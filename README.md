@@ -62,7 +62,7 @@ Applications can utilize the JVM Networking Infrastructure of Data Sand without 
 
 ### Tree Model Analysis
 The Idea behind Data Sand is that every Tree Model can be queried by a SQL statement, the parent-2-child relation can be referred to as one-2-many and also be automatically tagged as "Inner Join" between the parent and the child, hence for example if we have the following Pojo Tree Model:
-  CEO  
+  CEO
    |
     - EVP 1
        |
