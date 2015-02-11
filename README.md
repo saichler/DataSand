@@ -2,7 +2,7 @@
 Data Sand is an open source project built to be a toolkit for the "Internet of Everything" and analytics, making it ridiculously simple to build your application-> Share Objects between JVMs-> Query objects scattered on multiple JVMs via SQL&JDBC regardless of where and how the data is stored...Is it far fetched? To Good to be true? Maybe...Or maybe not.
 
 ## Internet Of Everything
-The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. To my view, The OpenDaylight is providing the "Alphabet" and the infrastructure for a unified Model that serves as important "language" between the different application and the different "Boxes" out there for the Internet Of Everything.
+The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. To my view, The OpenDaylight is providing the "Alphabet" and the infrastructure for a unified Model that serves as important "language" between the different application and the different "Boxes" out there for the Internet Of Everything while Data Sand will help distribute and aggregate the data that the controller consume to take SDN decisions.
 
 ### The 200% & 10 Million Guidelines 
 * "Will optimizing a module or an application by 200% will satisfy the requirements?"
@@ -19,7 +19,7 @@ Traditionally your application would pull the data from the source (or the sourc
 * How do you configure your store for your model (e.g. annotating the POJOs like Hibernate)?
 * & possibly more considerations...
 
-## Idea behind Data Sand
+== Idea behind Data Sand ==
 Maybe it is far-fetched, although in a nutshell, the Data is already there, "Sharded" in the network so we just need an infrastructure to collect and unify it through a single interface with a convenient NBI of SQL & JDBC that will Virtualize the sharded data into one big SQL Data Base.
 
 * Node Networking
