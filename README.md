@@ -1,15 +1,15 @@
 # DataSand
-Data Sand is a open source project built to be the toolkit for the "Internet of Everything" and analytics, making it ridiculously simple.
+Data Sand is an open source project built to be a toolkit for the "Internet of Everything" and analytics, making it ridiculously simple to build your application-> Share Objects between JVMs-> Query objects scattered on multiple JVMs via SQL&JDBC regardless of where and how the data is stored...Is it far fetched? To Good to be true? Maybe...Or maybe not.
 
-## Internet Of Everything ##
+## Internet Of Everything
 The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. To my view, The OpenDaylight is providing the "Alphabet" and the infrastructure for a unified Model that serves as important "language" between the different application and the different "Boxes" out there for the Internet Of Everything.
 
-=== The 200% & 10 Million Questions ===
-* "will optimizing a module or an application by 200% will satisfy the requirements?"
+### The 200% & 10 Million Guidelines 
+* "Will optimizing a module or an application by 200% will satisfy the requirements?"
 * "Can it scale to 10M?"
-Those questions helped logically challenge the way a module or an application is designed and were fundamental guide lines in designing Data Sand.
+Those questions helped logically challenge the way a module or an application is designed and were guidelines in designing Data Sand.
 
-=== Traditionally ===
+### Traditionally
 Traditionally your application would pull the data from the source (or the source will push it)->parse the data (if needed)->abstract into a model (even if it is just POJOs)-> Store it in a data store for doing SDN logic or for Management & etc. This creates the "Big Data" challenge... Many have created wonderful data stores that are extremely scaleable, but then again, out of the top of my mind, you have the following challenges:
 * How do you query the data?
 * What part of the data needs to be indexed? 
@@ -19,7 +19,7 @@ Traditionally your application would pull the data from the source (or the sourc
 * How do you configure your store for your model (e.g. annotating the POJOs like Hibernate)?
 * & possibly more considerations...
 
-== Idea behind Data Sand ==
+## Idea behind Data Sand
 Maybe it is far-fetched, although in a nutshell, the Data is already there, "Sharded" in the network so we just need an infrastructure to collect and unify it through a single interface with a convenient NBI of SQL & JDBC that will Virtualize the sharded data into one big SQL Data Base.
 
 * Node Networking
@@ -352,3 +352,5 @@ Now let's query all the data via JDBC:
             stores[i].deleteDatabase();
         }
   }
+
+
