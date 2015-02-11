@@ -3,14 +3,14 @@
   <parent>
     <groupId>org.datasand</groupId>
     <artifactId>main</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
   <groupId>org.datasand</groupId>
-  <artifactId>object-store</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>Object Store</name>
-  <description>Object Store</description>
+  <artifactId>datasand-store</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>DataSand Store</name>
+  <description>DataSand Store</description>
   <dependencies>
     <dependency>
         <groupId>org.xerial</groupId>
@@ -19,8 +19,8 @@
     </dependency>
     <dependency>
         <groupId>org.datasand</groupId>
-        <artifactId>object-serialization</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <artifactId>datasand-serialization</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
         <groupId>junit</groupId>
@@ -29,8 +29,8 @@
     </dependency>
     <dependency>
         <groupId>org.datasand</groupId>
-        <artifactId>object-agents</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <artifactId>datasand-agents</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>

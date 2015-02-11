@@ -4,6 +4,8 @@ rm -rf agents/.classpath
 rm -rf agents/.project
 rm -rf agents/.settings
 rm -rf agents/.gitignore
+rm -rf agents/node1/
+rm -rf agents/node2/
 rm -rf mdsal/target
 rm -rf mdsal/target-ide
 rm -rf mdsal/.classpath

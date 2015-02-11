@@ -3,12 +3,12 @@
   <parent>
     <groupId>org.datasand</groupId>
     <artifactId>main</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
   <groupId>org.datasand</groupId>
-  <artifactId>object-serialization</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>Object Serialization</name>
-  <description>Object Serialization</description>
+  <artifactId>datasand-serialization</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>DataSand Serialization</name>
+  <description>DataSand Serialization</description>
 </project>

@@ -3,19 +3,19 @@
   <parent>
     <groupId>org.datasand</groupId>
     <artifactId>main</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
   <groupId>org.datasand</groupId>
-  <artifactId>object-network</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>Object Network</name>
-  <description>Object Network</description>
+  <artifactId>datasand-network</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>DataSand Network</name>
+  <description>DataSand Network</description>
   <dependencies>
     <dependency>
         <groupId>org.datasand</groupId>
-        <artifactId>object-serialization</artifactId>
-        <version>0.0.1-SNAPSHOT</version>
+        <artifactId>datasand-serialization</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
         <groupId>junit</groupId>
