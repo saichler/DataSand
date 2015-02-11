@@ -1,15 +1,15 @@
 # DataSand
-Data Sand is a open source project built to be the toolkit for the "Internet of Everything" and analytics, making it ridiculously simple.
+Data Sand is an open source project built to be a toolkit for the "Internet of Everything" and analytics, making it ridiculously simple to build your application-> Share Objects between JVMs-> Query objects scattered on multiple JVMs via SQL&JDBC regardless of where and how the data is stored...Is it far fetched? To Good to be true? Maybe...Or maybe not.
 
-## Internet Of Everything ##
-The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. To my view, The OpenDaylight is providing the "Alphabet" and the infrastructure for a unified Model that serves as important "language" between the different application and the different "Boxes" out there for the Internet Of Everything.
+## Internet Of Everything
+The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. To my view, The OpenDaylight is providing the "Alphabet" and the infrastructure for a unified Model that serves as important "language" between the different application and the different "Boxes" out there for the Internet Of Everything while Data Sand will help distribute and aggregate the data that the controller consume to take SDN decisions.
 
-=== The 200% & 10 Million Questions ===
-* "will optimizing a module or an application by 200% will satisfy the requirements?"
+### The 200% & 10 Million Guidelines 
+* "Will optimizing a module or an application by 200% will satisfy the requirements?"
 * "Can it scale to 10M?"
-Those questions helped logically challenge the way a module or an application is designed and were fundamental guide lines in designing Data Sand.
+Those questions helped logically challenge the way a module or an application is designed and were guidelines in designing Data Sand.
 
-=== Traditionally ===
+### Traditionally
 Traditionally your application would pull the data from the source (or the source will push it)->parse the data (if needed)->abstract into a model (even if it is just POJOs)-> Store it in a data store for doing SDN logic or for Management & etc. This creates the "Big Data" challenge... Many have created wonderful data stores that are extremely scaleable, but then again, out of the top of my mind, you have the following challenges:
 * How do you query the data?
 * What part of the data needs to be indexed? 
@@ -19,7 +19,7 @@ Traditionally your application would pull the data from the source (or the sourc
 * How do you configure your store for your model (e.g. annotating the POJOs like Hibernate)?
 * & possibly more considerations...
 
-== Idea behind Data Sand ==
+## Idea behind Data Sand
 Maybe it is far-fetched, although in a nutshell, the Data is already there, "Sharded" in the network so we just need an infrastructure to collect and unify it through a single interface with a convenient NBI of SQL & JDBC that will Virtualize the sharded data into one big SQL Data Base.
 
 * Node Networking
@@ -42,27 +42,28 @@ Maybe it is far-fetched, although in a nutshell, the Data is already there, "Sha
   Sometimes it important to throttle the data stream as it does not matter how fast data is being collected, the consumer cannot process it fast enough. Data Sand implements a very basic
   protocol between the client and the Data Providing Nodes to throttle and make sure none of the sides get overflowed with memory consumption.
 
-= Deep Dive into Data Sand =
+# Deep Dive into Data Sand
 
 Data sand is build out of 3 components: Node Networking, Object Serialization, Object Store.
 
-== Data Sand Virtual JVM Network ==
+## Data Sand Virtual JVM Network
 [[File:DataSand-Network.png|thumbnail|Network]]
 Byte Serialization layer is integrated into DataSand so it can share Objects between JVMs. Now being part of the Networking Hardware business, why not create a Virtual Network Switching between the JVM processes to make it easy to share info between them? I must declare that this idea isn't mine, however i have simplified it a lot by defining that the switching will be done only based on one "hope" scenarios, hence i do not need to implement a "Spanning Tree" protocol to block loops as i do not have loops. A question popup from the last statement, "What do we do if there isn't any direct connectivity between all the machines in the setup?" (e.g. devices can be on different subnets with no connectivity between them). When that happens, Data Sand will just create a "Tunnel" through one of the nodes that has connectivity to each of the machines and the tunnel will be considered as one hope.
 
-=== NetworkNode ===
+### NetworkNode
 A NetworkNode is an Object that once you instantiate it, it will bind to the first port that is available starting from port 50000, e.g. it will try to bind to port 50000 then 50001...50002 & so on until success. The first NetworkNode that binds to port 50000 is taking the role of the Machine jvSwitch and any NetworkNode that binds to port 50001 and up will automatically try to create a connection to the NetworkNode on port 50000, hence the JVMs in a single machine have a "Star Topology" communication inside the machine. For example say NetworkNode that bind to port 50004 sends a message to the NetworkNode that bind to port 50007, the message will be sent to NetworkNode @ port 50000 and it will switch it to port 50007. The big idea is that each NetworkNode can implement ARP broadcast according to specific subjects and "discover" its peers without knowing up front which one implements the business logic of the ARP group. 
 
 A connection between two machines will be done only between the two NetworkNodes bind to port 50000 on each machine so for example, if NetworkNode bind to port 50004 on Machine 1 sends an ARP message-> the message will be sent to NetworkNode on port 50000 on Machine 1 -> NetworkNode 50000 will distribute the message to all NetworkNode on port 50001 and up on Machine 1-> NetworkNode 50000 on Machine 1 will send the message to NetworkNode 50000 on Machine 2-> NetworkNode 50000 on Machine 2 will distribute it to all NetworkNode 50001 and up on Machine 2.
 
-=== Infrastructure For Application Communication ===
+### Infrastructure For Application Communication
 Applications can utilize the JVM Networking Infrastructure of Data Sand without utilizing the the Storage capabilities, for example an App can be running on the device and collect data on-demand-> abstract it and send it over the wire to another node without actually storing it, which enable also an on-demand, real time kind of implementation of a data store without actually storing anything...
 
-== Tree Model & Object Serialization ==
+## Tree Model & Object Serialization
 
-=== Tree Model Analysis ===
+### Tree Model Analysis
 The Idea behind Data Sand is that every Tree Model can be queried by a SQL statement, the parent-2-child relation can be referred to as one-2-many and also be automatically tagged as "Inner Join" between the parent and the child, hence for example if we have the following Pojo Tree Model:
-  CEO  
+
+  CEO
    |
     - EVP 1
        |
@@ -92,7 +93,7 @@ If we have the following query: "Select VP.Name,EVP.Name from VP,EVP;" based on 
 
 Data Sand does this analysis on each object type that it is being introduce with. Data Sand comes with default rules to analyze the Objects and by default a "child" in the model is every "Getter" in the Object that returns an array or collection that its component type isn't some java native type. The different rules are flexible so if the default rules does not fit your model, you can change, extend and add more rules based on your model requirements.
 
-=== Serializing An Object ===
+### Serializing An Object
 With the Analysis above, Data Sand determinate what is considered a "Child" in the Tree Model and what is considered an "Attribute". If an Object isn't a native Java type, Data sand will create a Serializer for it regardless if it is considered a "Child" or an "Attribute". A Serializer is just a generated code that hard code the sequence of the Objects "Getters" and using the Encoder interface to encode them, e.g. if we user the example above, an EVP Serializer will look as follows:
   public class EVPSerializer {
     public void encode(Object obj,EncodeDataContainer edc){
@@ -118,32 +119,32 @@ Note that the "decodeAndList" method is specifying that sub EncodeDataContainer 
 [[File:DataSand-Serialization.png|thumbnail|Serialization]]
 Data Sand will come with 3 default serialization methods, byte array, JSON & XML. The "will" is because i am still working on JSON & XML...:o) Adding new serialization targets is really easy and you just need to extends two classes to add a new serialization method, the Encoder & the EncodeDataContainer.
 
-=== TypeDescriptor & Serializer ===
+### TypeDescriptor & Serializer
 A TypeDescriptor is a class that analyze an objects and defines a Serializer for that object according to rules. By default, the rules are fitted for POJOs but you can alter them and add more depending on your model and wishes. You can take a look @ the mdsal project inside Data Sand to see how to define your own rules (or observers) for your model.
 
 A Serializer is a simple class that hard code the sequence of encoding and decoding the Object attributes, you don't have to write a Serializer as the TypeDescriptor generates and compile the serializer for your Object, either on run-time or pre project build, for your preference.
 
-=== Encoder ===
+### Encoder
 An Encoder contains a set of methods that each one converts a java type to the destination persistence format, for example the ByteEncoder overrides all those methods and one of them is the method "encodeInt32" to encode an "int" into a 4 byte array. By creating your own encoder, you override all the abstract methods and eventually have a class that "knows" how to convert from the POJO/Object type to persistence type and back. Objects do not need to be converted as they already have a Serializer (from the last section), hence you just need to override the basic types like int,String,List & etc.
 
-=== EncodeDataContainer ===
+### EncodeDataContainer
 an EncodeDataContainer contains the encoded data from the Encoder, in the case of ByteEncodeDataContainer, it contains an array of bytes. In other word, the EncodeDataContainer should contain any kind of container that holds the persisted data, for example if i would have built an Encoder & EncodeDataContainer for an Oracle Database, i probably put a "PreparedStatement" and the containing container in the EncodeDataContainer.
 
 For examples of Encoder & EncodeDataContainer, please refer to the code of ByteEncoder & ByteArrayEncodeDataContainer, JSONEncoder & JSONEncodeDataContainer, XMLEncoder & XMLEncodeDataContainer.
 
-=== ByteEncoder ===
+### ByteEncoder
 I must specify that the byte encoding isn't based on the java serialization, the idea behind it is more like the Google Protocol Buffers, however without the need to define a Message for each type and compile it. E.g. the Byte encoding is encoding the Object to its minimal size (or @ least as far as i could think of...) by only encoding the data and not the types, the type codes & type definition is shared via the Clustering framework of the TypeDescriptor, which i will elaborate later on.
 
-== Object Store ==
+## Object Store
 By default, Data Sand comes with proprietary File objects store that stores the data in its byte array encoding form that put to usage the Serialization section above. The unique feature of this object store is that it has a similar implementation of the XSQL in OpenDayLight (in a nutshell an SQL translator) to enable SQL queries, JDBC & Object retrieval via SQL queries. In case of a requirement to use a different persistent layer, you just need to implement two classes to introduce an new persistency layer based on the two classes you implemented in the Serialization section.
 
-=== ObjectDataStore ===
+### ObjectDataStore
 When you create your own persistence data store implementation, you need to extends the ObjectDataStore. In a nutshell, you just need to implement about 6 methods, only if your store needs them (like commit(), close(), init() & etc) and a constructor that indicates the type of Serializer your ObjectStore uses. Please refer to the SQLite implementation of the ObjectDataStore to see an example for a code...
 
-=== DataPersister ===
+### DataPersister
 The Data Persister job  is to persist the encoded data to the target persistency layer, for example the ByteArrayDataPersister is taking the encoded data from the ByteArrayEncodeDataContainer and persistin g it into files. In a well establish persistency store, the Data Persister will probably not have any job, for example in an SQLIte it will probably just execute the PreparedStatement in the SQLiteEncodeDataContainer on the database connection...
 
-= Code Examples =
+# Code Examples
 First we instantiate an ObjectStore, in the example i am instantiating a ByteArrayObjectDataStore. When you instantiate it, you need to specify where the data & the TypeDescriptors will be kept:
   //Instantiate a ByteArrayDataStore
   ByteArrayObjectDataStore myDataStore = new ByteArrayObjectDataStore("myExampleDataStore");
@@ -352,3 +353,5 @@ Now let's query all the data via JDBC:
             stores[i].deleteDatabase();
         }
   }
+
+
