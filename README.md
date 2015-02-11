@@ -19,7 +19,7 @@ Traditionally your application would pull the data from the source (or the sourc
 * How do you configure your store for your model (e.g. annotating the POJOs like Hibernate)?
 * & possibly more considerations...
 
-== Idea behind Data Sand ==
+## Idea behind Data Sand
 Maybe it is far-fetched, although in a nutshell, the Data is already there, "Sharded" in the network so we just need an infrastructure to collect and unify it through a single interface with a convenient NBI of SQL & JDBC that will Virtualize the sharded data into one big SQL Data Base.
 
 * Node Networking
