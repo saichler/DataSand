@@ -208,7 +208,7 @@ public class Shard {
     public Object readObjectNoChildren(TypeDescriptor table, int recordIndex) {
         DataPersister dataPersister = this.dataPersisters.get(table.getTypeClass());
         Object data = dataPersister.read(recordIndex);
-        EncodeDataContainer ba = EncodeDataContainerFactory.newContainer(data,null,db.getEncoderType(),db.getTypeDescriptorsContainer().getEmptyTypeDescriptor());
+        EncodeDataContainer ba = EncodeDataContainerFactory.newContainer(data,null,db.getEncoderType(),table);
         if(data==null || dataPersister.isDeleted(data)){
             ba.getEncoder().encodeNULL(ba);
             ba.resetLocation();

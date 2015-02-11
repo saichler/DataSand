@@ -498,7 +498,11 @@ public class ByteEncoder extends AbstractEncoder{
 
         ISerializer serializer = getSerializer(classCode,ba.getTypeDescriptorContainer());
         if (serializer == null) {
-            ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode).getTypeClass();
+        	TypeDescriptor ts = ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode);
+        	if(ts!=null)
+        		ts.getTypeClass();
+        	else
+        		System.err.println("Missing class code="+classCode);
         }
         if (serializer != null) {
             return serializer.decode(ba, 0);

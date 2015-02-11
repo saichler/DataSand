@@ -17,8 +17,6 @@ import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ThreadPool;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
-import org.datasand.codec.json.JsonEncodeDataContainer;
-import org.datasand.codec.xml.XMLEncodeDataContainer;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.bytearray.ByteArrayObjectDataStore;
 import org.junit.After;
@@ -57,7 +55,7 @@ public class MDSALDBTest {
 
         MDSALDBTest test = new MDSALDBTest();
         test.setupFlagsAndCreateDB();
-
+/*
         SalPersistedDomTest obj = buildTestElement("Updated Element",500,true,true,true,true,true,4);
         TypeDescriptor td = test.database.getTypeDescriptorsContainer().getTypeDescriptorByObject(obj);
 
@@ -68,11 +66,12 @@ public class MDSALDBTest {
         XMLEncodeDataContainer xml = new XMLEncodeDataContainer(td);
         xml.getEncoder().encodeObject(obj, xml);
         System.out.println(xml.toXML(0));
-
+*/
         //test.testPerformance500000();
         //test.testSaveAndLoadDatabase();
         //test.testThreads();
         //test.testwritereadwriteread();
+        test.testSelect1Of20000WithSubElementsWithCriteriaOnParent();
         System.gc();
         try{Thread.sleep(1000);}catch(Exception err){}
         System.out.println("final memory="+getUsedMemory());
@@ -100,6 +99,7 @@ public class MDSALDBTest {
     public void closeDBAndDeleteIT(){
         if(database!=null){
             database.close();
+            //try{Thread.sleep(2000);}catch(Exception err){err.printStackTrace();}
             database.deleteDatabase();
         }
     }
@@ -569,6 +569,7 @@ public class MDSALDBTest {
             SalPersistedDomTest before = buildTestElement(i,true,true,true,true,true);
             database.write(before, -1);
         }
+        database.commit();
         setEndTime();
         setStartTime("Selecting 100 of those 20000 sub elements...");
         executeQueryTest("select MainString2,Atypedeftest,AtestInt32,NoKeysubList.Name,NoKeysubList.Typedeftest from SalPersistedDomTest,NoKeysubList where RowIndex>=557 and RowIndex<=657;","testSelect100Of20000WithSubElements",database);
@@ -785,6 +786,7 @@ public class MDSALDBTest {
         int i = memStr.length()-3;
         while(i-3>0){
             result = ","+memStr.substring(i-3,i)+result;
+            i=i-3;
         }
         if(i>0)
             result = memStr.substring(0,i)+result;

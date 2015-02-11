@@ -276,13 +276,13 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
     }
 
     public void close() {
-        this.server.close();
         this.commit();
         this.closed = true;
         for (Shard bl : this.location.values()) {
             bl.close();
         }
-        this.server.close();
+        if(this.server!=null)
+        	this.server.close();
     }
 
     public boolean isClosed() {
