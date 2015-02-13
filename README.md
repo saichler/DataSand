@@ -2,32 +2,30 @@
 Data Sand is an open source project built to be a toolkit for the "Internet of Everything" and analytics, aiming to make it ridiculously simple & easy to build, store, share & query applications/services/data using the “Social Networking” approach.
 
 ## Internet Of Everything
-The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. Each connected element has some functionality, probably has some data to store, would probably need some management & might need to share & interact with other elements on its network that have some functional commonality.
+The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. Each connected element has some functionality, probably has some data to store, would probably need some management & might need to share & interact with other elements on its network that have some functional or process commonality.
 
-### Home Sequence Example
+### Example @ Home
 Let’s say you have your bathroom heater and your coffee machine connected to the smart home and you want your bathroom heater to be turned on once you enter the bathroom and turned off once you leave the bathroom. At the same point when you leave the bathroom you wish for the coffee machine to start brewing so you will have hot coffee ready once you get down. 
 
 ####Traditionally
-You will have a “Command Center” where both the bathroom heater & the coffee machine are connected to so the sequence of operations would be: BTH message CC on enter->CC message BHT to turn on->BTH message CC on exist->CC message BTH to turn off->CC message coffee maker to turn on.
+You will have a “Command Center” (CMC) where both the BTH (bathroom heater) & CFM (coffee maker) machine are connected to so the sequence of operations would be: BTH message CMC on enter->CMC message BHT to turn on->BTH message CMC on exist->CMC message BTH to turn off->CMC message CFM to turn on.
 
 ####Data Sand way
-BTH Turn On on Enter->BTH Turn Off on Exit->BTH ARP Finish to BTH Group Listeners->Coffee machine receive ARP and turned on. As you can see, the Command Center isn’t part of the elements interaction, hence the “Social Networking” as the different elements interact with each other. The Command Center is still there, however it;s job is to only configure the sequence initially.
+BTH Turn On on Enter->BTH Turn Off on Exit->BTH ARP Finish to BTH Group Listeners->CFM receive ARP and turned on. As you can see, the Command Center isn’t part of the elements interaction, hence the “Social Networking” as the different elements interact with each other. The Command Center is still there, however it’s job is to only configure the sequence initially.
 
+### Example @ Core Network
+Let’s say you have a few Switches connected to each other and you would like to discover MAC topology between those routers.
 
-### The 200% & 10 Million Guidelines 
-* "Will optimizing a module or an application by 200% will satisfy the requirements?"
-* "Can it scale to 10M?"
-Those questions helped logically challenge the way a module or an application is designed and were guidelines in designing Data Sand.
+####Traditionally
+You pull the MAC data (e.g. ARP table & Port MACs) from each router->abstract it to a common model-> Store it either in memory or in a data store-> Run a process to examine, iterate & cross reference the data to determinate “What” is connected to “What”->Once you have a Link you again store it somewhere, either in memory or in a data store.
 
-### Traditionally
-Traditionally your application would pull the data from the source (or the source will push it)->parse the data (if needed)->abstract into a model (even if it is just POJOs)-> Store it in a data store for doing SDN logic or for Management & etc. This creates the "Big Data" challenge... Many have created wonderful data stores that are extremely scaleable, but then again, out of the top of my mind, you have the following challenges:
-* How do you query the data?
-* What part of the data needs to be indexed? 
-* How fast would it be to retrieve it?
-* What and how much hardware do you need to host it? 
-* How much compute power do you need?
-* How do you configure your store for your model (e.g. annotating the POJOs like Hibernate)?
-* & possibly more considerations...
+####Data Sand way
+Each router has its Data Sand node running either inside the router or @ an external machine (Note that in case of external node, a node does not mean a dedicated process as one process can host several nodes). This node is polling the data->abstracting it->Store it locally inside a Data Sand Store->ARP the Port MAC data to the MAC Topology ARP Group. In parallel Receive MAC data by listening on the Topology ARP Group->Cross reference the received data with my local data->Once there is a Match, add the Source Address of the ARP as my adjacent by marking it inside the local model->Send a “I’m your adjacent” message to the ARP source to make sure he also mark the adjacency.
+
+As you can see, there isn’t a central place where the data is being accumulated and processed, nodes “Socialize” with each other to determine the topology adjacency. One may immediately and naturally ask “How can an external application consume/query the data? And this is where Data Sand kick in “Social Querying”... 
+
+### Social Querying & SQL Virtualization
+Under the hood, Data Sand formulate a Switching Network between its nodes, hence you can ARP a query to the “Data Sand Store ARP” group and receive the data from each node that has this service, kind of a MapReduce implementation if you think about it. The great thing about Data Sand is that it Mask this entire process via SQL & JDBC, hence it is literally virtualizing all the nodes into ONE BIG SQL DATABASE...
 
 ## Idea behind Data Sand
 Maybe it is far-fetched, although in a nutshell, the Data is already there, "Sharded" in the network so we just need an infrastructure to collect and unify it through a single interface with a convenient NBI of SQL & JDBC that will Virtualize the sharded data into one big SQL Data Base.
@@ -362,5 +360,3 @@ Now let's query all the data via JDBC:
             stores[i].deleteDatabase();
         }
   }
-
-
