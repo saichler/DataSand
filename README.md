@@ -7,9 +7,11 @@ The Internet Of Everything suggests that everything is connected to the network,
 ### Home Sequence Example
 Let’s say you have your bathroom heater and your coffee machine connected to the smart home and you want your bathroom heater to be turned on once you enter the bathroom and turned off once you leave the bathroom. At the same point when you leave the bathroom you wish for the coffee machine to start brewing so you will have hot coffee ready once you get down. 
 
-####Traditionally, you will have a “Command Center” where both the bathroom heater & the coffee machine are connected to so the sequence of operations would be: BTH message CC on enter->CC message BHT to turn on->BTH message CC on exist->CC message BTH to turn off->CC message coffee maker to turn on.
+####Traditionally
+You will have a “Command Center” where both the bathroom heater & the coffee machine are connected to so the sequence of operations would be: BTH message CC on enter->CC message BHT to turn on->BTH message CC on exist->CC message BTH to turn off->CC message coffee maker to turn on.
 
-####Data Sand way it will be: BTH Turn On on Enter->BTH Turn Off on Exit->BTH ARP Finish to BTH Group Listeners->Coffee machine receive ARP and turned on. As you can see, the Command Center isn’t part of the elements interaction, hence the “Social Networking” as the different elements interact with each other. The Command Center is still there, however it;s job is to only configure the sequence initially.
+####Data Sand way
+BTH Turn On on Enter->BTH Turn Off on Exit->BTH ARP Finish to BTH Group Listeners->Coffee machine receive ARP and turned on. As you can see, the Command Center isn’t part of the elements interaction, hence the “Social Networking” as the different elements interact with each other. The Command Center is still there, however it;s job is to only configure the sequence initially.
 
 
 ### The 200% & 10 Million Guidelines 
