@@ -1,8 +1,16 @@
 # DataSand
-Data Sand is an open source project built to be a toolkit for the "Internet of Everything" and analytics, making it ridiculously simple to build your application-> Share Objects between JVMs-> Query objects scattered on multiple JVMs via SQL&JDBC regardless of where and how the data is stored...Is it far fetched? To Good to be true? Maybe...Or maybe not.
+Data Sand is an open source project built to be a toolkit for the "Internet of Everything" and analytics, aiming to make it ridiculously simple & easy to build, store, share & query applications/services/data using the “Social Networking” approach.
 
 ## Internet Of Everything
-The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. To my view, The OpenDaylight is providing the "Alphabet" and the infrastructure for a unified Model that serves as important "language" between the different application and the different "Boxes" out there for the Internet Of Everything while Data Sand will help distribute and aggregate the data that the controller consume to take SDN decisions.
+The Internet Of Everything suggests that everything is connected to the network, from the core router in the carriers network to the Microwave & Fridge @ home. Each connected element has some functionality, probably has some data to store, would probably need some management & might need to share & interact with other elements on its network that have some functional commonality.
+
+### Home Sequence Example
+Let’s say you have your bathroom heater and your coffee machine connected to the smart home and you want your bathroom heater to be turned on once you enter the bathroom and turned off once you leave the bathroom. At the same point when you leave the bathroom you wish for the coffee machine to start brewing so you will have hot coffee ready once you get down. 
+
+####Traditionally, you will have a “Command Center” where both the bathroom heater & the coffee machine are connected to so the sequence of operations would be: BTH message CC on enter->CC message BHT to turn on->BTH message CC on exist->CC message BTH to turn off->CC message coffee maker to turn on.
+
+####Data Sand way it will be: BTH Turn On on Enter->BTH Turn Off on Exit->BTH ARP Finish to BTH Group Listeners->Coffee machine receive ARP and turned on. As you can see, the Command Center isn’t part of the elements interaction, hence the “Social Networking” as the different elements interact with each other. The Command Center is still there, however it;s job is to only configure the sequence initially.
+
 
 ### The 200% & 10 Million Guidelines 
 * "Will optimizing a module or an application by 200% will satisfy the requirements?"
@@ -62,7 +70,6 @@ Applications can utilize the JVM Networking Infrastructure of Data Sand without 
 
 ### Tree Model Analysis
 The Idea behind Data Sand is that every Tree Model can be queried by a SQL statement, the parent-2-child relation can be referred to as one-2-many and also be automatically tagged as "Inner Join" between the parent and the child, hence for example if we have the following Pojo Tree Model:
-
   CEO
    |
     - EVP 1
