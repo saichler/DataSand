@@ -1,7 +1,11 @@
 package org.datasand.agents;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ISerializer;
+import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  *
@@ -13,6 +17,8 @@ public class Message implements ISerializer{
     private int messageType = -1;
     private Object messageData = null;
     private static long nextMessageID = 1000;
+    public static final Map<Integer,Integer> passThroughIncomingMessage = new ConcurrentHashMap<Integer, Integer>();
+    public static final Map<Integer,Integer> passThroughOutgoingMessage = new ConcurrentHashMap<Integer, Integer>();
 
     public Message(){
     }
@@ -52,9 +58,12 @@ public class Message implements ISerializer{
     @Override
     public void encode(Object value, EncodeDataContainer edc) {
         Message m = (Message)value;
+        edc.getEncoder().encodeInt32(m.getMessageType(), edc);        
         edc.getEncoder().encodeInt64(m.messageID, edc);
-        edc.getEncoder().encodeInt32(m.getMessageType(), edc);
-        edc.getEncoder().encodeObject(m.messageData, edc);
+        if(passThroughOutgoingMessage.containsKey(m.getMessageType()) && m.getMessageData() instanceof ByteArrayEncodeDataContainer){
+        	((ByteArrayEncodeDataContainer)edc).insert((ByteArrayEncodeDataContainer)m.getMessageData(),2+4+8);
+        }else
+        	edc.getEncoder().encodeObject(m.messageData, edc);
     }
 
     @Override
@@ -65,9 +74,13 @@ public class Message implements ISerializer{
     @Override
     public Object decode(EncodeDataContainer edc, int length) {
         Message m = new Message();
+        m.messageType = edc.getEncoder().decodeInt32(edc);        
         m.messageID = edc.getEncoder().decodeInt64(edc);
-        m.messageType = edc.getEncoder().decodeInt32(edc);
-        m.messageData = edc.getEncoder().decodeObject(edc);
+        if(passThroughIncomingMessage.containsKey(m.messageType)){
+        	m.messageData = edc;
+        }else{
+        	m.messageData = edc.getEncoder().decodeObject(edc);
+        }
         return m;
     }
 

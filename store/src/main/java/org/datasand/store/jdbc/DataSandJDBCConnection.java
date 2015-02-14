@@ -26,6 +26,7 @@ import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.MessageEntry;
+import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
 import org.datasand.network.NetworkID;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
@@ -40,6 +41,11 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
     private Map<RSID,QueryUpdater> updaters = new HashMap<RSID,QueryUpdater>();
     private Message repetitve = new Message(-1,null);
 
+    static{
+    	Message.passThroughIncomingMessage.put(DataSandJDBCMessage.TYPE_DELEGATE_QUERY_RECORD, DataSandJDBCMessage.TYPE_DELEGATE_QUERY_RECORD);
+    	Message.passThroughOutgoingMessage.put(DataSandJDBCMessage.TYPE_QUERY_RECORD, DataSandJDBCMessage.TYPE_QUERY_RECORD);
+    }
+    
     public DataSandJDBCConnection(AutonomousAgentManager manager,ObjectDataStore _dataStore) {
         super(107,manager);
         this.dataDataStore = _dataStore;
@@ -130,8 +136,13 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
             case DataSandJDBCMessage.TYPE_DELEGATE_QUERY_RECORD:
             {
                 QueryContainer c = queries.get(msg.getRSID());
-                DataSandJDBCMessage m = new DataSandJDBCMessage(msg.getRecord(),msg.getRSID());
-                this.send(m, c.source);
+                if(msg.getMessageData() instanceof DataSandJDBCDataContainer){
+	                DataSandJDBCMessage m = new DataSandJDBCMessage(msg.getRecord(),msg.getRSID());
+	                this.send(m, c.source);                	
+                }else{
+	                DataSandJDBCMessage m = new DataSandJDBCMessage((ByteArrayEncodeDataContainer)msg.getMessageData(),msg.getRSID());
+	                this.send(m, c.source);
+                }
             }
                 break;
             case DataSandJDBCMessage.TYPE_QUERY_RECORD:

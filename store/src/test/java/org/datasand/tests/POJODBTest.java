@@ -3,14 +3,12 @@ package org.datasand.tests;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;
@@ -236,8 +234,58 @@ public class POJODBTest {
     }
 
     public static void main(String args[]){
-        TypeDescriptorsContainer tc = new TypeDescriptorsContainer("./test");
-        AutonomousAgentManager am = new AutonomousAgentManager(tc);
+    	ByteArrayObjectDataStore database[] = new ByteArrayObjectDataStore[5];
+    	for(int j=0;j<5;j++){
+    		database[j] = new ByteArrayObjectDataStore("test-"+j,true);
+	        for(int i=0;i<10;i++){
+	            Object pojo = buildPojo(j*10+i);
+	            database[j].write(pojo, -1);
+	        }
+	        database[j].commit();
+    	}
+        DataSandJDBCDriver driver = new DataSandJDBCDriver();
+        Connection conn = null;
+        Statement st = null;
+        ResultSet rs = null;
+        StringBuffer buff = new StringBuffer();
+        try{
+            conn = driver.connect("127.0.0.1", null);
+            st = conn.createStatement();
+            String sql = "Select TestString,TestBoolean,TestLong,TestShort,TestIndex from PojoObject;";
+            rs = st.executeQuery(sql);
+            int colCount = rs.getMetaData().getColumnCount();
+            buff.append("\"");
+            for(int i=1;i<=colCount;i++){
+                buff.append(rs.getMetaData().getColumnLabel(i));
+                if(i<colCount)
+                    buff.append("\",\"");
+                else
+                    buff.append("\"\n");
+            }
+            int count=0;
+            while(rs.next()){
+                buff.append("\"");
+                for(int i=1;i<=colCount;i++){
+                    buff.append(rs.getObject(i));
+                    if(i<colCount)
+                        buff.append("\",\"");
+                    else
+                        buff.append("\"\n");
+                }
+                count++;
+            }
+            System.out.println(buff);
+            System.out.println("Finish "+count);
+        }catch(Exception err){
+            err.printStackTrace();
+        }
+        if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
+        if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
+        if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
+        for(int i=0;i<database.length;i++){
+            database[i].close();
+            database[i].deleteDatabase();
+        }                    
     }
 
     public static void main2(String args[]){

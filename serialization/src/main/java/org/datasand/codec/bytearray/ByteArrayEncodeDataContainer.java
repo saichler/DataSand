@@ -111,4 +111,11 @@ public class ByteArrayEncodeDataContainer extends EncodeDataContainer{
         }
         return result;
     }
+
+    public void insert(ByteArrayEncodeDataContainer edc,int startLocation){    	
+    	byte otherData[] = edc.getBytes();
+    	this.adjustSize(otherData.length-startLocation);
+    	System.arraycopy(otherData, startLocation, this.bytes, this.location,otherData.length-startLocation);
+    	this.advance(otherData.length);
+    }
 }

@@ -5,6 +5,7 @@ import java.util.Map;
 import org.datasand.agents.Message;
 import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptorsContainer;
+import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
 import org.datasand.network.NetworkID;
 import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
 /**
@@ -27,6 +28,8 @@ public class DataSandJDBCMessage extends Message {
     public static final int TYPE_DELEGATE_CONTINUE = 13;
     public static final int TYPE_NODE_WAITING_MARK = 14;
     public static final int TYPE_NODE_WAITING_MARK_REPLY = 15;
+
+    private RSID rsid = null;
 
     public DataSandJDBCMessage() {
         super();
@@ -60,8 +63,12 @@ public class DataSandJDBCMessage extends Message {
         super(TYPE_DELEGATE_QUERY_RECORD,new DataSandJDBCDataContainer(_record,_rsID));
     }
 
-    public DataSandJDBCMessage(Map _record, RSID _rsID) {
-        super(TYPE_QUERY_RECORD,new DataSandJDBCDataContainer(_record,_rsID));
+    public DataSandJDBCMessage(Map record, RSID _rsID) {
+        super(TYPE_QUERY_RECORD,new DataSandJDBCDataContainer(record, _rsID));
+    }
+
+    public DataSandJDBCMessage(ByteArrayEncodeDataContainer edc, RSID _rsID) {
+        super(TYPE_QUERY_RECORD,edc);
     }
 
     public DataSandJDBCMessage(RSID _rsID) {
@@ -101,7 +108,21 @@ public class DataSandJDBCMessage extends Message {
     }
 
     public RSID getRSID() {
-        return ((DataSandJDBCDataContainer)this.getMessageData()).getRsID();
+    	if(this.rsid!=null) return this.rsid;
+    	if(this.getMessageData() instanceof DataSandJDBCDataContainer){
+    		return ((DataSandJDBCDataContainer)this.getMessageData()).getRsID();
+    	}else
+    	if(this.getMessageData() instanceof ByteArrayEncodeDataContainer){
+    		ByteArrayEncodeDataContainer edc = (ByteArrayEncodeDataContainer)this.getMessageData();
+    		edc.resetLocation();    		
+    		edc.advance(16);
+    		int a = edc.getEncoder().decodeInt32(edc);
+    		long b = edc.getEncoder().decodeInt64(edc);
+    		int c = edc.getEncoder().decodeInt32(edc);
+    		this.rsid = new RSID(a,b,c);
+    		return this.rsid;
+    	}
+    	return null;
     }
 
     public Exception getERROR() {
