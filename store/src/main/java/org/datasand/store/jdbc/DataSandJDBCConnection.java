@@ -17,7 +17,9 @@ import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
@@ -137,8 +139,8 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
             {
                 QueryContainer c = queries.get(msg.getRSID());
                 if(msg.getMessageData() instanceof DataSandJDBCDataContainer){
-	                DataSandJDBCMessage m = new DataSandJDBCMessage(msg.getRecord(),msg.getRSID());
-	                this.send(m, c.source);                	
+	                DataSandJDBCMessage m = new DataSandJDBCMessage(msg.getRecords(),msg.getRSID());
+	                this.send(m, c.source);
                 }else{
 	                DataSandJDBCMessage m = new DataSandJDBCMessage((ByteArrayEncodeDataContainer)msg.getMessageData(),msg.getRSID());
 	                this.send(m, c.source);
@@ -147,7 +149,9 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
                 break;
             case DataSandJDBCMessage.TYPE_QUERY_RECORD:
                 DataSandJDBCResultSet rs2 = DataSandJDBCStatement.getQuery(msg.getRSID());
-                rs2.addRecord(msg.getRecord(),false);
+                for(Map record:msg.getRecords()){
+                	rs2.addRecord(record,false);
+                }
                 break;
             case DataSandJDBCMessage.TYPE_QUERY_FINISH:
                 DataSandJDBCResultSet rs3 = DataSandJDBCStatement.removeQuery(msg.getRSID());
@@ -233,18 +237,25 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
 
         public void run() {
             int count = 0;
+            List<Map> records = new ArrayList<Map>(DataSandJDBCResultSet.RECORD_Threshold);
             while (rs.next()) {
-                DataSandJDBCMessage rec = new DataSandJDBCMessage(rs.getCurrent(), rs.getRSID(),0);
-                send(rec,source);
+            	records.add(rs.getCurrent());
                 count++;
-                if(count>=DataSandJDBCResultSet.RECORD_Threshold_Release){
+                if(count>=DataSandJDBCResultSet.RECORD_Threshold){
+                    DataSandJDBCMessage recs = new DataSandJDBCMessage(records, rs.getRSID(),0);
+                    send(recs,source);
                     synchronized(waitingObject){
+                    	records.clear();
                         DataSandJDBCMessage m = new DataSandJDBCMessage(getAgentID(),rs.getRSID());
                         send(m,source);
                         try{waitingObject.wait();}catch(Exception err){err.printStackTrace();}
                         count = 0;
                     }
                 }
+            }
+            if(!records.isEmpty()){
+                DataSandJDBCMessage recs = new DataSandJDBCMessage(records, rs.getRSID(),0);
+                send(recs,source);                
             }
             updaters.remove(rs.getRSID());
             DataSandJDBCMessage end = new DataSandJDBCMessage(rs.getRSID(),0,0);

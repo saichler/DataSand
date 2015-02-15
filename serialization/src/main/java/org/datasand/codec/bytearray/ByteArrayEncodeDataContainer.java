@@ -116,6 +116,6 @@ public class ByteArrayEncodeDataContainer extends EncodeDataContainer{
     	byte otherData[] = edc.getBytes();
     	this.adjustSize(otherData.length-startLocation);
     	System.arraycopy(otherData, startLocation, this.bytes, this.location,otherData.length-startLocation);
-    	this.advance(otherData.length);
+    	this.advance(otherData.length-startLocation);
     }
 }

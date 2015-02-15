@@ -47,7 +47,7 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
     public static final int COLLECT_TYPE_RECORDS = 0;
     public static final int COLLECT_TYPE_OBJECTS = 1;
     public static final int COLLECT_TYPE_ROOTS   = 2;
-    public static final int RECORD_Threshold = 100;
+    public static final int RECORD_Threshold = 200;
     public static final int RECORD_Threshold_Release = RECORD_Threshold/2;
 
     private RSID rsid = new RSID();

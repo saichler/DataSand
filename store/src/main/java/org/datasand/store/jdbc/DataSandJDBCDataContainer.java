@@ -1,6 +1,8 @@
 package org.datasand.store.jdbc;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.datasand.codec.EncodeDataContainer;
@@ -57,14 +59,17 @@ public class DataSandJDBCDataContainer implements ISerializer{
             byte[] data = ((TypeDescriptorsContainer)dc.data).getRepositoryData();
             ba.getEncoder().encodeByteArray(data,ba);
         }else
-        if(dc.data instanceof Map){
+        if(dc.data instanceof List){
             ba.getEncoder().encodeInt16(3, ba);
-            Map m = (Map)dc.data;
-            ba.getEncoder().encodeSize(m.size(),ba);
-            for(Object o:m.entrySet()){
-                Map.Entry e = (Map.Entry)o;
-                ba.getEncoder().encodeObject(e.getKey(), ba);
-                ba.getEncoder().encodeObject(e.getValue(), ba);
+            List<Map> records = (List<Map>)dc.data;
+            ba.getEncoder().encodeInt16(records.size(), ba);
+            for(Map m:records){
+	            ba.getEncoder().encodeSize(m.size(),ba);
+	            for(Object o:m.entrySet()){
+	                Map.Entry e = (Map.Entry)o;
+	                ba.getEncoder().encodeObject(e.getKey(), ba);
+	                ba.getEncoder().encodeObject(e.getValue(), ba);
+	            }
             }
         }else
         if(dc.data instanceof Exception){
@@ -98,14 +103,19 @@ public class DataSandJDBCDataContainer implements ISerializer{
             dc.data=tc;
         }else
         if(type==3){
-            Map m = new HashMap();
-            int size = ba.getEncoder().decodeSize(ba);
-            for(int i=0;i<size;i++){
-                Object key = ba.getEncoder().decodeObject(ba);
-                Object value = ba.getEncoder().decodeObject(ba);
-                m.put(key, value);
-            }
-            dc.data = m;
+        	int listSize = ba.getEncoder().decodeSize(ba);
+        	List<Map> records = new ArrayList<Map>(listSize);
+        	for(int i=0;i<listSize;i++){
+	            Map m = new HashMap();
+	            int size = ba.getEncoder().decodeSize(ba);
+	            for(int j=0;j<size;j++){
+	                Object key = ba.getEncoder().decodeObject(ba);
+	                Object value = ba.getEncoder().decodeObject(ba);
+	                m.put(key, value);
+	            }
+	            records.add(m);
+        	}
+            dc.data = records;
         }else
         if(type==4){
             String msg = ba.getEncoder().decodeString(ba);

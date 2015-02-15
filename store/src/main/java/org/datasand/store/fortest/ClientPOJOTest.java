@@ -13,7 +13,7 @@ public class ClientPOJOTest {
         Statement st = null;
         ResultSet rs = null;
         try{
-            conn = driver.connect("128.107.142.54", null);
+            conn = driver.connect("192.168.1.119", null);
             st = conn.createStatement();
             String sql = "Select TestString,TestBoolean,TestLong,TestShort,TestIndex from PojoObject;";
             rs = st.executeQuery(sql);

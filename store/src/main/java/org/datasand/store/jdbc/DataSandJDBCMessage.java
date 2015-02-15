@@ -1,5 +1,6 @@
 package org.datasand.store.jdbc;
 
+import java.util.List;
 import java.util.Map;
 
 import org.datasand.agents.Message;
@@ -28,7 +29,8 @@ public class DataSandJDBCMessage extends Message {
     public static final int TYPE_DELEGATE_CONTINUE = 13;
     public static final int TYPE_NODE_WAITING_MARK = 14;
     public static final int TYPE_NODE_WAITING_MARK_REPLY = 15;
-
+    
+    //Temp rsid when the message is pass through
     private RSID rsid = null;
 
     public DataSandJDBCMessage() {
@@ -59,12 +61,12 @@ public class DataSandJDBCMessage extends Message {
         super(TYPE_DELEGATE_QUERY,new DataSandJDBCDataContainer(_rs,_rs.getRSID()));
     }
 
-    public DataSandJDBCMessage(Map _record, RSID _rsID,int temp) {
-        super(TYPE_DELEGATE_QUERY_RECORD,new DataSandJDBCDataContainer(_record,_rsID));
+    public DataSandJDBCMessage(List<Map> _records, RSID _rsID,int temp) {
+        super(TYPE_DELEGATE_QUERY_RECORD,new DataSandJDBCDataContainer(_records,_rsID));
     }
 
-    public DataSandJDBCMessage(Map record, RSID _rsID) {
-        super(TYPE_QUERY_RECORD,new DataSandJDBCDataContainer(record, _rsID));
+    public DataSandJDBCMessage(List<Map> records, RSID _rsID) {
+        super(TYPE_QUERY_RECORD,new DataSandJDBCDataContainer(records, _rsID));
     }
 
     public DataSandJDBCMessage(ByteArrayEncodeDataContainer edc, RSID _rsID) {
@@ -103,8 +105,8 @@ public class DataSandJDBCMessage extends Message {
         return (DataSandJDBCResultSet)((DataSandJDBCDataContainer)this.getMessageData()).getData();
     }
 
-    public Map getRecord() {
-        return (Map)((DataSandJDBCDataContainer)this.getMessageData()).getData();
+    public List<Map> getRecords() {
+        return (List<Map>)((DataSandJDBCDataContainer)this.getMessageData()).getData();
     }
 
     public RSID getRSID() {
@@ -114,7 +116,14 @@ public class DataSandJDBCMessage extends Message {
     	}else
     	if(this.getMessageData() instanceof ByteArrayEncodeDataContainer){
     		ByteArrayEncodeDataContainer edc = (ByteArrayEncodeDataContainer)this.getMessageData();
-    		edc.resetLocation();    		
+    		//reset the location to 0
+    		edc.resetLocation();
+    		//decode only the RDID
+    		//2 - for the type Message
+    		//4 - for the Message Type
+    		//8 - for the Message ID
+    		//2 - for the DataSandObjectContainer Type
+    		// == 16
     		edc.advance(16);
     		int a = edc.getEncoder().decodeInt32(edc);
     		long b = edc.getEncoder().decodeInt64(edc);

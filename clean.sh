@@ -35,3 +35,11 @@ rm -rf target
 rm -rf .project
 rm -rf .settings
 rm -rf store/JDBC-Connection/
+rm -rf .metadata/
+rm -rf RemoteSystemsTempFiles/
+rm -rf agents/bin/
+rm -rf network/bin/
+rm -rf serialization/bin/
+rm -rf store/bin/
+rm -rf store/src/main/yang-gen-sal/
+rm -rf src
