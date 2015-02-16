@@ -16,6 +16,29 @@
   </modules>
   <build>
     <plugins>
+        <plugin>
+            <groupId>com.github.github</groupId>
+            <artifactId>site-maven-plugin</artifactId>
+            <version>0.11</version>
+            <configuration>
+                <message>Maven artifacts for ${project.version}</message>
+                <noJekyll>true</noJekyll>
+                <outputDirectory>${project.build.directory}/datasand-maven-repo</outputDirectory>
+                <branch>refs/heads/master</branch>
+                <includes><include>**/*</include></includes>
+                <repositoryName>datasand-maven-repo</repositoryName>
+                <repositoryOwner>saichler</repositoryOwner>
+                <merge>true</merge>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>site</goal>
+                </goals>
+                <phase>deploy</phase>
+              </execution>
+            </executions>
+        </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
