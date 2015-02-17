@@ -13,7 +13,7 @@
 <repositories>
     <repository>
         <id>datasand-mvn-repo</id>
-        <url>https://raw.github.com/saichler/DataSand/datasand-maven-repo/org/datasand/datasand-store</url>
+        <url>https://raw.github.com/saichler/datasand-maven-repo/master/</url>
         <snapshots>
             <enabled>true</enabled>
             <updatePolicy>always</updatePolicy>
@@ -90,7 +90,7 @@
         <groupId>org.datasand</groupId>
         <artifactId>datasand-store</artifactId>
         <version>0.1.0-SNAPSHOT</version>
-    </dependency>
+   </dependency>
   </dependencies>
   <build>
     <plugins>
