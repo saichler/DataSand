@@ -43,3 +43,10 @@ rm -rf serialization/bin/
 rm -rf store/bin/
 rm -rf store/src/main/yang-gen-sal/
 rm -rf src
+rm -rf filesystem/target
+rm -rf filesystem/target-ide
+rm -rf filesystem/.classpath
+rm -rf filesystem/.project
+rm -rf filesystem/.settings
+rm -rf filesystem/.gitignore
+

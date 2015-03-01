@@ -13,6 +13,7 @@
     <module>network</module>
     <module>agents</module>
     <module>store</module>
+    <module>filesystem</module>
   </modules>
   <build>
     <plugins>
