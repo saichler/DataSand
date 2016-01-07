@@ -17,6 +17,9 @@ import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
 import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.bytearray.MD5ID;
+import org.datasand.codec.serialize.ISerializer;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -130,7 +133,7 @@ public class TypeDescriptor {
         return this.keyColumn;
     }
 
-    public MD5Identifier getMD5IDForObject(Object object){
+    public MD5ID getMD5IDForObject(Object object){
         if(this.keyColumn==null){
             return null;
         }
@@ -141,7 +144,7 @@ public class TypeDescriptor {
         if(value!=null){
             BytesArray ba = new BytesArray(128,this);
             container.getTypeDescriptorByObject(value).getSerializer().encode(value, ba);
-            return MD5Identifier.createX(ba.getData());
+            return MD5ID.createX(ba.getData());
         }
         return null;
     }
@@ -452,7 +455,7 @@ public class TypeDescriptor {
         append("", 0, buff);
         append("package " + type.getTypeClass().getPackage().getName() + ";", 0,buff);
         append("import org.datasand.codec.EncodeDataContainer;", 0, buff);
-        append("import org.datasand.codec.ISerializer;", 0, buff);
+        append("import org.datasand.codec.serialize.ISerializer;", 0, buff);
         String className = type.getTypeClassName();
         className = replaceAll(className, "$", ".");
         append("import " + className + ";", 0, buff);

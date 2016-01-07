@@ -1,6 +1,6 @@
 package org.datasand.filesystem;
 
-import org.datasand.codec.ISerializer;
+import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.bytearray.BytesArray;
 
 public class FileRepositoryManifestSerializer implements ISerializer{

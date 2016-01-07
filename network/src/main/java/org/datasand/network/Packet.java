@@ -1,6 +1,6 @@
 package org.datasand.network;
 
-import org.datasand.codec.ISerializer;
+import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.codec.bytearray.Encoder;

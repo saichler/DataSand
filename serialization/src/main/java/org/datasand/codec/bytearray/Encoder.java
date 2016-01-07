@@ -14,8 +14,9 @@ import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.datasand.codec.ISerializer;
-import org.datasand.codec.MD5Identifier;
+import org.datasand.codec.serialize.ISerializer;
+import org.datasand.codec.serialize.SerializersManager;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -30,9 +31,9 @@ public class Encoder {
             encodeNULL(ba);
         }else{
             ba.adjustSize(16);
-            MD5Identifier id = serializersManager.getMD5ByObject(value);
-            encodeInt64(id.getA(),ba);
-            encodeInt64(id.getB(),ba);
+            MD5ID id = serializersManager.getMD5ByObject(value);
+            encodeInt64(id.getMd5Long1(),ba);
+            encodeInt64(id.getMd5Long2(),ba);
             ba.advance(16);
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
             serializer.encode(value,ba);
@@ -340,9 +341,9 @@ public class Encoder {
             encodeNULL(ba);
         } else {
             encodeInt32(value.length, ba);
-            MD5Identifier id = serializersManager.getMD5ByClass(value.getClass().getComponentType());
-            encodeInt64(id.getA(),ba);
-            encodeInt64(id.getB(),ba);
+            MD5ID id = serializersManager.getMD5ByClass(value.getClass().getComponentType());
+            encodeInt64(id.getMd5Long1(),ba);
+            encodeInt64(id.getMd5Long2(),ba);
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
             for (int i = 0; i < value.length; i++) {
                 serializer.encode(value[i],ba);
@@ -357,7 +358,7 @@ public class Encoder {
         int size = decodeInt32(ba);
         long a = decodeInt64(ba);
         long b = decodeInt64(ba);
-        MD5Identifier id = MD5Identifier.createX(a,b);
+        MD5ID id = MD5ID.create(a,b);
         ISerializer serializer = serializersManager.getSerializerByMD5(id);
         Class cls = serializersManager.getClassByMD5(id);
         Object result[] = (Object[]) Array.newInstance(cls, size);
@@ -373,9 +374,9 @@ public class Encoder {
             encodeNULL(ba);
         } else {
             encodeInt32(list.size(), ba);
-            MD5Identifier id = serializersManager.getMD5ByClass(list.get(0).getClass());
-            encodeInt64(id.getA(),ba);
-            encodeInt64(id.getB(),ba);
+            MD5ID id = serializersManager.getMD5ByClass(list.get(0).getClass());
+            encodeInt64(id.getMd5Long1(),ba);
+            encodeInt64(id.getMd5Long2(),ba);
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
             for (Object o: list) {
                 serializer.encode(o,ba);
@@ -390,7 +391,7 @@ public class Encoder {
         int size = decodeInt32(ba);
         long a = decodeInt64(ba);
         long b = decodeInt64(ba);
-        MD5Identifier id = MD5Identifier.createX(a,b);
+        MD5ID id = MD5ID.create(a,b);
         ISerializer serializer = serializersManager.getSerializerByMD5(id);
         List result = new ArrayList(size);
         for (int i = 0; i < size; i++) {
@@ -541,7 +542,7 @@ public class Encoder {
         if (value == null) {
             encodeNULL(ba);
         } else {
-            TypeDescriptor tbl = ba.getTypeDescriptorContainer().getTypeDescriptorByClass(objectType);
+            VTable tbl = ba.getTypeDescriptorContainer().getTypeDescriptorByClass(objectType);
             int classCode = tbl.getClassCode();
             encodeInt16(classCode,ba);
             EncodeDataContainer subBA = new BytesArray(1024,ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode));
@@ -624,9 +625,9 @@ public class Encoder {
 
         ISerializer serializer = getSerializer(classCode,ba.getTypeDescriptorContainer());
         if (serializer == null) {
-        	TypeDescriptor ts = ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode);
+        	VTable ts = ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode);
         	if(ts!=null)
-        		ts.getTypeClass();
+        		ts.getJavaClassType();
         	else
         		System.err.println("Missing class code="+classCode);
         }
@@ -647,7 +648,7 @@ public class Encoder {
         int classCode = decodeInt16(ba);
         ISerializer serializer = getSerializer(classCode,ba.getTypeDescriptorContainer());
         if (serializer == null) {
-            ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode).getTypeClass();
+            ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode).getJavaClassType();
         }
         if (serializer != null) {
             if(ba.getSubElementsData().get(classCode)!=null){

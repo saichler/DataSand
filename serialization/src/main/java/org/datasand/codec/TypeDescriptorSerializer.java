@@ -1,8 +1,11 @@
 package org.datasand.codec;
+
+import org.datasand.codec.serialize.ISerializer;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class TypeDescriptorSerializer implements ISerializer{
+public class TypeDescriptorSerializer implements ISerializer {
 
     @Override
     public void encode(Object value, byte[] byteArray, int location) {

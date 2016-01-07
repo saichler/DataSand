@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.ISerializer;
+import org.datasand.codec.serialize.ISerializer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */

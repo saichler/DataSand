@@ -2,7 +2,7 @@ package org.datasand.agents.cmap;
 
 import java.util.Map;
 
-import org.datasand.codec.ISerializer;
+import org.datasand.codec.serialize.ISerializer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */

@@ -5,7 +5,7 @@ import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.datasand.codec.ISerializer;
+import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.ThreadPool;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;

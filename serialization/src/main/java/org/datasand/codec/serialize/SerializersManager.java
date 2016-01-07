@@ -5,44 +5,43 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.codec.bytearray;
+package org.datasand.codec.serialize;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.datasand.codec.ISerializer;
-import org.datasand.codec.MD5Identifier;
+import org.datasand.codec.bytearray.MD5ID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class SerializersManager {
 
-    private final Map<MD5Identifier,ISerializer> md5ToSerializer = new HashMap<>();
-    private final Map<Class<?>,MD5Identifier> classToMD5 = new HashMap<>();
-    private final Map<MD5Identifier,Class<?>> md5ToClass = new HashMap<>();
+    private final Map<MD5ID,ISerializer> md5ToSerializer = new HashMap<>();
+    private final Map<Class<?>,MD5ID> classToMD5 = new HashMap<>();
+    private final Map<MD5ID,Class<?>> md5ToClass = new HashMap<>();
 
     public SerializersManager(){
 
     }
 
     public ISerializer getSerializerByClass(Class cls){
-        MD5Identifier id = getMD5ByClass(cls);
+        MD5ID id = getMD5ByClass(cls);
         return getSerializerByMD5(id);
     }
 
-    public MD5Identifier getMD5ByClass(Class cls){
+    public MD5ID getMD5ByClass(Class cls){
         return classToMD5.get(cls);
     }
 
-    public MD5Identifier getMD5ByObject(Object o){
+    public MD5ID getMD5ByObject(Object o){
         return classToMD5.get(o.getClass());
     }
 
-    public ISerializer getSerializerByMD5(MD5Identifier id){
+    public ISerializer getSerializerByMD5(MD5ID id){
         return md5ToSerializer.get(id);
     }
 
-    public Class getClassByMD5(MD5Identifier id){
+    public Class getClassByMD5(MD5ID id){
         return md5ToClass.get(id);
     }
 
@@ -51,6 +50,6 @@ public class SerializersManager {
     }
 
     public ISerializer getSerializerByLongs(long a,long b){
-        return getSerializerByMD5(MD5Identifier.createX(a,b));
+        return getSerializerByMD5(MD5ID.create(a,b));
     }
 }

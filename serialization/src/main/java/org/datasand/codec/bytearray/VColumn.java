@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2015 DataSand,Sharon Aicler and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.datasand.codec.bytearray;
 
 import java.lang.reflect.InvocationTargetException;
@@ -9,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by root on 1/7/16.
+ * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class VColumn {
     public static boolean IS_SERVER_SIDE = false;
@@ -63,6 +70,31 @@ public class VColumn {
             return this.javaGetMethodName.substring(2);
         }
         return this.javaGetMethodName;
+    }
+
+
+    public String getJavaGetMethodName() {
+        return javaGetMethodName;
+    }
+
+    public String getJavaClassName() {
+        return javaClassName;
+    }
+
+    public String getvColumnName() {
+        return vColumnName;
+    }
+
+    public String getvTableName() {
+        return vTableName;
+    }
+
+    public Method getJavaGetMethod() {
+        return javaGetMethod;
+    }
+
+    public Class<?> getJavaClass() {
+        return javaClass;
     }
 
     @Override
@@ -195,7 +227,7 @@ public class VColumn {
         vcol.augmentedTableName = Encoder.decodeString(ba);
         return vcol;
     }
-    
+
     public static Class<?> getGenericType(ParameterizedType type) {
         Type[] typeArguments = type.getActualTypeArguments();
         for (Type typeArgument : typeArguments) {

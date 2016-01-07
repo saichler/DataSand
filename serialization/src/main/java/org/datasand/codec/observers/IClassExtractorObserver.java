@@ -1,11 +1,12 @@
 package org.datasand.codec.observers;
 
-import org.datasand.codec.TypeDescriptor;
+import org.datasand.codec.bytearray.VTable;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public interface IClassExtractorObserver {
     public Class<?> getObjectClass(Object obj);
-    public Class<?> getBuilderClass(TypeDescriptor td);
-    public String getBuilderMethod(TypeDescriptor td);
+    public Class<?> getBuilderClass(VTable td);
+    public String getBuilderMethod(VTable td);
 }

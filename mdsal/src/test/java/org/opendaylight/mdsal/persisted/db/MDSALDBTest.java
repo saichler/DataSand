@@ -56,7 +56,7 @@ public class MDSALDBTest {
         test.setupFlagsAndCreateDB();
 /*
         SalPersistedDomTest obj = buildTestElement("Updated Element",500,true,true,true,true,true,4);
-        TypeDescriptor td = test.database.getTypeDescriptorsContainer().getTypeDescriptorByObject(obj);
+        VTable td = test.database.getTypeDescriptorsContainer().getTypeDescriptorByObject(obj);
 
         JsonEncodeDataContainer json = new JsonEncodeDataContainer(td);
         json.getEncoder().encodeObject(obj, json);

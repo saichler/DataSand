@@ -3,7 +3,7 @@ package org.datasand.agents;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.datasand.codec.ISerializer;
+import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.bytearray.BytesArray;
 
 /**

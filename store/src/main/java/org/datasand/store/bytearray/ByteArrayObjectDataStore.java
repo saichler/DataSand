@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.PrintStream;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.MD5Identifier;
+import org.datasand.codec.bytearray.MD5ID;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.store.ObjectDataStore;
@@ -292,7 +292,7 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
         TypeDescriptor td = this.getTypeDescriptorsContainer().getTypeDescriptorByObject(dataKey);
         BytesArray ba = (BytesArray)EncodeDataContainerFactory.newContainer(null,null,this.getEncoderType(),td);
         td.getSerializer().encode(dataKey, ba);
-        MD5Identifier md5 = MD5Identifier.createX(ba.getData());
+        MD5ID md5 = MD5ID.createX(ba.getData());
         return md5;
     }
 }

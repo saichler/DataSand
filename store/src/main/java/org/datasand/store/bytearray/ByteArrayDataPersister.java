@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.datasand.codec.MD5Identifier;
+import org.datasand.codec.bytearray.MD5ID;
 import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.codec.bytearray.Encoder;
@@ -23,7 +23,7 @@ public class ByteArrayDataPersister extends DataPersister{
 
     private File file = null;
     private RandomAccessFile randomAccessFile = null;
-    private Map<MD5Identifier, ByteArrayDataLocation> locations = new HashMap<MD5Identifier, ByteArrayDataLocation>();
+    private Map<MD5ID, ByteArrayDataLocation> locations = new HashMap<MD5ID, ByteArrayDataLocation>();
     private Map<Integer, int[]> parentIndexToRecordIndex = new HashMap<Integer, int[]>();
     private List<ByteArrayDataLocation> locationsByIndex = new ArrayList<ByteArrayDataLocation>();
     private String dataFileLocation = null;
@@ -49,7 +49,7 @@ public class ByteArrayDataPersister extends DataPersister{
             BytesArray ba = new BytesArray(1024,container.getEmptyTypeDescriptor());
             ba.getEncoder().encodeInt32(changeNumber, ba);
             ba.getEncoder().encodeInt32(locations.size(), ba);
-            for (Map.Entry<MD5Identifier, ByteArrayDataLocation> entry : locations.entrySet()) {
+            for (Map.Entry<MD5ID, ByteArrayDataLocation> entry : locations.entrySet()) {
                 ba.getEncoder().encodeInt64(entry.getKey().getA(), ba);
                 ba.getEncoder().encodeInt64(entry.getKey().getB(), ba);
                 entry.getValue().encode(ba);
@@ -90,7 +90,7 @@ public class ByteArrayDataPersister extends DataPersister{
                 for (int i = 0; i < size; i++) {
                     long a = ba.getEncoder().decodeInt64(ba);
                     long b = ba.getEncoder().decodeInt64(ba);
-                    MD5Identifier md5 = MD5Identifier.createX(a, b);
+                    MD5ID md5 = MD5ID.createX(a, b);
                     locations.put(md5, ByteArrayDataLocation.decode(ba, 0));
                 }
                 size = ba.getEncoder().decodeInt32(ba);
@@ -251,7 +251,7 @@ public class ByteArrayDataPersister extends DataPersister{
         }
     }
 
-    private int writeNew(byte data[],MD5Identifier x,int parentRecordIndex){
+    private int writeNew(byte data[], MD5ID x, int parentRecordIndex){
         ByteArrayDataLocation newL = new ByteArrayDataLocation((int) fileSize, data.length+HEADER_SIZE,this.locationsByIndex.size(),parentRecordIndex);
         if (x != null) {
             locations.put(x, newL);
