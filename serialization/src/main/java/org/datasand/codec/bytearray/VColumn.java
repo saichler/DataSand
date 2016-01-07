@@ -1,5 +1,6 @@
 package org.datasand.codec.bytearray;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -17,12 +18,14 @@ public class VColumn {
     private final String javaClassName;
     private final String vColumnName;
     private final String vTableName;
+    private Method javaGetMethod = null;
+    private Class<?> javaClass = null;
+    private Class<?> javaMethodReturnType = null;
 
-    private Method getMethod = null;
     private String augmentedTableName = null;
-    private Class<?> myClass = null;
+
     private boolean collection = false;
-    private Class<?> returntype = null;
+
     private boolean isint = false;
     private boolean isboolean = false;
     private boolean islong = false;
@@ -37,13 +40,12 @@ public class VColumn {
     }
 
     public VColumn(Method getMethod, Class<?> clazz) {
-        this.javaGetMethodName = getMethod.getName();
-        this.javaClassName = this.myClass.getName();
+        this.javaGetMethod = getMethod;
+        this.javaClass = clazz;
+        this.javaGetMethodName = this.javaGetMethod.getName();
+        this.javaClassName = this.javaClass.getName();
         this.vColumnName = extractVColumnName();
         this.vTableName = this.javaClassName.substring(this.javaClassName.lastIndexOf(".") + 1);
-
-        this.getMethod = getMethod;
-        this.myClass = clazz;
         initMethod();
     }
 
@@ -63,68 +65,27 @@ public class VColumn {
         return this.javaGetMethodName;
     }
 
-    public String getMethodName() {
-        return this.methodName;
-    }
-
-    public String getClassName() {
-        return this.className;
-    }
-
-    public int getCharWidth() {
-        return this.charWidth;
-    }
-
-    public void setCharWidth(int i) {
-        this.charWidth = i;
-    }
-
-    public String getColumnName() {
-        if (!isMethodInitialized()) {
-            initMethod();
-        }
-        if (this.columnName == null) {
-            if (this.methodName.startsWith("get")) {
-                this.columnName = this.methodName.substring(3);
-            } else if (this.methodName.startsWith("is")) {
-                this.columnName = this.methodName.substring(2);
-            }
-        }
-        return this.columnName;
-    }
-
-    public String getTableName() {
-        if (!isMethodInitialized()) {
-            initMethod();
-        }
-        if (this.tableName == null) {
-            this.tableName = this.className.substring(this.className
-                    .lastIndexOf(".") + 1);
-        }
-        return tableName;
-    }
-
     @Override
     public int hashCode() {
-        return this.methodName.hashCode() + this.className.hashCode();
+        return java.util.Objects.hash(this.javaClassName,this.javaGetMethodName);
     }
 
     @Override
     public boolean equals(Object obj) {
-        AttributeDescriptor other = (AttributeDescriptor) obj;
-        if (className.equals(other.className)
-                && methodName.equals(other.methodName))
+        VColumn other = (VColumn) obj;
+        if (this.javaClassName.equals(other.javaClassName) && this.javaGetMethodName.equals(other.javaGetMethodName)) {
             return true;
+        }
         return false;
     }
 
     @Override
     public String toString() {
-        return className + "." + methodName;
+        return this.javaClassName + "." + this.javaGetMethodName;
     }
 
     public boolean isMethodInitialized() {
-        return (this.getMethod != null || !IS_SERVER_SIDE);
+        return (this.javaGetMethod != null || !IS_SERVER_SIDE);
     }
 
     public boolean isCollection() {
@@ -134,11 +95,11 @@ public class VColumn {
         return this.collection;
     }
 
-    public Class<?> getReturnType() {
+    public Class<?> getJavaMethodReturnType() {
         if (!isMethodInitialized()) {
             initMethod();
         }
-        return this.returntype;
+        return this.javaMethodReturnType;
     }
 
     public boolean isInt() {
@@ -169,25 +130,16 @@ public class VColumn {
         return this.isbyte;
     }
 
-    public Object get(Object element, Map<?, ?> augmentationMap, Class<?> elementClass) {
-        if (this.getMethod == null) {
+    public Object get(Object element, Map<?, ?> augmentationMap, Class<?> elementClass) throws InvocationTargetException, IllegalAccessException {
+        if (this.javaGetMethod == null) {
             initMethod();
         }
-        if (this.myClass.equals(elementClass)) {
-            try {
-                return getMethod.invoke(element, (Object[]) null);
-            } catch (Exception err) {
-                err.printStackTrace();
-            }
+        if (this.javaClass.equals(elementClass)) {
+            return javaGetMethod.invoke(element, (Object[]) null);
         } else {
-            Object augmentingElement = augmentationMap.get(this.myClass);
-            try {
-                return getMethod.invoke(augmentingElement, (Object[]) null);
-            } catch (Exception err) {
-                err.printStackTrace();
-            }
+            Object augmentingElement = augmentationMap.get(this.javaClass);
+            return javaGetMethod.invoke(augmentingElement, (Object[]) null);
         }
-        return null;
     }
 
     public void setAugmentedTableName(String _augName){
@@ -199,53 +151,51 @@ public class VColumn {
     }
 
     public void initMethod() {
-
-        if (this.myClass == null || this.getMethod == null) {
-            try {
-                this.myClass = getClass().getClassLoader().loadClass(this.className);
-                this.getMethod = this.myClass.getMethod(this.methodName,(Class[]) null);
-            } catch (Exception err) {
-                err.printStackTrace();
+        try {
+            if (this.javaClass == null || this.javaGetMethod == null) {
+                this.javaClass = ClassLoaderManager.getClassLoader(this.javaClassName).loadClass(this.javaClassName);
+                this.javaGetMethod = this.javaClass.getMethod(this.javaGetMethodName, (Class[]) null);
             }
+
+            if (this.javaGetMethod.getReturnType().isArray()) {
+                this.collection = true;
+                this.javaMethodReturnType = this.javaGetMethod.getReturnType().getComponentType();
+            } else if (List.class.isAssignableFrom(this.javaGetMethod.getReturnType())
+                    || Set.class.isAssignableFrom(this.javaGetMethod.getReturnType())
+                    || Map.class.isAssignableFrom(this.javaGetMethod.getReturnType())) {
+                this.collection = true;
+                this.javaMethodReturnType = getMethodReturnTypeFromGeneric(this.javaGetMethod);
+            } else {
+                this.javaMethodReturnType = this.javaGetMethod.getReturnType();
+            }
+
+            if (this.javaMethodReturnType.equals(int.class)) {
+                this.isint = true;
+            } else if (this.javaMethodReturnType.equals(boolean.class)) {
+                this.isboolean = true;
+            } else if (this.javaMethodReturnType.equals(long.class)) {
+                this.islong = true;
+            } else if (this.javaMethodReturnType.equals(byte.class)) {
+                this.isbyte = true;
+            }
+        }catch(ClassNotFoundException | NoSuchMethodException e){
+            VLogger.error("Failed to init the java class & methods",e);
         }
-
-        if (this.getMethod.getReturnType().isArray()) {
-            this.collection = true;
-            this.returntype = this.getMethod.getReturnType().getComponentType();
-        } else if (List.class.isAssignableFrom(this.getMethod.getReturnType())
-                || Set.class.isAssignableFrom(this.getMethod.getReturnType())
-                || Map.class.isAssignableFrom(this.getMethod.getReturnType())) {
-            this.collection = true;
-            this.returntype = getMethodReturnTypeFromGeneric(this.getMethod);
-        } else {
-            this.returntype = this.getMethod.getReturnType();
-        }
-
-        if (this.returntype.equals(int.class))
-            this.isint = true;
-        else if (this.returntype.equals(boolean.class))
-            this.isboolean = true;
-        else if (this.returntype.equals(long.class))
-            this.islong = true;
-        else if (this.returntype.equals(byte.class))
-            this.isbyte = true;
     }
 
-    public void encode(EncodeDataContainer ba) {
-        ba.getEncoder().encodeString(this.methodName, ba);
-        ba.getEncoder().encodeString(this.className, ba);
-        ba.getEncoder().encodeString(this.augmentedTableName, ba);
+    public static final void encode(Object value, BytesArray ba) {
+        VColumn vcol = (VColumn)value;
+        Encoder.encodeString(vcol.javaGetMethodName,ba);
+        Encoder.encodeString(vcol.javaClassName,ba);
+        Encoder.encodeString(vcol.augmentedTableName,ba);
     }
 
-    public static AttributeDescriptor decode(EncodeDataContainer ba) {
-        String mName = ba.getEncoder().decodeString(ba);
-        String cName = ba.getEncoder().decodeString(ba);
-        String aName = ba.getEncoder().decodeString(ba);
-        AttributeDescriptor p = new AttributeDescriptor(mName,cName);
-        p.setAugmentedTableName(aName);
-        return p;
+    public static final Object decode(BytesArray ba) {
+        VColumn vcol = new VColumn(Encoder.decodeString(ba),Encoder.decodeString(ba));
+        vcol.augmentedTableName = Encoder.decodeString(ba);
+        return vcol;
     }
-
+    
     public static Class<?> getGenericType(ParameterizedType type) {
         Type[] typeArguments = type.getActualTypeArguments();
         for (Type typeArgument : typeArguments) {
