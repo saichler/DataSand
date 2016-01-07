@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2015 DataSand,Sharon Aicler and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.datasand.codec.bytearray;
 
 import java.lang.reflect.Array;
@@ -7,40 +14,73 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-
-import org.datasand.codec.AbstractEncoder;
+import java.util.Map;
 import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.FrameworkClassCodes;
 import org.datasand.codec.ISerializer;
+import org.datasand.codec.MD5Identifier;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.observers.IAugmetationObserver;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ByteEncoder extends AbstractEncoder{
+public class ByteEncoder {
 
-    public static final byte NULL_VALUE_1 = (byte) 'N';
-    public static final byte NULL_VALUE_2 = (byte) 'L';
+    public static final byte[] NULL = new byte[] {'-','N','U','L','L','-'};
+    private static final Map<MD5Identifier,ISerializer> md5ToSerializer = new HashMap<>();
+    private static final Map<String,MD5Identifier> classNameToMD5 = new HashMap<>();
 
+    private static final ISerializer getSerializer(MD5Identifier id){
+        return md5ToSerializer.get(id);
+    }
+
+    private static final MD5Identifier getMD5(Object o){
+        String className = o.getClass().getName();
+        MD5Identifier md5ID = classNameToMD5.get(className);
+        if(md5ID==null){
+            md5ID = MD5Identifier.createX(className);
+            classNameToMD5.put(className,md5ID);
+        }
+        return md5ID;
+    }
+
+    private static final ISerializer getSerializer(long a,long b){
+        MD5Identifier id = MD5Identifier.createX(a,b);
+        return md5ToSerializer.get(id);
+    }
+
+    //Object
+    public static final void encodeObject(Object value,ByteArrayEncodeDataContainer ba){
+        if(value==null){
+            encodeNULL(ba);
+        }else{
+            ba.adjustSize(16);
+            MD5Identifier id = getMD5(value);
+            encodeInt64(id.getA(),ba);
+            encodeInt64(id.getB(),ba);
+            ba.advance(16);
+            ISerializer serializer = getSerializer(id);
+            serializer.encode(value,ba);
+        }
+    }
+
+    public static final Object decodeObject(ByteArrayEncodeDataContainer ba){
+        if(isNULL(ba)){
+            return null;
+        }else{
+            long a = decodeInt64(ba);
+            long b = decodeInt64(ba);
+            ISerializer serializer = getSerializer(a,b);
+            return serializer.decode(ba);
+        }
+    }
+
+    //INT16
     public static final void encodeInt16(int value, byte[] byteArray,int location) {
         byteArray[location + 1] = (byte) (value >> 8);
         byteArray[location] = (byte) (value);
-    }
-
-    public void encodeSize(int size,EncodeDataContainer _ba){
-        this.encodeInt16(size, _ba);
-    }
-
-    public int decodeSize(EncodeDataContainer edc){
-        return this.decodeInt16(edc);
-    }
-
-    public  void encodeInt16(int value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        ba.adjustSize(2);
-        encodeInt16(value, ba.getBytes(), ba.getLocation());
-        ba.advance(2);
     }
 
     public static final int decodeInt16(byte[] byteArray, int location) {
@@ -52,27 +92,150 @@ public class ByteEncoder extends AbstractEncoder{
         }
 
         if (byteArray[location + 1] > 0) {
-            value += ((int) byteArray[location + 1] & 0xFFL) << (8 * (1));
+            value += ((int) byteArray[location + 1] & 0xFFL) << (8);
         } else {
-            value += ((int) (256 + byteArray[location + 1]) & 0xFFL) << (8 * (1));
+            value += ((int) (256 + byteArray[location + 1]) & 0xFFL) << (8);
         }
         return value;
     }
 
-    public void encodeShort(short value, byte[] byteArray,int location) {
+    public static final void encodeInt16(int value, ByteArrayEncodeDataContainer ba) {
+        ba.adjustSize(2);
+        encodeInt16(value, ba.getBytes(), ba.getLocation());
+        ba.advance(2);
+    }
+
+    public static final int decodeInt16(ByteArrayEncodeDataContainer ba) {
+        int value = decodeInt16(ba.getBytes(), ba.getLocation());
+        ba.advance(2);
+        return value;
+    }
+
+    //INT32
+    public static final void encodeInt32(int value, byte byteArray[],int location) {
+        byteArray[location] = (byte) ((value >> 24) & 0xff);
+        byteArray[location + 1] = (byte) ((value >> 16) & 0xff);
+        byteArray[location + 2] = (byte) ((value >> 8) & 0xff);
+        byteArray[location + 3] = (byte) ((value) & 0xff);
+    }
+
+    public static final int decodeInt32(byte[] byteArray, int location) {
+        return (int) (0xff & byteArray[location]) << 24
+                | (int) (0xff & byteArray[location + 1]) << 16
+                | (int) (0xff & byteArray[location + 2]) << 8
+                | (int) (0xff & byteArray[location + 3]);
+    }
+
+    public static final void encodeInt32(Integer value, ByteArrayEncodeDataContainer ba) {
+        if(value==null) value = 0;
+        ba.adjustSize(4);
+        encodeInt32(value, ba.getBytes(), ba.getLocation());
+        ba.advance(4);
+    }
+
+    public static final int decodeInt32(ByteArrayEncodeDataContainer ba) {
+        int value = decodeInt32(ba.getBytes(), ba.getLocation());
+        ba.advance(4);
+        return value;
+    }
+
+    //INT64 - long
+    public static final void encodeInt64(long value, byte[] byteArray,int location) {
+        byteArray[location] = (byte) ((value >> 56) & 0xff);
+        byteArray[location + 1] = (byte) ((value >> 48) & 0xff);
+        byteArray[location + 2] = (byte) ((value >> 40) & 0xff);
+        byteArray[location + 3] = (byte) ((value >> 32) & 0xff);
+        byteArray[location + 4] = (byte) ((value >> 24) & 0xff);
+        byteArray[location + 5] = (byte) ((value >> 16) & 0xff);
+        byteArray[location + 6] = (byte) ((value >> 8) & 0xff);
+        byteArray[location + 7] = (byte) ((value) & 0xff);
+    }
+
+    public static final long decodeInt64(byte[] byteArray, int location) {
+        return (long) (0xff & byteArray[location]) << 56
+                | (long) (0xff & byteArray[location + 1]) << 48
+                | (long) (0xff & byteArray[location + 2]) << 40
+                | (long) (0xff & byteArray[location + 3]) << 32
+                | (long) (0xff & byteArray[location + 4]) << 24
+                | (long) (0xff & byteArray[location + 5]) << 16
+                | (long) (0xff & byteArray[location + 6]) << 8
+                | (long) (0xff & byteArray[location + 7]);
+    }
+
+    public static final void encodeInt64(Long value, ByteArrayEncodeDataContainer ba) {
+        if(value==null)
+            value = 0L;
+        ba.adjustSize(8);
+        encodeInt64(value, ba.getBytes(), ba.getLocation());
+        ba.advance(8);
+    }
+
+    public static final long decodeInt64(ByteArrayEncodeDataContainer ba) {
+        long value = decodeInt64(ba.getBytes(), ba.getLocation());
+        ba.advance(8);
+        return value;
+    }
+
+    //NULL
+    public static final void encodeNULL(ByteArrayEncodeDataContainer ba) {
+        ba.adjustSize(NULL.length);
+        System.arraycopy(NULL,0,ba.getBytes(),ba.getLocation(),NULL.length);
+        ba.advance(NULL.length);
+    }
+
+    public static final boolean isNULL(ByteArrayEncodeDataContainer ba) {
+        if(ba.getBytes().length<ba.getLocation()+NULL.length){
+            return false;
+        }
+        for(int i=0;i<NULL.length;i++){
+            if(ba.getBytes()[ba.getLocation()+i]!=NULL[i]) {
+                return false;
+            }
+        }
+        ba.advance(NULL.length);
+        return true;
+    }
+
+    //String
+    public static final void encodeString(String value, byte[] byteArray, int location) {
+        byte bytes[] = value.getBytes();
+        encodeInt16(bytes.length, byteArray, location);
+        System.arraycopy(bytes, 0, byteArray, location + 2, bytes.length);
+    }
+
+    public static final String decodeString(byte[] byteArray, int location) {
+        int size = decodeInt16(byteArray, location);
+        return new String(byteArray, location + 2, size);
+    }
+
+    public static final void encodeString(String value, ByteArrayEncodeDataContainer ba) {
+        if (value == null) {
+            encodeNULL(ba);
+        } else {
+            int size = value.getBytes().length+2;
+            ba.adjustSize(size);
+            encodeString(value,ba.getBytes(),ba.getLocation());
+            ba.advance(size);
+        }
+    }
+
+    public static final String decodeString(ByteArrayEncodeDataContainer ba) {
+        if (isNULL(ba)) {
+            return null;
+        }
+        int size = decodeInt16(ba.getBytes(), ba.getLocation());
+        String result = new String(ba.getBytes(), ba.getLocation() + 2, size);
+        ba.advance(size + 2);
+        return result;
+    }
+
+    //Short
+    public static final void encodeShort(short value, byte[] byteArray,int location) {
         byteArray[location + 1] = (byte) (value >> 8);
         byteArray[location] = (byte) (value);
     }
 
-    public void encodeShort(Short value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if(value==null) value = 0;
-        ba.adjustSize(2);
-        encodeShort(value, ba.getBytes(), ba.getLocation());
-        ba.advance(2);
-    }
-
-    public short decodeShort(byte[] byteArray, int location) {
+    public static final short decodeShort(byte[] byteArray, int location) {
         short value = 0;
         if (byteArray[location] > 0) {
             value += ((int) byteArray[location] & 0xFFL);
@@ -88,42 +251,97 @@ public class ByteEncoder extends AbstractEncoder{
         return value;
     }
 
-    public short decodeShort(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
+    public static final void encodeShort(Short value, ByteArrayEncodeDataContainer ba) {
+        if(value==null) value = 0;
+        ba.adjustSize(2);
+        encodeShort(value, ba.getBytes(), ba.getLocation());
+        ba.advance(2);
+    }
+
+    public static final short decodeShort(ByteArrayEncodeDataContainer ba) {
         short value = decodeShort(ba.getBytes(), ba.getLocation());
         ba.advance(2);
         return value;
     }
 
-    public int decodeInt16(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        int value = decodeInt16(ba.getBytes(), ba.getLocation());
-        ba.advance(2);
-        return value;
+    //Byte Array
+    public static final void encodeByteArray(byte[] value, byte byteArray[],int location) {
+        encodeInt32(value.length, byteArray, location);
+        System.arraycopy(value, 0, byteArray, location + 4, value.length);
     }
 
-    public static final void encodeInt32(int value, byte byteArray[],int location) {
-        byteArray[location] = (byte) ((value >> 24) & 0xff);
-        byteArray[location + 1] = (byte) ((value >> 16) & 0xff);
-        byteArray[location + 2] = (byte) ((value >> 8) & 0xff);
-        byteArray[location + 3] = (byte) ((value >> 0) & 0xff);
+    public static final byte[] decodeByteArray(byte[] byteArray, int location) {
+        int size = decodeInt32(byteArray, location);
+        byte array[] = new byte[size];
+        System.arraycopy(byteArray, location + 4, array, 0, array.length);
+        return array;
     }
 
-    public void encodeInt32(Integer value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if(value==null) value = 0;
-        ba.adjustSize(4);
-        encodeInt32(value, ba.getBytes(), ba.getLocation());
-        ba.advance(4);
+    public static final void encodeByteArray(byte[] value, ByteArrayEncodeDataContainer ba) {
+        if (value == null) {
+            encodeNULL(ba);
+        } else {
+            ba.adjustSize(value.length + 4);
+            encodeByteArray(value, ba.getBytes(), ba.getLocation());
+            ba.advance(value.length + 4);
+        }
     }
 
-    public static final int decodeInt32(byte[] byteArray, int location) {
-        int value = (int) (0xff & byteArray[location]) << 24
-                | (int) (0xff & byteArray[location + 1]) << 16
-                | (int) (0xff & byteArray[location + 2]) << 8
-                | (int) (0xff & byteArray[location + 3]) << 0;
-        return value;
+    public static final byte[] decodeByteArray(ByteArrayEncodeDataContainer ba) {
+        if (isNULL(ba)) {
+            return null;
+        }
+        byte[] array = decodeByteArray(ba.getBytes(), ba.getLocation());
+        ba.advance(array.length + 4);
+        return array;
     }
+
+    //Boolean
+    public static final void encodeBoolean(boolean value, byte[] byteArray,int location) {
+        if (value)
+            byteArray[location] = 1;
+        else
+            byteArray[location] = 0;
+    }
+
+    public static final boolean decodeBoolean(byte[] byteArray, int location) {
+        if (byteArray[location] == 1)
+            return true;
+        else
+            return false;
+    }
+
+    public static final void encodeBoolean(Boolean value, ByteArrayEncodeDataContainer ba) {
+        if(value==null) value = false;
+        ba.adjustSize(1);
+        encodeBoolean(value, ba.getBytes(), ba.getLocation());
+        ba.advance(1);
+    }
+
+    public static final Boolean decodeBoolean(ByteArrayEncodeDataContainer ba) {
+        boolean result = decodeBoolean(ba.getBytes(), ba.getLocation());
+        ba.advance(1);
+        return result;
+    }
+
+    //Byte
+    public static final void encodeByte(Byte value, ByteArrayEncodeDataContainer ba) {
+        if(value==null) value = (byte)0;
+        ba.adjustSize(1);
+        ba.getBytes()[ba.getLocation()] = value;
+        ba.advance(1);
+    }
+
+    public static final byte decodeByte(ByteArrayEncodeDataContainer ba){
+        ba.advance(1);
+        return ba.getBytes()[ba.getLocation()-1];
+    }
+
+
+
+
+
+
 
     public int decodeUInt32(byte[] byteArray, int location) {
         int value = 0;
@@ -153,31 +371,7 @@ public class ByteEncoder extends AbstractEncoder{
         return value;
     }
 
-    public int decodeInt32(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        int value = decodeInt32(ba.getBytes(), ba.getLocation());
-        ba.advance(4);
-        return value;
-    }
 
-    public void encodeInt64(long value, byte[] byteArray,int location) {
-        byteArray[location] = (byte) ((value >> 56) & 0xff);
-        byteArray[location + 1] = (byte) ((value >> 48) & 0xff);
-        byteArray[location + 2] = (byte) ((value >> 40) & 0xff);
-        byteArray[location + 3] = (byte) ((value >> 32) & 0xff);
-        byteArray[location + 4] = (byte) ((value >> 24) & 0xff);
-        byteArray[location + 5] = (byte) ((value >> 16) & 0xff);
-        byteArray[location + 6] = (byte) ((value >> 8) & 0xff);
-        byteArray[location + 7] = (byte) ((value >> 0) & 0xff);
-    }
-
-    public void encodeInt64(Long value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if(value==null) value = 0L;
-        ba.adjustSize(8);
-        encodeInt64(value, ba.getBytes(), ba.getLocation());
-        ba.advance(8);
-    }
 
     public void encodeBigDecimal(BigDecimal value, EncodeDataContainer ba) {
         if(value==null){
@@ -203,18 +397,6 @@ public class ByteEncoder extends AbstractEncoder{
         long longValue = decodeInt64(ba);
         return new BigDecimal(Double.longBitsToDouble(longValue));
         */
-    }
-
-    public long decodeInt64(byte[] byteArray, int location) {
-        long value = (long) (0xff & byteArray[location]) << 56
-                | (long) (0xff & byteArray[location + 1]) << 48
-                | (long) (0xff & byteArray[location + 2]) << 40
-                | (long) (0xff & byteArray[location + 3]) << 32
-                | (long) (0xff & byteArray[location + 4]) << 24
-                | (long) (0xff & byteArray[location + 5]) << 16
-                | (long) (0xff & byteArray[location + 6]) << 8
-                | (long) (0xff & byteArray[location + 7]) << 0;
-        return value;
     }
 
     public long decodeUInt64(byte[] byteArray, int location) {
@@ -270,124 +452,14 @@ public class ByteEncoder extends AbstractEncoder{
         return value;
     }
 
-    public long decodeInt64(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        long value = decodeInt64(ba.getBytes(), ba.getLocation());
-        ba.advance(8);
-        return value;
-    }
 
-    public void encodeString(String value, byte[] byteArray,
-            int location) {
-        byte bytes[] = value.getBytes();
-        encodeInt16(bytes.length, byteArray, location);
-        System.arraycopy(bytes, 0, byteArray, location + 2, bytes.length);
-    }
 
-    public void encodeString(String value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if (value == null) {
-            encodeNULL(ba);
-        } else {
-            byte bytes[] = value.getBytes();
-            ba.adjustSize(bytes.length + 2);
-            encodeInt16(bytes.length, ba.getBytes(), ba.getLocation());
-            System.arraycopy(bytes, 0, ba.getBytes(), ba.getLocation() + 2,
-                    bytes.length);
-            ba.advance(bytes.length + 2);
-        }
-    }
 
-    public String decodeString(byte[] byteArray, int location) {
-        int size = decodeInt16(byteArray, location);
-        return new String(byteArray, location + 2, size);
-    }
 
-    public String decodeString(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if (isNULL(ba)) {
-            return null;
-        }
-        int size = decodeInt16(ba.getBytes(), ba.getLocation());
-        String result = new String(ba.getBytes(), ba.getLocation() + 2, size);
-        ba.advance(size + 2);
-        return result;
-    }
 
-    public void encodeByteArray(byte[] value, byte byteArray[],int location) {
-        encodeInt32(value.length, byteArray, location);
-        System.arraycopy(value, 0, byteArray, location + 4, value.length);
-    }
 
-    public void encodeByteArray(byte[] value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if (value == null) {
-            encodeNULL(ba);
-        } else {
-            ba.adjustSize(value.length + 4);
-            encodeByteArray(value, ba.getBytes(), ba.getLocation());
-            ba.advance(value.length + 4);
-        }
-    }
 
-    public byte[] decodeByteArray(byte[] byteArray, int location) {
-        int size = decodeInt32(byteArray, location);
-        byte array[] = new byte[size];
-        System.arraycopy(byteArray, location + 4, array, 0, array.length);
-        return array;
-    }
 
-    public byte[] decodeByteArray(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if (isNULL(ba)) {
-            return null;
-        }
-        byte[] array = decodeByteArray(ba.getBytes(), ba.getLocation());
-        ba.advance(array.length + 4);
-        return array;
-    }
-
-    public void encodeBoolean(boolean value, byte[] byteArray,int location) {
-        if (value)
-            byteArray[location] = 1;
-        else
-            byteArray[location] = 0;
-    }
-
-    public void encodeBoolean(boolean value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        ba.adjustSize(1);
-        encodeBoolean(value, ba.getBytes(), ba.getLocation());
-        ba.advance(1);
-    }
-
-    public boolean decodeBoolean(byte[] byteArray, int location) {
-        if (byteArray[location] == 1)
-            return true;
-        else
-            return false;
-    }
-
-    public boolean decodeBoolean(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        boolean result = decodeBoolean(ba.getBytes(), ba.getLocation());
-        ba.advance(1);
-        return result;
-    }
-
-    public void encodeByte(Byte value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if(value==null) value = (byte)0;
-        ba.adjustSize(1);
-        ba.getBytes()[ba.getLocation()] = value;
-        ba.advance(1);
-    }
-
-    public byte decodeByte(EncodeDataContainer _ba){
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        ba.advance(1);
-        return ba.getBytes()[ba.getLocation()-1];
-    }
 
     public void encodeAugmentations(Object value, EncodeDataContainer ba) {
         IAugmetationObserver ao = ba.getTypeDescriptorContainer().getAugmentationObserver();
@@ -478,6 +550,7 @@ public class ByteEncoder extends AbstractEncoder{
         }
     }
 
+    /*
     public Object decodeObject(EncodeDataContainer ba) {
         if (isNULL(ba)) {
             return null;
@@ -510,32 +583,9 @@ public class ByteEncoder extends AbstractEncoder{
             System.err.println("Missing class code=" + classCode);
         }
         return null;
-    }
+    }*/
 
-    public boolean isNULL(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        if (ba.getBytes().length > ba.getLocation() + 1
-                && ba.getBytes()[ba.getLocation()] == NULL_VALUE_1
-                && ba.getBytes()[ba.getLocation() + 1] == NULL_VALUE_2) {
-            ba.advance(2);
-            return true;
-        }
-        return false;
-    }
-
-    public static final void encodeNULL(byte byteArray[], int location) {
-        byteArray[location] = NULL_VALUE_1;
-        byteArray[location + 1] = NULL_VALUE_2;
-
-    }
-
-    public void encodeNULL(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
-        ba.adjustSize(2);
-        encodeNULL(ba.getBytes(), ba.getLocation());
-        ba.advance(2);
-    }
-
+    /*
     public Object decodeAndObject(EncodeDataContainer _ba) {
         ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
         if (isNULL(ba)) {
@@ -557,7 +607,7 @@ public class ByteEncoder extends AbstractEncoder{
             System.err.println("Missing class code=" + classCode);
         }
         return null;
-    }
+    }*/
 
     public void encodeIntArray(int value[], EncodeDataContainer ba) {
         if (value == null) {
