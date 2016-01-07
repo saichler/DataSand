@@ -1,10 +1,9 @@
 package org.datasand.network;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ISerializer;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.bytearray.Encoder;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -32,7 +31,7 @@ public class Packet implements ISerializer {
 
     private static int nextPacketID = 1000;
     static {
-        ByteEncoder.registerSerializer(Packet.class, new Packet(),NetworkClassCodes.CODE_Packet);
+        Encoder.registerSerializer(Packet.class, new Packet(),NetworkClassCodes.CODE_Packet);
     }
 
     private Packet() {
@@ -95,7 +94,7 @@ public class Packet implements ISerializer {
         Packet p = (Packet) value;
         p.source.encode(p.source, byteArray, location + PACKET_SOURCE_LOCATION);
         p.destination.encode(p.destination, byteArray, location+ PACKET_DEST_LOCATION);
-        ByteEncoder.encodeInt16(p.packetID, byteArray, location+ PACKET_ID_LOCATION);
+        Encoder.encodeInt16(p.packetID, byteArray, location+ PACKET_ID_LOCATION);
         if (p.multiPart) {
             byte m_p = (byte) (p.priority * 2 + 1);
             byteArray[location + PACKET_MULTIPART_AND_PRIORITY_LOCATION] = m_p;
@@ -109,7 +108,7 @@ public class Packet implements ISerializer {
 
     @Override
     public void encode(Object value, EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
+        BytesArray ba = (BytesArray)_ba;
         encode(value, ba);
         ba.advance(PACKET_DATA_LOCATION + data.length);
     }
@@ -117,11 +116,11 @@ public class Packet implements ISerializer {
     @Override
     public Object decode(byte[] byteArray, int start, int length) {
         Packet m = new Packet();
-        m.source = (NetworkID) ByteEncoder.getSerializer(NetworkID.class,null)
+        m.source = (NetworkID) Encoder.getSerializer(NetworkID.class,null)
                 .decode(byteArray, start + PACKET_SOURCE_LOCATION, 8);
-        m.destination = (NetworkID) ByteEncoder.getSerializer(NetworkID.class,null)
+        m.destination = (NetworkID) Encoder.getSerializer(NetworkID.class,null)
                 .decode(byteArray, start + PACKET_DEST_LOCATION, 8);
-        m.packetID = ByteEncoder.decodeInt16(byteArray, start
+        m.packetID = Encoder.decodeInt16(byteArray, start
                 + PACKET_ID_LOCATION);
         m.priority = ((int) byteArray[start
                 + PACKET_MULTIPART_AND_PRIORITY_LOCATION]) / 2;
@@ -134,7 +133,7 @@ public class Packet implements ISerializer {
 
     @Override
     public Object decode(EncodeDataContainer _ba, int length) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
+        BytesArray ba = (BytesArray)_ba;
         Object p = decode(ba.getBytes(), ba.getLocation(), length);
         ba.advance(length);
         return p;
@@ -169,14 +168,14 @@ public class Packet implements ISerializer {
             if(this.getSource().equals(NetworkNodeConnection.PROTOCOL_ID_UNREACHABLE)){
                 byte origData[] = new byte[this.getData().length-PACKET_DATA_LOCATION];
                 System.arraycopy(this.getData(), PACKET_DATA_LOCATION, origData, 0, origData.length);
-                ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(origData,container.getEmptyTypeDescriptor());
+                BytesArray ba = new BytesArray(origData,container.getEmptyTypeDescriptor());
                 try{
                     decodedObject = ba.getEncoder().decodeObject(ba);
                 }catch(Exception err){
                     System.err.println("Unable to decode...");
                 }
             }else{
-                ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(this.getData(),container.getEmptyTypeDescriptor());
+                BytesArray ba = new BytesArray(this.getData(),container.getEmptyTypeDescriptor());
                 try{
                     decodedObject = ba.getEncoder().decodeObject(ba);}
                 catch(Exception err){
@@ -203,11 +202,11 @@ public class Packet implements ISerializer {
     }
 
     public NetworkID getUnreachableOrigAddress(){
-        int destAddress = ByteEncoder.decodeInt32(this.getData(),PACKET_DEST_LOCATION);
-        int destPort = ByteEncoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION+4);
+        int destAddress = Encoder.decodeInt32(this.getData(),PACKET_DEST_LOCATION);
+        int destPort = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION+4);
         if(destAddress==0){
-            destAddress = ByteEncoder.decodeInt32(this.getData(), this.getData().length-6);
-            destPort = ByteEncoder.decodeInt16(this.getData(), this.getData().length-2);
+            destAddress = Encoder.decodeInt32(this.getData(), this.getData().length-6);
+            destPort = Encoder.decodeInt16(this.getData(), this.getData().length-2);
         }
         return new NetworkID(destAddress, destPort, 0);
     }

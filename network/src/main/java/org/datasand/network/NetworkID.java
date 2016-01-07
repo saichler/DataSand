@@ -1,15 +1,14 @@
 package org.datasand.network;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ISerializer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class NetworkID implements ISerializer {
     private int[] address = null;
     static {
-        ByteEncoder.registerSerializer(NetworkID.class, new NetworkID(),NetworkClassCodes.CODE_NetworkID);
+        Encoder.registerSerializer(NetworkID.class, new NetworkID(),NetworkClassCodes.CODE_NetworkID);
     }
 
     private NetworkID() {
@@ -62,7 +61,7 @@ public class NetworkID implements ISerializer {
     public String getIPv4AddressAsString(){
         StringBuffer buff = new StringBuffer();
         byte ipv4[] = new byte[4];
-        ByteEncoder.encodeInt32(address[0], ipv4, 0);
+        Encoder.encodeInt32(address[0], ipv4, 0);
         String ipString[] = new String[4];
         if (ipv4[0] < 0) {
             ipString[0] = "" + (256 + ipv4[0]);
@@ -95,7 +94,7 @@ public class NetworkID implements ISerializer {
         // ipv4
         if (address.length == 3) {
             byte ipv4[] = new byte[4];
-            ByteEncoder.encodeInt32(address[0], ipv4, 0);
+            Encoder.encodeInt32(address[0], ipv4, 0);
             String ipString[] = new String[4];
             if (ipv4[0] < 0) {
                 ipString[0] = "" + (256 + ipv4[0]);
@@ -150,11 +149,11 @@ public class NetworkID implements ISerializer {
         NetworkID id = (NetworkID)value;
         for (int i = 0; i < id.address.length; i++) {
             if (i < id.address.length - 2)
-                ByteEncoder.encodeInt32(id.address[i], byteArray, start);
+                Encoder.encodeInt32(id.address[i], byteArray, start);
             else if (i == id.address.length - 2)
-                ByteEncoder.encodeInt16(id.address[i], byteArray, start + i * 4);
+                Encoder.encodeInt16(id.address[i], byteArray, start + i * 4);
             else
-                ByteEncoder.encodeInt16(id.address[i], byteArray, start + (i - 1) * 4 + 2);
+                Encoder.encodeInt16(id.address[i], byteArray, start + (i - 1) * 4 + 2);
         }
     }
 
@@ -168,9 +167,9 @@ public class NetworkID implements ISerializer {
 
     @Override
     public Object decode(byte[] byteArray, int start, int length) {
-        int a = ByteEncoder.decodeInt32(byteArray, start);
-        int b = ByteEncoder.decodeInt16(byteArray, start + 4);
-        int c = ByteEncoder.decodeInt16(byteArray, start + 6);
+        int a = Encoder.decodeInt32(byteArray, start);
+        int b = Encoder.decodeInt16(byteArray, start + 4);
+        int c = Encoder.decodeInt16(byteArray, start + 6);
         return new NetworkID(a, b, c);
     }
 

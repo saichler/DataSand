@@ -1,8 +1,7 @@
 package org.datasand.filesystem;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ISerializer;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 
 public class FileDataSerializer implements ISerializer{
 
@@ -12,7 +11,7 @@ public class FileDataSerializer implements ISerializer{
 
 	@Override
 	public void encode(Object value, EncodeDataContainer ba) {
-		FileData.encode(value, (ByteArrayEncodeDataContainer)ba);
+		FileData.encode(value, (BytesArray)ba);
 	}
 
 	@Override
@@ -22,7 +21,7 @@ public class FileDataSerializer implements ISerializer{
 
 	@Override
 	public Object decode(EncodeDataContainer ba, int length) {
-		return FileData.decode((ByteArrayEncodeDataContainer)ba, length);
+		return FileData.decode((BytesArray)ba, length);
 	}
 
 	@Override

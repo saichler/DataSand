@@ -13,7 +13,7 @@ import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.cnode.CNode;
 import org.datasand.agents.cnode.CPeerEntry;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.Encoder;
 import org.datasand.network.NetworkID;
 
 /**
@@ -27,7 +27,7 @@ public class CMap<K,V> extends CNode<Map<K,V>,CMapEntry<K,V>> implements Map<K,V
     private int size = 0;
     private ICMapListener<K, V> listener = null;
     static{
-        ByteEncoder.registerSerializer(CMapEntry.class, new CMapEntry(), MAP_ENTRY_CLASS_CODE);
+        Encoder.registerSerializer(CMapEntry.class, new CMapEntry(), MAP_ENTRY_CLASS_CODE);
     }
     public CMap(int subSystemID,AutonomousAgentManager m, int multicastGroupID,ICMapListener<K, V> _listener){
         super(subSystemID,m,multicastGroupID);

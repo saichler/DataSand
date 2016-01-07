@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.store.DataPersister;

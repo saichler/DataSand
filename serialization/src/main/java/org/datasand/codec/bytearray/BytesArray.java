@@ -1,36 +1,24 @@
+/*
+ * Copyright (c) 2015 DataSand,Sharon Aicler and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.datasand.codec.bytearray;
-
-import java.util.List;
-import java.util.Map;
-
-import org.datasand.codec.EncodeDataContainer;
-import org.datasand.codec.TypeDescriptor;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ByteArrayEncodeDataContainer extends EncodeDataContainer{
+public class BytesArray {
     private int location = 0;
     private byte[] bytes = null;
-    public int enlargeTimes = 0;
 
-    public ByteArrayEncodeDataContainer(byte[] _bytes,TypeDescriptor _typeDescriptor) {
-        super(_typeDescriptor,EncodeDataContainer.ENCODER_TYPE_BYTE_ARRAY);
-        this.bytes = _bytes;
+    public BytesArray(byte[] bytes) {
+        this.bytes = bytes;
     }
 
-    public ByteArrayEncodeDataContainer(byte[] _bytes, Object _codingOption,TypeDescriptor _typeDescriptor) {
-        super(_codingOption,_typeDescriptor,EncodeDataContainer.ENCODER_TYPE_BYTE_ARRAY);
-        this.bytes = _bytes;
-    }
-
-    public ByteArrayEncodeDataContainer(int size,TypeDescriptor _typeDescriptor) {
-        super(_typeDescriptor,EncodeDataContainer.ENCODER_TYPE_BYTE_ARRAY);
-        this.bytes = new byte[size];
-    }
-
-    public ByteArrayEncodeDataContainer(int size, Object _codingOption,TypeDescriptor _typeDescriptor) {
-        super(_codingOption,_typeDescriptor,EncodeDataContainer.ENCODER_TYPE_BYTE_ARRAY);
+    public BytesArray(int size) {
         this.bytes = new byte[size];
     }
 
@@ -53,9 +41,9 @@ public class ByteArrayEncodeDataContainer extends EncodeDataContainer{
     }
 
     public void adjustSize(int goingToAdd) {
-        if (location + goingToAdd < bytes.length)
+        if (location + goingToAdd < bytes.length) {
             return;
-        enlargeTimes++;
+        }
         int newSize = (int) (bytes.length * 1.3);
         if (newSize < location + goingToAdd) {
             newSize = location + goingToAdd;
@@ -67,11 +55,6 @@ public class ByteArrayEncodeDataContainer extends EncodeDataContainer{
 
     public void resetLocation() {
         this.location = 0;
-        for (List<EncodeDataContainer> list : this.getSubElementsData().values()) {
-            for (EncodeDataContainer subBA : list) {
-                ((ByteArrayEncodeDataContainer)subBA).resetLocation();
-            }
-        }
     }
 
     public byte[] getMarked(int mark) {
@@ -80,6 +63,7 @@ public class ByteArrayEncodeDataContainer extends EncodeDataContainer{
         return result;
     }
 
+    /*
     public static byte[] toSingleByteArray(ByteArrayEncodeDataContainer source){
         ByteArrayEncodeDataContainer enc = new ByteArrayEncodeDataContainer(1024,source.getTypeDescriptor());
         byte data[] = source.getData();
@@ -117,5 +101,5 @@ public class ByteArrayEncodeDataContainer extends EncodeDataContainer{
     	this.adjustSize(otherData.length-startLocation);
     	System.arraycopy(otherData, startLocation, this.bytes, this.location,otherData.length-startLocation);
     	this.advance(otherData.length-startLocation);
-    }
+    }*/
 }

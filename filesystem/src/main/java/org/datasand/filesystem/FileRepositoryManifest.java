@@ -3,13 +3,12 @@ package org.datasand.filesystem;
 import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 
 public class FileRepositoryManifest {
 	
@@ -89,7 +88,7 @@ public class FileRepositoryManifest {
 		private long md5B = -1;		
 	}
 	
-	public static void encode(Object obj,ByteArrayEncodeDataContainer ba){
+	public static void encode(Object obj,BytesArray ba){
 		FileRepositoryManifest rm = (FileRepositoryManifest)obj;
 		ba.getEncoder().encodeString(rm.directory, ba);
 		ba.getEncoder().encodeSize(rm.fileExtentions.size(),ba);
@@ -102,7 +101,7 @@ public class FileRepositoryManifest {
 		}
 	}
 	
-	public static Object decode(ByteArrayEncodeDataContainer ba){
+	public static Object decode(BytesArray ba){
 		FileRepositoryManifest rm = new FileRepositoryManifest();
 		rm.directory = ba.getEncoder().decodeString(ba);
 		int size = ba.getEncoder().decodeSize(ba);
@@ -117,7 +116,7 @@ public class FileRepositoryManifest {
 		return rm;
 	}
 	
-	public static void encodeFileDesc(Object obj,ByteArrayEncodeDataContainer ba){
+	public static void encodeFileDesc(Object obj,BytesArray ba){
 		FileDescription fd = (FileDescription)obj;
 		ba.getEncoder().encodeString(fd.name, ba);
 		ba.getEncoder().encodeInt64(fd.lastChanged, ba);
@@ -127,7 +126,7 @@ public class FileRepositoryManifest {
 		ba.getEncoder().encodeInt64(fd.md5B, ba);
 	}
 
-	public static FileDescription decodeFileDesc(ByteArrayEncodeDataContainer ba){
+	public static FileDescription decodeFileDesc(BytesArray ba){
 		FileDescription fd = new FileDescription();
 		fd.name = ba.getEncoder().decodeString(ba);
 		fd.lastChanged = ba.getEncoder().decodeInt64(ba);

@@ -8,71 +8,44 @@
 package org.datasand.codec.bytearray;
 
 import java.lang.reflect.Array;
-import java.math.BigDecimal;
 import java.net.Inet6Address;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import org.datasand.codec.EncodeDataContainer;
-import org.datasand.codec.FrameworkClassCodes;
 import org.datasand.codec.ISerializer;
 import org.datasand.codec.MD5Identifier;
-import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.observers.IAugmetationObserver;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ByteEncoder {
+public class Encoder {
 
     public static final byte[] NULL = new byte[] {'-','N','U','L','L','-'};
-    private static final Map<MD5Identifier,ISerializer> md5ToSerializer = new HashMap<>();
-    private static final Map<String,MD5Identifier> classNameToMD5 = new HashMap<>();
-
-    private static final ISerializer getSerializer(MD5Identifier id){
-        return md5ToSerializer.get(id);
-    }
-
-    private static final MD5Identifier getMD5(Object o){
-        String className = o.getClass().getName();
-        MD5Identifier md5ID = classNameToMD5.get(className);
-        if(md5ID==null){
-            md5ID = MD5Identifier.createX(className);
-            classNameToMD5.put(className,md5ID);
-        }
-        return md5ID;
-    }
-
-    private static final ISerializer getSerializer(long a,long b){
-        MD5Identifier id = MD5Identifier.createX(a,b);
-        return md5ToSerializer.get(id);
-    }
+    private static final SerializersManager serializersManager = new SerializersManager();
 
     //Object
-    public static final void encodeObject(Object value,ByteArrayEncodeDataContainer ba){
+    public static final void encodeObject(Object value,BytesArray ba){
         if(value==null){
             encodeNULL(ba);
         }else{
             ba.adjustSize(16);
-            MD5Identifier id = getMD5(value);
+            MD5Identifier id = serializersManager.getMD5ByObject(value);
             encodeInt64(id.getA(),ba);
             encodeInt64(id.getB(),ba);
             ba.advance(16);
-            ISerializer serializer = getSerializer(id);
+            ISerializer serializer = serializersManager.getSerializerByMD5(id);
             serializer.encode(value,ba);
         }
     }
 
-    public static final Object decodeObject(ByteArrayEncodeDataContainer ba){
+    public static final Object decodeObject(BytesArray ba){
         if(isNULL(ba)){
             return null;
         }else{
             long a = decodeInt64(ba);
             long b = decodeInt64(ba);
-            ISerializer serializer = getSerializer(a,b);
+            ISerializer serializer = serializersManager.getSerializerByLongs(a,b);
             return serializer.decode(ba);
         }
     }
@@ -99,13 +72,13 @@ public class ByteEncoder {
         return value;
     }
 
-    public static final void encodeInt16(int value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeInt16(int value, BytesArray ba) {
         ba.adjustSize(2);
         encodeInt16(value, ba.getBytes(), ba.getLocation());
         ba.advance(2);
     }
 
-    public static final int decodeInt16(ByteArrayEncodeDataContainer ba) {
+    public static final int decodeInt16(BytesArray ba) {
         int value = decodeInt16(ba.getBytes(), ba.getLocation());
         ba.advance(2);
         return value;
@@ -126,14 +99,14 @@ public class ByteEncoder {
                 | (int) (0xff & byteArray[location + 3]);
     }
 
-    public static final void encodeInt32(Integer value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeInt32(Integer value, BytesArray ba) {
         if(value==null) value = 0;
         ba.adjustSize(4);
         encodeInt32(value, ba.getBytes(), ba.getLocation());
         ba.advance(4);
     }
 
-    public static final int decodeInt32(ByteArrayEncodeDataContainer ba) {
+    public static final int decodeInt32(BytesArray ba) {
         int value = decodeInt32(ba.getBytes(), ba.getLocation());
         ba.advance(4);
         return value;
@@ -162,7 +135,7 @@ public class ByteEncoder {
                 | (long) (0xff & byteArray[location + 7]);
     }
 
-    public static final void encodeInt64(Long value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeInt64(Long value, BytesArray ba) {
         if(value==null)
             value = 0L;
         ba.adjustSize(8);
@@ -170,20 +143,20 @@ public class ByteEncoder {
         ba.advance(8);
     }
 
-    public static final long decodeInt64(ByteArrayEncodeDataContainer ba) {
+    public static final long decodeInt64(BytesArray ba) {
         long value = decodeInt64(ba.getBytes(), ba.getLocation());
         ba.advance(8);
         return value;
     }
 
     //NULL
-    public static final void encodeNULL(ByteArrayEncodeDataContainer ba) {
+    public static final void encodeNULL(BytesArray ba) {
         ba.adjustSize(NULL.length);
         System.arraycopy(NULL,0,ba.getBytes(),ba.getLocation(),NULL.length);
         ba.advance(NULL.length);
     }
 
-    public static final boolean isNULL(ByteArrayEncodeDataContainer ba) {
+    public static final boolean isNULL(BytesArray ba) {
         if(ba.getBytes().length<ba.getLocation()+NULL.length){
             return false;
         }
@@ -208,7 +181,7 @@ public class ByteEncoder {
         return new String(byteArray, location + 2, size);
     }
 
-    public static final void encodeString(String value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeString(String value, BytesArray ba) {
         if (value == null) {
             encodeNULL(ba);
         } else {
@@ -219,7 +192,7 @@ public class ByteEncoder {
         }
     }
 
-    public static final String decodeString(ByteArrayEncodeDataContainer ba) {
+    public static final String decodeString(BytesArray ba) {
         if (isNULL(ba)) {
             return null;
         }
@@ -251,14 +224,14 @@ public class ByteEncoder {
         return value;
     }
 
-    public static final void encodeShort(Short value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeShort(Short value, BytesArray ba) {
         if(value==null) value = 0;
         ba.adjustSize(2);
         encodeShort(value, ba.getBytes(), ba.getLocation());
         ba.advance(2);
     }
 
-    public static final short decodeShort(ByteArrayEncodeDataContainer ba) {
+    public static final short decodeShort(BytesArray ba) {
         short value = decodeShort(ba.getBytes(), ba.getLocation());
         ba.advance(2);
         return value;
@@ -277,7 +250,7 @@ public class ByteEncoder {
         return array;
     }
 
-    public static final void encodeByteArray(byte[] value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeByteArray(byte[] value, BytesArray ba) {
         if (value == null) {
             encodeNULL(ba);
         } else {
@@ -287,7 +260,7 @@ public class ByteEncoder {
         }
     }
 
-    public static final byte[] decodeByteArray(ByteArrayEncodeDataContainer ba) {
+    public static final byte[] decodeByteArray(BytesArray ba) {
         if (isNULL(ba)) {
             return null;
         }
@@ -311,37 +284,123 @@ public class ByteEncoder {
             return false;
     }
 
-    public static final void encodeBoolean(Boolean value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeBoolean(Boolean value, BytesArray ba) {
         if(value==null) value = false;
         ba.adjustSize(1);
         encodeBoolean(value, ba.getBytes(), ba.getLocation());
         ba.advance(1);
     }
 
-    public static final Boolean decodeBoolean(ByteArrayEncodeDataContainer ba) {
+    public static final Boolean decodeBoolean(BytesArray ba) {
         boolean result = decodeBoolean(ba.getBytes(), ba.getLocation());
         ba.advance(1);
         return result;
     }
 
     //Byte
-    public static final void encodeByte(Byte value, ByteArrayEncodeDataContainer ba) {
+    public static final void encodeByte(Byte value, BytesArray ba) {
         if(value==null) value = (byte)0;
         ba.adjustSize(1);
         ba.getBytes()[ba.getLocation()] = value;
         ba.advance(1);
     }
 
-    public static final byte decodeByte(ByteArrayEncodeDataContainer ba){
+    public static final byte decodeByte(BytesArray ba){
         ba.advance(1);
         return ba.getBytes()[ba.getLocation()-1];
     }
 
+    //Int array
+    public static final void encodeIntArray(int value[], BytesArray ba) {
+        if (value == null) {
+            encodeNULL(ba);
+        } else {
+            encodeInt32(value.length, ba);
+            for (int i = 0; i < value.length; i++) {
+                encodeInt32(value[i], ba);
+            }
+        }
+    }
+
+    public static final int[] decodeIntArray(BytesArray ba) {
+        if (isNULL(ba)) {
+            return null;
+        }
+        int size = decodeInt32(ba);
+        int result[] = new int[size];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = decodeInt32(ba);
+        }
+        return result;
+    }
+
+    //Array of objects
+    public static final void encodeArray(Object value[], BytesArray ba) {
+        if (value == null) {
+            encodeNULL(ba);
+        } else {
+            encodeInt32(value.length, ba);
+            MD5Identifier id = serializersManager.getMD5ByClass(value.getClass().getComponentType());
+            encodeInt64(id.getA(),ba);
+            encodeInt64(id.getB(),ba);
+            ISerializer serializer = serializersManager.getSerializerByMD5(id);
+            for (int i = 0; i < value.length; i++) {
+                serializer.encode(value[i],ba);
+            }
+        }
+    }
+
+    public static final Object[] decodeArray(BytesArray ba) {
+        if (isNULL(ba)) {
+            return null;
+        }
+        int size = decodeInt32(ba);
+        long a = decodeInt64(ba);
+        long b = decodeInt64(ba);
+        MD5Identifier id = MD5Identifier.createX(a,b);
+        ISerializer serializer = serializersManager.getSerializerByMD5(id);
+        Class cls = serializersManager.getClassByMD5(id);
+        Object result[] = (Object[]) Array.newInstance(cls, size);
+        for (int i = 0; i < result.length; i++) {
+            result[i] = serializer.decode(ba);
+        }
+        return result;
+    }
+
+    //List
+    public static final void encodeList(List<?> list, BytesArray ba) {
+        if (list == null || list.size()==0) {
+            encodeNULL(ba);
+        } else {
+            encodeInt32(list.size(), ba);
+            MD5Identifier id = serializersManager.getMD5ByClass(list.get(0).getClass());
+            encodeInt64(id.getA(),ba);
+            encodeInt64(id.getB(),ba);
+            ISerializer serializer = serializersManager.getSerializerByMD5(id);
+            for (Object o: list) {
+                serializer.encode(o,ba);
+            }
+        }
+    }
+
+    public static final List<?> decodeList(BytesArray ba) {
+        if (isNULL(ba)) {
+            return null;
+        }
+        int size = decodeInt32(ba);
+        long a = decodeInt64(ba);
+        long b = decodeInt64(ba);
+        MD5Identifier id = MD5Identifier.createX(a,b);
+        ISerializer serializer = serializersManager.getSerializerByMD5(id);
+        List result = new ArrayList(size);
+        for (int i = 0; i < size; i++) {
+            result.add(serializer.decode(ba));
+        }
+        return result;
+    }
 
 
-
-
-
+    /*
 
     public int decodeUInt32(byte[] byteArray, int location) {
         int value = 0;
@@ -386,7 +445,7 @@ public class ByteEncoder {
         ba.adjustSize(8);
         encodeInt64(longValue, ba.getBytes(), ba.getLocation());
         ba.advance(8);
-        */
+
     }
 
     public BigDecimal decodeBigDecimal(EncodeDataContainer ba){
@@ -396,7 +455,7 @@ public class ByteEncoder {
         /*
         long longValue = decodeInt64(ba);
         return new BigDecimal(Double.longBitsToDouble(longValue));
-        */
+
     }
 
     public long decodeUInt64(byte[] byteArray, int location) {
@@ -475,15 +534,17 @@ public class ByteEncoder {
         }
     }
 
+
+    /*
     public void encodeAndAddObject(Object value, EncodeDataContainer _ba,Class<?> objectType) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
+        BytesArray ba = (BytesArray)_ba;
         if (value == null) {
             encodeNULL(ba);
         } else {
             TypeDescriptor tbl = ba.getTypeDescriptorContainer().getTypeDescriptorByClass(objectType);
             int classCode = tbl.getClassCode();
             encodeInt16(classCode,ba);
-            EncodeDataContainer subBA = new ByteArrayEncodeDataContainer(1024,ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode));
+            EncodeDataContainer subBA = new BytesArray(1024,ba.getTypeDescriptorContainer().getTypeDescriptorByCode(classCode));
             ISerializer serializer = getSerializer(objectType,ba.getTypeDescriptorContainer());
             if (serializer != null) {
                 encodeInt16(classCode, subBA);
@@ -493,14 +554,6 @@ public class ByteEncoder {
                 System.err.println("Can't find a serializer for " + objectType);
             }
         }
-    }
-
-    public void encodeObject(Object value, EncodeDataContainer ba) {
-        if(value==null){
-            encodeNULL(ba);
-            return;
-        }
-        encodeObject(value, ba,null);
     }
 
     public void encodeObject(Object value, EncodeDataContainer ba,Class<?> objectType) {
@@ -548,7 +601,7 @@ public class ByteEncoder {
         } else {
             System.err.println("Can't find a serializer for " + objectType);
         }
-    }
+    }*/
 
     /*
     public Object decodeObject(EncodeDataContainer ba) {
@@ -587,7 +640,7 @@ public class ByteEncoder {
 
     /*
     public Object decodeAndObject(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
+        BytesArray ba = (BytesArray)_ba;
         if (isNULL(ba)) {
             return null;
         }
@@ -598,7 +651,7 @@ public class ByteEncoder {
         }
         if (serializer != null) {
             if(ba.getSubElementsData().get(classCode)!=null){
-                ByteArrayEncodeDataContainer subBA = (ByteArrayEncodeDataContainer)ba.getSubElementsData().get(classCode).get(0);
+                BytesArray subBA = (BytesArray)ba.getSubElementsData().get(classCode).get(0);
                 subBA.advance(2);
                 return serializer.decode(subBA, 0);
             }else
@@ -607,29 +660,6 @@ public class ByteEncoder {
             System.err.println("Missing class code=" + classCode);
         }
         return null;
-    }*/
-
-    public void encodeIntArray(int value[], EncodeDataContainer ba) {
-        if (value == null) {
-            encodeNULL(ba);
-        } else {
-            encodeInt32(value.length, ba);
-            for (int i = 0; i < value.length; i++) {
-                encodeInt32(value[i], ba);
-            }
-        }
-    }
-
-    public int[] decodeIntArray(EncodeDataContainer ba) {
-        if (isNULL(ba)) {
-            return null;
-        }
-        int size = decodeInt32(ba);
-        int result[] = new int[size];
-        for (int i = 0; i < result.length; i++) {
-            result[i] = decodeInt32(ba);
-        }
-        return result;
     }
 
     public void encodeArray(Object value[], EncodeDataContainer ba,Class<?> componentType) {
@@ -660,22 +690,6 @@ public class ByteEncoder {
         }
     }
 
-    public void encodeList(List<?> list, EncodeDataContainer ba,Class<?> componentType) {
-        if (list == null) {
-            encodeNULL(ba);
-        } else {
-            encodeInt32(list.size(), ba);
-            for (Object o: list) {
-                if (String.class.equals(componentType)) {
-                    encodeString((String) o, ba);
-                } else if (ISerializer.class.isAssignableFrom(componentType)) {
-                    ((ISerializer) o).encode(o, ba);
-                } else {
-                    encodeObject(o, ba, componentType);
-                }
-            }
-        }
-    }
 
     public void encodeAndAddList(List<?> list, EncodeDataContainer ba,Class<?> componentType) {
         if (list == null) {
@@ -684,7 +698,7 @@ public class ByteEncoder {
             encodeInt32(list.size(), ba);
             int componentCode = ba.getTypeDescriptorContainer().getTypeDescriptorByClass(componentType).getClassCode();
             for (Object o: list) {
-                ByteArrayEncodeDataContainer subBA = new ByteArrayEncodeDataContainer(1024,ba.getTypeDescriptorContainer().getTypeDescriptorByCode(componentCode));
+                BytesArray subBA = new BytesArray(1024,ba.getTypeDescriptorContainer().getTypeDescriptorByCode(componentCode));
                 if (String.class.equals(componentType)) {
                     encodeString((String) o, subBA);
                 } else if (ISerializer.class.isAssignableFrom(componentType)) {
@@ -695,42 +709,6 @@ public class ByteEncoder {
                 ba.addSubElementData(componentCode, subBA,o);
             }
         }
-    }
-
-    public Object[] decodeArray(EncodeDataContainer ba,Class<?> componentType) {
-        if (isNULL(ba)) {
-            return null;
-        }
-        int size = decodeInt32(ba);
-        Object result[] = (Object[]) Array.newInstance(componentType, size);
-        for (int i = 0; i < result.length; i++) {
-            if (String.class.equals(componentType)) {
-                result[i] = decodeString(ba);
-            } else if (ISerializer.class.isAssignableFrom(componentType)) {
-                ISerializer serializer = getSerializer(componentType,ba.getTypeDescriptorContainer());
-                if (serializer != null) {
-                    result[i] = serializer.decode(ba, 0);
-                } else {
-                    System.err.println("Can't find Serializer for class:"
-                            + componentType.getName());
-                }
-            } else {
-                result[i] = decodeObject(ba);
-            }
-        }
-        return result;
-    }
-
-    public List<Object> decodeList(EncodeDataContainer ba) {
-        if (isNULL(ba)) {
-            return null;
-        }
-        int size = decodeInt32(ba);
-        List<Object> result = new ArrayList<Object>(size);
-        for (int i = 0; i < size; i++) {
-            result.add(decodeObject(ba));
-        }
-        return result;
     }
 
     public List<Object> decodeList(EncodeDataContainer ba,Class<?> componentType) {
@@ -797,7 +775,7 @@ public class ByteEncoder {
         if(result.size()==0)
             return null;
         return result;
-    }
+    }*/
 
     public static String getLocalIPAddress() {
         try {

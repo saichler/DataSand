@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -19,8 +19,8 @@ public class DataSandJDBCDriver implements Driver {
 
     public static DataSandJDBCDriver drv = new DataSandJDBCDriver();
     static {
-        ByteEncoder.registerSerializer(DataSandJDBCMessage.class, new DataSandJDBCMessage(), 432);
-        ByteEncoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer(), 433);
+        Encoder.registerSerializer(DataSandJDBCMessage.class, new DataSandJDBCMessage(), 432);
+        Encoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer(), 433);
     }
     public DataSandJDBCDriver() {
         try {

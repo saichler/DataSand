@@ -9,7 +9,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -226,8 +226,8 @@ public class NetworkNodeConnection extends Thread {
     public static final byte[] addUnreachableAddressForMulticast(byte data[],int destAddress,int destPort){
         byte[] _unreachable = new byte[data.length+6];
         System.arraycopy(data, 0, _unreachable,0, data.length);
-        ByteEncoder.encodeInt32(destAddress, _unreachable, data.length);
-        ByteEncoder.encodeInt16(destPort, _unreachable, data.length+4);
+        Encoder.encodeInt32(destAddress, _unreachable, data.length);
+        Encoder.encodeInt16(destPort, _unreachable, data.length+4);
         return _unreachable;
     }
 
@@ -254,8 +254,8 @@ public class NetworkNodeConnection extends Thread {
                 }
 
                 if (data != null && data.length > 0) {
-                    int destAddr = ByteEncoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
-                    int destPort = ByteEncoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
+                    int destAddr = Encoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
+                    int destPort = Encoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
                     if (destAddr == 0) {
                         if (networkNode.getLocalHost().getPort() != 50000) {
                             networkNode.receivedPacket(data);
@@ -274,8 +274,8 @@ public class NetworkNodeConnection extends Thread {
                             }
                         } else {
                             data = markAsUnreachable(data);
-                            destAddr = ByteEncoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
-                            destPort = ByteEncoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
+                            destAddr = Encoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
+                            destPort = Encoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
                             NetworkNodeConnection source = networkNode.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
@@ -286,7 +286,7 @@ public class NetworkNodeConnection extends Thread {
                             } else
                                 System.err.println("Source unreachable:"
                                         + new NetworkID(destAddr, destPort,
-                                                ByteEncoder.decodeInt16(data,
+                                                Encoder.decodeInt16(data,
                                                         16)));
                         }
                     } else if (destAddr != networkNode.getLocalHost().getIPv4Address() && networkNode.getLocalHost().getPort() == 50000) {
@@ -299,8 +299,8 @@ public class NetworkNodeConnection extends Thread {
                             }
                         } else {
                             data = markAsUnreachable(data);
-                            destAddr = ByteEncoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
-                            destPort = ByteEncoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
+                            destAddr = Encoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
+                            destPort = Encoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
                             NetworkNodeConnection source = networkNode.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
@@ -311,7 +311,7 @@ public class NetworkNodeConnection extends Thread {
                             } else
                                 System.err.println("Source unreachable:"
                                         + new NetworkID(destAddr, destPort,
-                                                ByteEncoder.decodeInt16(data,
+                                                Encoder.decodeInt16(data,
                                                         16)));
                         }
                     }

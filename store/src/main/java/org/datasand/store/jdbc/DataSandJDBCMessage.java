@@ -4,9 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.datasand.agents.Message;
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.network.NetworkID;
 import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
 /**
@@ -69,7 +68,7 @@ public class DataSandJDBCMessage extends Message {
         super(TYPE_QUERY_RECORD,new DataSandJDBCDataContainer(records, _rsID));
     }
 
-    public DataSandJDBCMessage(ByteArrayEncodeDataContainer edc, RSID _rsID) {
+    public DataSandJDBCMessage(BytesArray edc, RSID _rsID) {
         super(TYPE_QUERY_RECORD,edc);
     }
 
@@ -114,8 +113,8 @@ public class DataSandJDBCMessage extends Message {
     	if(this.getMessageData() instanceof DataSandJDBCDataContainer){
     		return ((DataSandJDBCDataContainer)this.getMessageData()).getRsID();
     	}else
-    	if(this.getMessageData() instanceof ByteArrayEncodeDataContainer){
-    		ByteArrayEncodeDataContainer edc = (ByteArrayEncodeDataContainer)this.getMessageData();
+    	if(this.getMessageData() instanceof BytesArray){
+    		BytesArray edc = (BytesArray)this.getMessageData();
     		//reset the location to 0
     		edc.resetLocation();
     		//decode only the RDID

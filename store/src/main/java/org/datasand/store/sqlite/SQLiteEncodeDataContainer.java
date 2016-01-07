@@ -3,7 +3,6 @@ package org.datasand.store.sqlite;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptor;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

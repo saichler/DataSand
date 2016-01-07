@@ -1,6 +1,5 @@
 package org.datasand.store.json;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.EncodeDataContainerFactory.EncodeDataContainerInstantiator;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.json.JsonEncodeDataContainer;

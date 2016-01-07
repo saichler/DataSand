@@ -10,11 +10,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.MD5Identifier;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.bytearray.Encoder;
 import org.datasand.store.DataPersister;
 import org.datasand.store.Shard;
 /**
@@ -35,7 +34,7 @@ public class ByteArrayDataPersister extends DataPersister{
 
     private static final int HEADER_SIZE = 12;
 
-    private ByteArrayEncodeDataContainer writeBuffer = null;
+    private BytesArray writeBuffer = null;
     private static final long MAX_WRITE_BUFFER_SIZE = 1024*1024*10;
     public static boolean USE_WRITE_BUFFERING = true;
 
@@ -47,7 +46,7 @@ public class ByteArrayDataPersister extends DataPersister{
 
     public void save() {
         try {
-            ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(1024,container.getEmptyTypeDescriptor());
+            BytesArray ba = new BytesArray(1024,container.getEmptyTypeDescriptor());
             ba.getEncoder().encodeInt32(changeNumber, ba);
             ba.getEncoder().encodeInt32(locations.size(), ba);
             for (Map.Entry<MD5Identifier, ByteArrayDataLocation> entry : locations.entrySet()) {
@@ -85,7 +84,7 @@ public class ByteArrayDataPersister extends DataPersister{
                 FileInputStream in = new FileInputStream(f);
                 in.read(data);
                 in.close();
-                ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(data,container.getEmptyTypeDescriptor());
+                BytesArray ba = new BytesArray(data,container.getEmptyTypeDescriptor());
                 changeNumber = ba.getEncoder().decodeInt32(ba);
                 int size = ba.getEncoder().decodeInt32(ba);
                 for (int i = 0; i < size; i++) {
@@ -119,7 +118,7 @@ public class ByteArrayDataPersister extends DataPersister{
         super(_shard,_type,_container);
         this.dataFileLocation = this.shard.getBlockLocation() + "/" + _type.getName() + ".dat";
         this.dataFileDefLocation = this.shard.getBlockLocation() + "/" + _type.getName() + ".loc";
-        this.writeBuffer = new ByteArrayEncodeDataContainer(1024,this.container.getEmptyTypeDescriptor());
+        this.writeBuffer = new BytesArray(1024,this.container.getEmptyTypeDescriptor());
         file = new File(this.dataFileLocation);
     }
 
@@ -147,7 +146,7 @@ public class ByteArrayDataPersister extends DataPersister{
     }
 
     public int write(int parentRecordIndex,int recordIndex,EncodeDataContainer ba) {
-        byte[] data = ((ByteArrayEncodeDataContainer)ba).getData();
+        byte[] data = ((BytesArray)ba).getData();
         synchronized (this.locations) {
             if (randomAccessFile == null) {
                 try {
@@ -303,10 +302,10 @@ public class ByteArrayDataPersister extends DataPersister{
 
     private byte[] getHeader(int dataSize,int parentRecordIndex){
         byte header[] = new byte[12];
-        ByteEncoder.encodeInt32(changeNumber, header,0);
+        Encoder.encodeInt32(changeNumber, header,0);
         changeNumber++;
-        ByteEncoder.encodeInt32(dataSize,header,4);
-        ByteEncoder.encodeInt32(parentRecordIndex,header,8);
+        Encoder.encodeInt32(dataSize,header,4);
+        Encoder.encodeInt32(parentRecordIndex,header,8);
         return header;
     }
 

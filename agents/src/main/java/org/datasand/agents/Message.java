@@ -3,9 +3,9 @@ package org.datasand.agents;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ISerializer;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  *
@@ -60,14 +60,14 @@ public class Message implements ISerializer{
         Message m = (Message)value;
         edc.getEncoder().encodeInt32(m.getMessageType(), edc);        
         edc.getEncoder().encodeInt64(m.messageID, edc);
-        if(passThroughOutgoingMessage.containsKey(m.getMessageType()) && m.getMessageData() instanceof ByteArrayEncodeDataContainer){
+        if(passThroughOutgoingMessage.containsKey(m.getMessageType()) && m.getMessageData() instanceof BytesArray){
         	//this is a passthrough message
         	//copy the data bytes from the other container to this message
         	//2 - for the message class type
         	//4 - for the message type
         	//8 - for the message id
         	// == 14
-        	((ByteArrayEncodeDataContainer)edc).insert((ByteArrayEncodeDataContainer)m.getMessageData(),14);
+        	((BytesArray)edc).insert((BytesArray)m.getMessageData(),14);
         }else
         	edc.getEncoder().encodeObject(m.messageData, edc);
     }

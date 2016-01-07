@@ -1,6 +1,5 @@
 package org.datasand.codec.observers;
 
-import org.datasand.codec.EncodeDataContainer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */

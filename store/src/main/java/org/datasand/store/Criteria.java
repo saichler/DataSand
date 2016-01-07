@@ -3,7 +3,7 @@ package org.datasand.store;
 import java.io.Serializable;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.EncodeDataContainer;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */

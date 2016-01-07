@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.bytearray.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -47,7 +47,7 @@ public class NetworkNode extends Thread {
                 new NetworkID(0, 0, 0);
                 new Packet(localHost, localHost, (byte[]) null);
                 int localhost = NetworkID.valueOf(
-                        ByteEncoder.getLocalIPAddress() + ":0:0").getIPv4Address();
+                        Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
                 socket = new ServerSocket(i);
                 localHost = new NetworkID(localhost, i, 0);
                 if (i > 50000){
@@ -123,7 +123,7 @@ public class NetworkNode extends Thread {
             if (data.length % Packet.MAX_DATA_IN_ONE_PACKET > 0)
                 count++;
             byte[] countData = new byte[4];
-            ByteEncoder.encodeInt32(count, countData, 0);
+            Encoder.encodeInt32(count, countData, 0);
             Packet header = new Packet(source, dest, countData, -1, true);
             send(header);
             for (int i = 0; i < count; i++) {
@@ -243,8 +243,8 @@ public class NetworkNode extends Thread {
         public void run(){
             if(unicast) return;
             while(running){
-                ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(new byte[8], null);
-                ByteEncoder.getSerializer(NetworkID.class, null).encode(getLocalHost(), ba);
+                BytesArray ba = new BytesArray(new byte[8], null);
+                Encoder.getSerializer(NetworkID.class, null).encode(getLocalHost(), ba);
                 byte data[] = ba.getData();
                 try{
                     DatagramPacket packet = new DatagramPacket(data,data.length,InetAddress.getByName("255.255.255.255"),49999);
@@ -288,8 +288,8 @@ public class NetworkNode extends Thread {
             }
         }
         private void processIncomingPacket(DatagramPacket p){
-            ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(p.getData(), null);
-            NetworkID id = (NetworkID)ByteEncoder.getSerializer(NetworkID.class, null).decode(ba,0);
+            BytesArray ba = new BytesArray(p.getData(), null);
+            NetworkID id = (NetworkID) Encoder.getSerializer(NetworkID.class, null).decode(ba,0);
             if(!id.equals(getLocalHost())){
                 NetworkNodeConnection node = getNodeConnection(id.getIPv4Address(), id.getPort(), true);
                 if(node==null){
@@ -362,8 +362,8 @@ public class NetworkNode extends Thread {
     }
 
     public void broadcast(byte data[]) {
-        int sourceAddress = ByteEncoder.decodeInt32(data,Packet.PACKET_SOURCE_LOCATION);
-        int sourcePort = ByteEncoder.decodeInt16(data,Packet.PACKET_SOURCE_LOCATION+4);
+        int sourceAddress = Encoder.decodeInt32(data,Packet.PACKET_SOURCE_LOCATION);
+        int sourcePort = Encoder.decodeInt16(data,Packet.PACKET_SOURCE_LOCATION+4);
         NetworkNodeConnection sourceCon = getNodeConnection(sourceAddress, sourcePort,false);
         List<NetworkID> unreachableDest = new LinkedList<NetworkID>();
         for (Map.Entry<Integer, Map<Integer, NetworkNodeConnection>> addrEntry : this.routingTable.entrySet()) {
@@ -511,7 +511,7 @@ public class NetworkNode extends Thread {
                 if (mpc == null) {
                     mpc = new MultiPartContainer();
                     multiparts.put(pID, mpc);
-                    mpc.expectedCount = ByteEncoder.decodeInt32(packet,
+                    mpc.expectedCount = Encoder.decodeInt32(packet,
                             Packet.PACKET_DATA_LOCATION);
                 } else {
                     mpc.parts.add(packet);

@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ISerializer;
 import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.network.NetworkID;

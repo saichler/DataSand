@@ -3,9 +3,8 @@ package org.opendaylight.persisted.mdsal;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.codec.observers.IAugmetationObserver;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 /**
@@ -23,7 +22,7 @@ public class MDSalAugmentationObserver implements IAugmetationObserver{
         if (ctype.getAugmentationField(value) != null) {
             try {
                 Map<?, ?> augmentations = (Map<?, ?>) ctype.getAugmentationField(value).get(value);
-                if(ba instanceof ByteArrayEncodeDataContainer){
+                if(ba instanceof BytesArray){
                     if (augmentations == null) {
                         ba.getEncoder().encodeNULL(ba);
                     } else {

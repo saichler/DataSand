@@ -1,6 +1,5 @@
 package org.datasand.store.sqlite;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.EncodeDataContainerFactory.EncodeDataContainerInstantiator;
 import org.datasand.codec.TypeDescriptor;
 /**

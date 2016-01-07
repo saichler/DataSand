@@ -3,9 +3,7 @@ package org.datasand.store.sqlite;
 import java.math.BigDecimal;
 import java.util.List;
 
-import org.datasand.codec.AbstractEncoder;
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ISerializer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

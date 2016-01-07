@@ -12,7 +12,7 @@ import java.util.List;
 import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.codec.json.JsonEncodeDataContainer;
 import org.datasand.codec.xml.XMLEncodeDataContainer;
 import org.datasand.store.ObjectDataStore;
@@ -70,10 +70,10 @@ public class POJODBTest {
     @Test
     public void testPojoSerialization(){
         PojoObject before = buildPojo(123);
-        ByteArrayEncodeDataContainer dc = new ByteArrayEncodeDataContainer(1024,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
+        BytesArray dc = new BytesArray(1024,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
         dc.getEncoder().encodeObject(before, dc, PojoObject.class);
         byte[] data = dc.getBytes();
-        dc = new ByteArrayEncodeDataContainer(data,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
+        dc = new BytesArray(data,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
         PojoObject after = (PojoObject)dc.getEncoder().decodeObject(dc);
         Assert.assertEquals(true, isEqual(before,after,database.getTypeDescriptorsContainer()));
     }

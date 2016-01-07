@@ -1,6 +1,5 @@
 package org.datasand.store.json;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.store.DataPersister;
 import org.datasand.store.Shard;

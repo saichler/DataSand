@@ -3,8 +3,6 @@ package org.datasand.store.sqlite;
 import java.io.PrintStream;
 import java.sql.ResultSet;
 
-import org.datasand.codec.EncodeDataContainer;
-import org.datasand.codec.EncodeDataContainerFactory;
 import org.datasand.store.ObjectDataStore;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

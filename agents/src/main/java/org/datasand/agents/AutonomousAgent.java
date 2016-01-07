@@ -8,8 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.bytearray.Encoder;
 import org.datasand.network.NetworkID;
 import org.datasand.network.NetworkNodeConnection;
 import org.datasand.network.Packet;
@@ -34,7 +34,7 @@ public abstract class AutonomousAgent implements Runnable {
     public boolean _ForTestOnly_pseudoSendEnabled = false;
 
     static {
-        ByteEncoder.registerSerializer(Message.class, new Message(), 32);
+        Encoder.registerSerializer(Message.class, new Message(), 32);
     }
 
     public AutonomousAgent(int subSystemID,AutonomousAgentManager _manager) {
@@ -116,11 +116,11 @@ public abstract class AutonomousAgent implements Runnable {
             processMessage(obj, destination, destination);
             return;
         }
-        ByteArrayEncodeDataContainer ba = null;
-        if(ByteEncoder.getRegisteredSerializer(obj.getClass())!=null){
-            ba = new ByteArrayEncodeDataContainer(1024,this.manager.getTypeDescriptorsContainer().getEmptyTypeDescriptor());
+        BytesArray ba = null;
+        if(Encoder.getRegisteredSerializer(obj.getClass())!=null){
+            ba = new BytesArray(1024,this.manager.getTypeDescriptorsContainer().getEmptyTypeDescriptor());
         }else{
-            ba = new ByteArrayEncodeDataContainer(1024,this.manager.getTypeDescriptorsContainer().getTypeDescriptorByObject(obj));
+            ba = new BytesArray(1024,this.manager.getTypeDescriptorsContainer().getTypeDescriptorByObject(obj));
         }
         ba.getEncoder().encodeObject(obj, ba,this.manager.getTypeDescriptorsContainer().getElementClass(obj));
         manager.getNetworkNode().send(ba.getData(), this.agentID, destination);

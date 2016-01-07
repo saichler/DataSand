@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -139,7 +139,7 @@ public class TypeDescriptor {
         }
         Object value = this.keyColumn.get(object, null, this.typeClass);
         if(value!=null){
-            ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(128,this);
+            BytesArray ba = new BytesArray(128,this);
             container.getTypeDescriptorByObject(value).getSerializer().encode(value, ba);
             return MD5Identifier.createX(ba.getData());
         }

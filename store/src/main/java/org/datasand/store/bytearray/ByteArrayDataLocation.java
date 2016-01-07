@@ -1,8 +1,7 @@
 package org.datasand.store.bytearray;
 
-import org.datasand.codec.EncodeDataContainer;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.bytearray.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -45,28 +44,28 @@ public class ByteArrayDataLocation {
     }
 
     public void encode(byte[] byteArray, int location) {
-        ByteEncoder.encodeInt32(this.startPosition, byteArray, location);
-        ByteEncoder.encodeInt32(this.length, byteArray, location + 4);
-        ByteEncoder.encodeInt32(this.recordIndex, byteArray,location+8);
-        ByteEncoder.encodeInt32(this.parentIndex, byteArray,location+12);
+        Encoder.encodeInt32(this.startPosition, byteArray, location);
+        Encoder.encodeInt32(this.length, byteArray, location + 4);
+        Encoder.encodeInt32(this.recordIndex, byteArray,location+8);
+        Encoder.encodeInt32(this.parentIndex, byteArray,location+12);
     }
 
     public void encode(EncodeDataContainer _ba) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
+        BytesArray ba = (BytesArray)_ba;
         ba.adjustSize(16);
         encode(ba.getBytes(), ba.getLocation());
         ba.advance(16);
     }
 
     public static ByteArrayDataLocation decode(byte[] byteArray, int location, int length) {
-        return new ByteArrayDataLocation(ByteEncoder.decodeInt32(byteArray,location),
-                                ByteEncoder.decodeInt32(byteArray, location + 4),
-                                ByteEncoder.decodeInt32(byteArray, location + 8),
-                                ByteEncoder.decodeInt32(byteArray, location + 12));
+        return new ByteArrayDataLocation(Encoder.decodeInt32(byteArray,location),
+                                Encoder.decodeInt32(byteArray, location + 4),
+                                Encoder.decodeInt32(byteArray, location + 8),
+                                Encoder.decodeInt32(byteArray, location + 12));
     }
 
     public static ByteArrayDataLocation decode(EncodeDataContainer _ba, int length) {
-        ByteArrayEncodeDataContainer ba = (ByteArrayEncodeDataContainer)_ba;
+        BytesArray ba = (BytesArray)_ba;
         ByteArrayDataLocation result = decode(ba.getBytes(), ba.getLocation(), length);
         ba.advance(16);
         return result;

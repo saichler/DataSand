@@ -1,6 +1,5 @@
 package org.datasand.store;
 
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptorsContainer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

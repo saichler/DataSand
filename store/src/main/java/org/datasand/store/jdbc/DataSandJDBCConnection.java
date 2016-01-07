@@ -28,7 +28,7 @@ import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.MessageEntry;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.network.NetworkID;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
@@ -142,7 +142,7 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
 	                DataSandJDBCMessage m = new DataSandJDBCMessage(msg.getRecords(),msg.getRSID());
 	                this.send(m, c.source);
                 }else{
-	                DataSandJDBCMessage m = new DataSandJDBCMessage((ByteArrayEncodeDataContainer)msg.getMessageData(),msg.getRSID());
+	                DataSandJDBCMessage m = new DataSandJDBCMessage((BytesArray)msg.getMessageData(),msg.getRSID());
 	                this.send(m, c.source);
                 }
             }

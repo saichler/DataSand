@@ -13,10 +13,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.ThreadPool;
 import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.bytearray.ByteArrayObjectDataStore;
 import org.junit.After;
@@ -193,12 +192,12 @@ public class MDSALDBTest {
     @Test
     public void mdsalEncoderTest() {
         SalPersistedDomTest before = buildTestElement(0,true,true,true,true,true);
-        ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(1024,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
+        BytesArray ba = new BytesArray(1024,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
         ba.getEncoder().encodeObject(before, ba,SalPersistedDomTest.class);
 
-        byte data[] = ByteArrayEncodeDataContainer.toSingleByteArray(ba);
-        ByteArrayEncodeDataContainer singleSource = new ByteArrayEncodeDataContainer(data,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
-        EncodeDataContainer newSource = ByteArrayEncodeDataContainer.fromSingleByteArray(singleSource);
+        byte data[] = BytesArray.toSingleByteArray(ba);
+        BytesArray singleSource = new BytesArray(data,database.getTypeDescriptorsContainer().getTypeDescriptorByObject(before));
+        EncodeDataContainer newSource = BytesArray.fromSingleByteArray(singleSource);
 
         SalPersistedDomTest after = (SalPersistedDomTest) ba.getEncoder().decodeObject(newSource);
         Assert.assertEquals(before, after);

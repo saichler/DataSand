@@ -33,9 +33,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.EncodeDataContainer;
 import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.Encoder;
 import org.datasand.network.NetworkID;
 import org.datasand.store.Criteria;
 import org.datasand.store.ObjectDataStore.ObjectWithInfo;
@@ -71,7 +70,7 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
     private int collectedDataType = 0;
 
     public static class RSID{
-        private int address = NetworkID.valueOf(ByteEncoder.getLocalIPAddress() + ":0:0").getIPv4Address();
+        private int address = NetworkID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
         private long time = System.currentTimeMillis();
         private int localID = -1;
         public RSID(){

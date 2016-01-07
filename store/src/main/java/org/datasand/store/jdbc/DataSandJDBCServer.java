@@ -14,7 +14,7 @@ import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.ByteEncoder;
+import org.datasand.codec.bytearray.Encoder;
 import org.datasand.store.Criteria;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.bytearray.ByteArrayObjectDataStore;
@@ -26,8 +26,8 @@ public class DataSandJDBCServer  {
     private DataSandJDBCConnection agent = null;
 
     static {
-        ByteEncoder.registerSerializer(DataSandJDBCMessage.class, new DataSandJDBCMessage(), 432);
-        ByteEncoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer(), 433);
+        Encoder.registerSerializer(DataSandJDBCMessage.class, new DataSandJDBCMessage(), 432);
+        Encoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer(), 433);
     }
 
     public DataSandJDBCServer(ObjectDataStore a) {

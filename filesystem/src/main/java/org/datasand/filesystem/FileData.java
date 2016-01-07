@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.RandomAccessFile;
 
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.network.Packet;
 
 public class FileData {
@@ -51,7 +51,7 @@ public class FileData {
 		return this.data;
 	}
 	
-	public static void encode(Object value, ByteArrayEncodeDataContainer ba) {
+	public static void encode(Object value, BytesArray ba) {
 		FileData fileData = (FileData)value;
 		
 		if(fileData.part==fileData.total) return;
@@ -109,7 +109,7 @@ public class FileData {
 		fileData.part++;
 	}
 
-	public static Object decode(ByteArrayEncodeDataContainer ba, int length) {
+	public static Object decode(BytesArray ba, int length) {
 		FileData fd = new FileData();
 		fd.part = ba.getEncoder().decodeInt32(ba);
 		fd.total = ba.getEncoder().decodeInt32(ba);

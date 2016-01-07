@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.datasand.codec.bytearray.ByteArrayEncodeDataContainer;
+import org.datasand.codec.bytearray.BytesArray;
 import org.datasand.codec.observers.DefaultChildAttributeObserver;
 import org.datasand.codec.observers.DefaultMethodFilterObserver;
 import org.datasand.codec.observers.DefaultPOJOClassExtractor;
@@ -102,7 +102,7 @@ public class TypeDescriptorsContainer {
     }
 
     public byte[] getRepositoryData() {
-        ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(1024,this.EMPTY_TYPE_DESCRIPTOR);
+        BytesArray ba = new BytesArray(1024,this.EMPTY_TYPE_DESCRIPTOR);
         ba.getEncoder().encodeInt16(types.size(), ba);
         for (TypeDescriptor type : types.values()) {
             type.encode(ba);
@@ -111,7 +111,7 @@ public class TypeDescriptorsContainer {
     }
 
     public void load(byte data[]){
-        ByteArrayEncodeDataContainer ba = new ByteArrayEncodeDataContainer(data,this.EMPTY_TYPE_DESCRIPTOR);
+        BytesArray ba = new BytesArray(data,this.EMPTY_TYPE_DESCRIPTOR);
         int size = ba.getEncoder().decodeInt16(ba);
         List<TypeDescriptor> augmented = new LinkedList<TypeDescriptor>();
         for (int i = 0; i < size; i++) {

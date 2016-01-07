@@ -1,6 +1,5 @@
 package org.datasand.network;
 
-import org.datasand.codec.FrameworkClassCodes;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
