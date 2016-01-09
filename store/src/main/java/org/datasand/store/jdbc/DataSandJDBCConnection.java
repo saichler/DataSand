@@ -28,7 +28,7 @@ import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.MessageEntry;
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 import org.datasand.network.NetworkID;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;

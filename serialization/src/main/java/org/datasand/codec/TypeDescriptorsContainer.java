@@ -1,31 +1,10 @@
 package org.datasand.codec;
 
-import java.io.File;
-import java.io.RandomAccessFile;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.datasand.codec.bytearray.BytesArray;
-import org.datasand.codec.observers.DefaultChildAttributeObserver;
-import org.datasand.codec.observers.DefaultMethodFilterObserver;
-import org.datasand.codec.observers.DefaultPOJOClassExtractor;
-import org.datasand.codec.observers.DefaultPOJOTypeAttribute;
-import org.datasand.codec.observers.IAugmetationObserver;
-import org.datasand.codec.observers.IChildAttributeObserver;
-import org.datasand.codec.observers.IClassExtractorObserver;
-import org.datasand.codec.observers.IMethodFilterObserver;
-import org.datasand.codec.observers.ITypeAttributeObserver;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class TypeDescriptorsContainer {
-
+/*
     private Map<String, TypeDescriptor> types = new ConcurrentHashMap<String, TypeDescriptor>();
     private Map<String, TypeDescriptor> shortNameToType = new ConcurrentHashMap<String, TypeDescriptor>();
     private String repositoryFileName = null;
@@ -399,4 +378,5 @@ public class TypeDescriptorsContainer {
     public IClassExtractorObserver getClassExtractor(){
         return this.classExtractor;
     }
+    */
 }

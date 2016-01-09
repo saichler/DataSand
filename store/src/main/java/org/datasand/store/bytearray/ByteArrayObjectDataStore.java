@@ -4,9 +4,9 @@ import java.io.File;
 import java.io.PrintStream;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.bytearray.MD5ID;
+import org.datasand.codec.MD5ID;
 import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.Shard;
 import org.datasand.store.jdbc.DataSandJDBCResultSet;

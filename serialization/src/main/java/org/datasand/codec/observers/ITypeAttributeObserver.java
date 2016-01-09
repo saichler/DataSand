@@ -1,7 +1,6 @@
 package org.datasand.codec.observers;
 
-import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.bytearray.VColumn;
+import org.datasand.codec.VColumn;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

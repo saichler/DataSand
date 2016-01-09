@@ -1,6 +1,6 @@
 package org.datasand.codec.observers;
 
-import org.datasand.codec.bytearray.VTable;
+import org.datasand.codec.VTable;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

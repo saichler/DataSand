@@ -9,7 +9,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */

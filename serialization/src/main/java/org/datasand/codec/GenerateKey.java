@@ -5,14 +5,13 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.codec.bytearray;
+package org.datasand.codec;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import org.datasand.codec.bytearray.VLogger;
 
 public class GenerateKey {
     private static final VLogger LOGGER = null;

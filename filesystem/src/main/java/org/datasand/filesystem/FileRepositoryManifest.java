@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 
 public class FileRepositoryManifest {
 	

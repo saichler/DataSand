@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */

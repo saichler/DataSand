@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.datasand.codec.bytearray.BytesArray;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -144,9 +144,9 @@ public class NetworkNode extends Thread {
     public void send(Packet m) {
         if (this.connection != null) {
             try {
-                byte pData[] = new byte[Packet.PACKET_DATA_LOCATION + m.getData().length];
-                m.encode(m, pData, 0);
-                this.connection.sendPacket(pData);
+                BytesArray ba = new BytesArray(new byte[Packet.PACKET_DATA_LOCATION + m.getData().length]);
+                m.encode(m, ba);
+                this.connection.sendPacket(ba.getData());
             } catch (Exception err) {
                 err.printStackTrace();
             }
@@ -161,9 +161,9 @@ public class NetworkNode extends Thread {
                         int destPort = pMap.getKey();
                         NetworkNodeConnection c = pMap.getValue();
                         try {
-                            byte pData[] = new byte[Packet.PACKET_DATA_LOCATION+ m.getData().length];
-                            m.encode(m, pData, 0);
-                            byte[] unreachable = c.sendPacket(pData);
+                            BytesArray ba = new BytesArray(new byte[Packet.PACKET_DATA_LOCATION+ m.getData().length]);
+                            m.encode(m, ba);
+                            byte[] unreachable = c.sendPacket(ba.getData());
                             if(unreachable!=null){
                                 unreachable = NetworkNodeConnection.addUnreachableAddressForMulticast(unreachable, destAddress, destPort);
                                 if(sourceCon!=null){

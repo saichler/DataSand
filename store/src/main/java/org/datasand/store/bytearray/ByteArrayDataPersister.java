@@ -10,10 +10,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.datasand.codec.bytearray.MD5ID;
+import org.datasand.codec.MD5ID;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.BytesArray;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 import org.datasand.store.DataPersister;
 import org.datasand.store.Shard;
 /**

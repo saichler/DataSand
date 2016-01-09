@@ -5,12 +5,15 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.codec.bytearray;
+package org.datasand.codec;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import org.datasand.codec.observers.DefaultChildAttributeObserver;
+import org.datasand.codec.observers.DefaultMethodFilterObserver;
 import org.datasand.codec.observers.DefaultPOJOClassExtractor;
+import org.datasand.codec.observers.DefaultPOJOTypeAttribute;
 import org.datasand.codec.observers.IAugmetationObserver;
 import org.datasand.codec.observers.IChildAttributeObserver;
 import org.datasand.codec.observers.IClassExtractorObserver;
@@ -31,7 +34,9 @@ public class Observers {
     private IAugmetationObserver augmentationObserver = null;
 
     private Observers(){
-
+        modelChildIdentifierObservers.add(new DefaultChildAttributeObserver());
+        modelTypeIdentifierObservers.add(new DefaultPOJOTypeAttribute());
+        methodFilterObservers.add(new DefaultMethodFilterObserver());
     }
 
     public IClassExtractorObserver getClassExtractor(){

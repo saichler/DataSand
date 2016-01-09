@@ -1,4 +1,4 @@
-package org.datasand.codec.bytearray;
+package org.datasand.codec;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

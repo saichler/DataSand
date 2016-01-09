@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

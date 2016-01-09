@@ -1,9 +1,7 @@
 package org.datasand.codec.observers;
 
-import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.VColumn;
-import org.datasand.codec.bytearray.VTable;
+import org.datasand.codec.VColumn;
+import org.datasand.codec.VTable;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

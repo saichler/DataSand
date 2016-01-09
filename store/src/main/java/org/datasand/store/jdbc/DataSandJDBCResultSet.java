@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.Encoder;
 import org.datasand.network.NetworkID;
 import org.datasand.store.Criteria;
 import org.datasand.store.ObjectDataStore.ObjectWithInfo;

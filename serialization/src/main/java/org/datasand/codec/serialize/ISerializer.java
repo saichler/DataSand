@@ -7,7 +7,7 @@
  */
 package org.datasand.codec.serialize;
 
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

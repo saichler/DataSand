@@ -1,14 +1,16 @@
 package org.datasand.network;
 
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.codec.bytearray.Encoder;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class NetworkID implements ISerializer {
     private int[] address = null;
     static {
-        Encoder.registerSerializer(NetworkID.class, new NetworkID(),NetworkClassCodes.CODE_NetworkID);
+        Encoder.registerSerializer(NetworkID.class,new NetworkID());
     }
 
     private NetworkID() {
@@ -145,51 +147,19 @@ public class NetworkID implements ISerializer {
     }
 
     @Override
-    public void encode(Object value, byte[] byteArray, int start) {
+    public void encode(Object value, BytesArray ba) {
         NetworkID id = (NetworkID)value;
-        for (int i = 0; i < id.address.length; i++) {
-            if (i < id.address.length - 2)
-                Encoder.encodeInt32(id.address[i], byteArray, start);
-            else if (i == id.address.length - 2)
-                Encoder.encodeInt16(id.address[i], byteArray, start + i * 4);
-            else
-                Encoder.encodeInt16(id.address[i], byteArray, start + (i - 1) * 4 + 2);
-        }
+        Encoder.encodeInt32(id.getIPv4Address(), ba);
+        Encoder.encodeInt16(id.getPort(), ba);
+        Encoder.encodeInt16(id.getSubSystemID(), ba);
     }
 
-    @Override
-    public void encode(Object value, EncodeDataContainer ba) {
-        NetworkID id = (NetworkID)value;
-        ba.getEncoder().encodeInt32(id.getIPv4Address(), ba);
-        ba.getEncoder().encodeInt16(id.getPort(), ba);
-        ba.getEncoder().encodeInt16(id.getSubSystemID(), ba);
-    }
 
     @Override
-    public Object decode(byte[] byteArray, int start, int length) {
-        int a = Encoder.decodeInt32(byteArray, start);
-        int b = Encoder.decodeInt16(byteArray, start + 4);
-        int c = Encoder.decodeInt16(byteArray, start + 6);
+    public Object decode(BytesArray ba) {
+        int a = Encoder.decodeInt32(ba);
+        int b = Encoder.decodeInt16(ba);
+        int c = Encoder.decodeInt16(ba);
         return new NetworkID(a, b, c);
-    }
-
-    @Override
-    public Object decode(EncodeDataContainer ba, int length) {
-        int a = ba.getEncoder().decodeInt32(ba);
-        int b = ba.getEncoder().decodeInt16(ba);
-        int c = ba.getEncoder().decodeInt16(ba);
-        return new NetworkID(a, b, c);
-    }
-
-    @Override
-    public String getShardName(Object obj) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Object getRecordKey(Object obj) {
-        // TODO Auto-generated method stub
-        return null;
     }
 }

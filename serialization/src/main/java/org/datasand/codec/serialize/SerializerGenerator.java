@@ -7,10 +7,15 @@
  */
 package org.datasand.codec.serialize;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
-import org.datasand.codec.bytearray.Observers;
-import org.datasand.codec.bytearray.VColumn;
-import org.datasand.codec.bytearray.VTable;
+import java.util.HashSet;
+import org.datasand.codec.Observers;
+import org.datasand.codec.VColumn;
+import org.datasand.codec.VSchema;
+import org.datasand.codec.VTable;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -41,12 +46,50 @@ public class SerializerGenerator {
         return buff.toString();
     }
 
-    public String generateSerializer(VTable vTable){
+    public static void main(String args[]){
+        VTable table = new VTable(VColumn.class);
+        table.analyze(new HashSet<Class<?>>());
+        try {
+            generateSerializer(table);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void generateSerializer(VTable vTable) throws IOException {
+        String clsTxt = generateSerializerText(vTable);
+        String fileName = replaceAll(vTable.getJavaClassType().getPackage().getName(),".","/")+"/"+vTable.getJavaClassType().getSimpleName();
+        File origFile = findJavaFile(new File(System.getProperty("user.dir")),fileName+".java");
+        String serializerFileName = origFile.getParent()+"/"+vTable.getJavaClassType().getSimpleName()+"Serializer.java";
+
+        File f = new File(serializerFileName);
+        FileOutputStream out = new FileOutputStream(f);
+        out.write(clsTxt.getBytes());
+        out.close();
+    }
+
+    public static final File findJavaFile(File dir,String fileName){
+        File f[] = dir.listFiles();
+        for(File file:f){
+            if(file.isDirectory()){
+                File found = findJavaFile(file,fileName);
+                if(found!=null){
+                    return found;
+                }
+            }else
+            if(file.getPath().endsWith(fileName)){
+                return file;
+            }
+        }
+        return null;
+    }
+
+    private static String generateSerializerText(VTable vTable){
         StringBuffer buff = new StringBuffer();
 
         append("", 0, buff);
         append("package " + vTable.getJavaClassType().getPackage().getName() + ";", 0,buff);
-        append("import org.datasand.codec.EncodeDataContainer;", 0, buff);
+        append("import org.datasand.codec.BytesArray;", 0, buff);
         append("import org.datasand.codec.serialize.ISerializer;", 0, buff);
         String className = vTable.getJavaClassType().getName();
         className = replaceAll(className, "$", ".");
@@ -61,15 +104,9 @@ public class SerializerGenerator {
         }
         append("public class " + serializerName + "Serializer implements ISerializer{", 0, buff);
         append("@Override", 4, buff);
-        append("public void encode(Object value, byte[] byteArray, int location) {",4, buff);
-        append("}", 4, buff);
-        append("", 0, buff);
-
-        append("@Override", 4, buff);
-        append("public void encode(Object value, EncodeDataContainer ba) {", 4, buff);
+        append("public void encode(Object value, BytesArray ba) {", 4, buff);
         append(vTable.getJavaClassType().getSimpleName() + " element = ("+ vTable.getJavaClassType().getSimpleName() + ") value;", 8, buff);
         for (VColumn column : vTable.getColumns()) {
-            append("ba.setCurrentAttributeName(\""+column.getvColumnName()+"\");",8,buff);
             if (column.getJavaMethodReturnType().equals(short.class) || column.getJavaMethodReturnType().equals(Short.class)) {
                 append("Encoder.encodeShort(element." + column.getJavaGetMethodName() + "(), ba);", 8, buff);
             } else
@@ -103,111 +140,106 @@ public class SerializerGenerator {
 
         if (Observers.instance.isChildAttribute(vTable)) {
             for (VColumn child : vTable.getChildren().keySet()) {
-                TypeDescriptor subTable = container.getTypeDescriptorByClass(child.getReturnType());
-                append("ba.setCurrentAttributeName(\""+child.getColumnName()+"\");",8,buff);
+                VTable subTable = VSchema.instance.getVTable(child.getJavaMethodReturnType());
+                append("ba.setCurrentAttributeName(\""+child.getvColumnName()+"\");",8,buff);
                 if(child.isCollection()){
-                    append("Encoder.encodeAndAddList(element."+child.getMethodName()+"(), ba,"+subTable.getTypeClassName()+".class);",8,buff);
+                    append("Encoder.encodeAndAddList(element."+child.getJavaGetMethodName()+"(), ba,"+subTable.getJavaClassType().getSimpleName()+".class);",8,buff);
                 }else{
-                    append("Encoder.encodeAndAddObject(element."+child.getMethodName()+"(), ba,"+subTable.getTypeClassName()+".class);",8,buff);
+                    append("Encoder.encodeAndAddObject(element."+child.getJavaGetMethodName()+"(), ba,"+subTable.getJavaClassType().getSimpleName()+".class);",8,buff);
                 }
             }
         }
 
         append("}", 4, buff);
         append("@Override", 4, buff);
-        append("public Object decode(byte[] byteArray, int location, int length) {",4, buff);
-        append("return null;", 8, buff);
-        append("}", 4, buff);
-        append("@Override", 4, buff);
-        append("public Object decode(EncodeDataContainer ba, int length) {", 4, buff);
+        append("public Object decode(BytesArray ba, int length) {", 4, buff);
         if (builderClass!=null) {
             append(builderClass.getSimpleName()+" builder = new "+ builderClass.getSimpleName()+"();", 8, buff);
-            for (AttributeDescriptor p : type.attributes) {
-                append("ba.setCurrentAttributeName(\""+p.getColumnName()+"\");",8,buff);
-                if (column.getJavaMethodReturnType().equals(short.class) || column.getJavaMethodReturnType().equals(Short.class)) {
-                    append("builder.set" + p.getColumnName()+ "(Encoder.decodeShort(ba));", 8, buff);
+            for (VColumn vColumn : vTable.getColumns()) {
+                if (vColumn.getJavaMethodReturnType().equals(short.class) || vColumn.getJavaMethodReturnType().equals(Short.class)) {
+                    append("builder.set" + vColumn.getvColumnName()+ "(Encoder.decodeShort(ba));", 8, buff);
                 }else
-                if (column.getJavaMethodReturnType().equals(boolean.class) || column.getJavaMethodReturnType().equals(Boolean.class)) {
-                    append("builder.set" + p.getColumnName()
+                if (vColumn.getJavaMethodReturnType().equals(boolean.class) || vColumn.getJavaMethodReturnType().equals(Boolean.class)) {
+                    append("builder.set" + vColumn.getvColumnName()
                             + "(Encoder.decodeBoolean(ba));", 8, buff);
                 }else
-                if (!p.isCollection() && (column.getJavaMethodReturnType().equals(byte.class)
-                        || column.getJavaMethodReturnType().equals(Byte.class))) {
-                    append("builder.set" + p.getColumnName()
+                if (!vColumn.isCollection() && (vColumn.getJavaMethodReturnType().equals(byte.class)
+                        || vColumn.getJavaMethodReturnType().equals(Byte.class))) {
+                    append("builder.set" + vColumn.getvColumnName()
                             + "(Encoder.decodeByte(ba));", 8, buff);
                 }else
-                if (p.isCollection() && (column.getJavaMethodReturnType().equals(byte.class)
-                        || column.getJavaMethodReturnType().equals(Byte.class))) {
-                    append("builder.set" + p.getColumnName()
+                if (vColumn.isCollection() && (vColumn.getJavaMethodReturnType().equals(byte.class)
+                        || vColumn.getJavaMethodReturnType().equals(Byte.class))) {
+                    append("builder.set" + vColumn.getvColumnName()
                             + "(Encoder.decodeByteArray(ba));", 8, buff);
                 }else
-                if (column.getJavaMethodReturnType().equals(BigDecimal.class)) {
-                    append("builder.set" + p.getColumnName()
+                if (vColumn.getJavaMethodReturnType().equals(BigDecimal.class)) {
+                    append("builder.set" + vColumn.getvColumnName()
                             + "(Encoder.decodeBigDecimal(ba));", 8, buff);
                 }else
-                if (column.getJavaMethodReturnType().equals(String.class)) {
-                    append("builder.set" + p.getColumnName()
+                if (vColumn.getJavaMethodReturnType().equals(String.class)) {
+                    append("builder.set" + vColumn.getvColumnName()
                             + "(Encoder.decodeString(ba));", 8, buff);
-                } else if (column.getJavaMethodReturnType().equals(int.class)
-                        || column.getJavaMethodReturnType().equals(Integer.class)) {
-                    append("builder.set" + p.getColumnName()
+                } else if (vColumn.getJavaMethodReturnType().equals(int.class)
+                        || vColumn.getJavaMethodReturnType().equals(Integer.class)) {
+                    append("builder.set" + vColumn.getvColumnName()
                             + "(Encoder.decodeInt32(ba));", 8, buff);
-                } else if (column.getJavaMethodReturnType().equals(long.class)
-                        || column.getJavaMethodReturnType().equals(Long.class)) {
-                    append("builder.set" + p.getColumnName()
+                } else if (vColumn.getJavaMethodReturnType().equals(long.class)
+                        || vColumn.getJavaMethodReturnType().equals(Long.class)) {
+                    append("builder.set" + vColumn.getvColumnName()
                             + "(Encoder.decodeInt64(ba));", 8, buff);
-                } else if (container.isTypeAttribute(p)) {
-                    append("builder.set" + p.getColumnName() + "(("
-                            + column.getJavaMethodReturnType().getName()
+                } else if (Observers.instance.isTypeAttribute(vColumn)) {
+                    append("builder.set" + vColumn.getvColumnName() + "(("
+                            + vColumn.getJavaMethodReturnType().getName()
                             + ")Encoder.decodeObject(ba));", 8, buff);
                 }
             }
 
-            if(container.supportAugmentations(type)){
+            if(Observers.instance.supportAugmentations(vTable)){
                 append("ba.setCurrentAttributeName(\"Augmentations\");",8,buff);
-                append("Encoder.decodeAugmentations(builder, ba,"+ type.getTypeClass().getSimpleName() + ".class);", 8,buff);
+                append("Encoder.decodeAugmentations(builder, ba,"+ vTable.getJavaClassType().getSimpleName() + ".class);", 8,buff);
             }
 
-            if (container.isChildAttribute(type)) {
-                for (AttributeDescriptor child : type.getChildren().keySet()) {
-                    TypeDescriptor subTable = container.getTypeDescriptorByClass(child.getReturnType());
-                    append("ba.setCurrentAttributeName(\""+child.getColumnName()+"\");",8,buff);
+            if (Observers.instance.isChildAttribute(vTable)) {
+                for (VColumn child : vTable.getChildren().keySet()) {
+                    VTable subTable = VSchema.instance.getVTable(child.getJavaClass());
+                    append("ba.setCurrentAttributeName(\""+child.getvColumnName()+"\");",8,buff);
                     if(child.isCollection()){
-                        append("builder.set"+child.getColumnName()+"(Encoder.decodeAndList(ba,"+subTable.getTypeClassName()+".class));",8,buff);
+                        append("builder.set"+child.getvColumnName()+"(Encoder.decodeAndList(ba,"+subTable.getJavaClassType().getSimpleName()+".class));",8,buff);
                     }else{
-                        append("builder.set"+child.getColumnName()+"(("+subTable.getTypeClassName()+")Encoder.decodeAndObject(ba));",8,buff);
+                        append("builder.set"+child.getvColumnName()+"(("+subTable.getJavaClassType().getSimpleName()+")Encoder.decodeAndObject(ba));",8,buff);
                     }
                 }
             }
-            if(container.getClassExtractor().getBuilderMethod(type)!=null){
-                append("return builder."+container.getClassExtractor().getBuilderMethod(type)+";", 8, buff);
+            if(Observers.instance.getClassExtractor().getBuilderMethod(vTable)!=null){
+                append("return builder."+Observers.instance.getClassExtractor().getBuilderMethod(vTable)+";", 8, buff);
             }else{
                 append("return builder;", 8, buff);
             }
         } else {
-            if(!type.getTypeClass().isEnum()){
-                append(type.getTypeClass().getSimpleName()
+            if(!vTable.getJavaClassType().isEnum()){
+                append(vTable.getJavaClassType().getSimpleName()
                         + " instance = new "
-                        + type.getTypeClass().getSimpleName()+"(",8,buff);
+                        + vTable.getJavaClassType().getSimpleName()+"(",8,buff);
             }
             boolean first = true;
-            for (AttributeDescriptor p : type.attributes) {
-                if (column.getJavaMethodReturnType().equals(boolean.class) || column.getJavaMethodReturnType().equals(Boolean.class)) {
+            for (VColumn vColumn : vTable.getColumns()) {
+                if (vColumn.getJavaMethodReturnType().equals(boolean.class) || vColumn.getJavaMethodReturnType().equals(Boolean.class)) {
                     if(!first)
                         append(",",12,buff);
                     first = false;
                     append("Encoder.decodeBoolean(ba)", 8, buff);
                 }else
-                if (column.getJavaMethodReturnType().equals(String.class)) {
+                if (vColumn.getJavaMethodReturnType().equals(String.class)) {
                     if(!first)
                         append(",",12,buff);
                     first = false;
                     append("Encoder.decodeString(ba)", 8, buff);
-                } else if (column.getJavaMethodReturnType().equals(int.class) || column.getJavaMethodReturnType().equals(Integer.class)) {
-                    if (type.getTypeClass().isEnum()) {
-                        append(type.getTypeClass().getSimpleName()
+                } else if (vColumn.getJavaMethodReturnType().equals(int.class) || vColumn.getJavaMethodReturnType().equals(Integer.class)) {
+                    if (vTable.getJavaClassType().isEnum()) {
+                        append(vTable.getJavaClassType().getSimpleName()
                                         + " instance = "
-                                        + type.getTypeClass().getSimpleName()
+                                        + vTable.getJavaClassType().getSimpleName()
                                         + ".forValue(Encoder.decodeInt32(ba));",
                                 8, buff);
                     } else{
@@ -216,26 +248,19 @@ public class SerializerGenerator {
                         first = false;
                         append("Encoder.decodeInt32(ba)", 8, buff);
                     }
-                } else if (column.getJavaMethodReturnType().equals(long.class) || column.getJavaMethodReturnType().equals(Long.class)) {
+                } else if (vColumn.getJavaMethodReturnType().equals(long.class) || vColumn.getJavaMethodReturnType().equals(Long.class)) {
                     if(!first)
                         append(",",12,buff);
                     first = false;
                     append("Encoder.decodeInt64(ba)", 8, buff);
                 }
             }
-            if(!type.getTypeClass().isEnum()){
+            if(!vTable.getJavaClassType().isEnum()){
                 append(");",8,buff);
             }
             append("return instance;", 8, buff);
         }
 
-        append("}", 4, buff);
-
-        append("public String getShardName(Object obj) {", 4, buff);
-        append("return \"Default\";", 8, buff);
-        append("}", 4, buff);
-        append("public String getRecordKey(Object obj) {", 4, buff);
-        append("return null;", 8, buff);
         append("}", 4, buff);
         append("}", 0, buff);
         return buff.toString();

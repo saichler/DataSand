@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.RandomAccessFile;
 
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 import org.datasand.network.Packet;
 
 public class FileData {

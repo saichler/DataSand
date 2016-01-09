@@ -13,7 +13,7 @@ import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.cnode.CNode;
 import org.datasand.agents.cnode.CPeerEntry;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.Encoder;
 import org.datasand.network.NetworkID;
 
 /**

@@ -15,7 +15,7 @@ import java.util.List;
 import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.ThreadPool;
 import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.bytearray.ByteArrayObjectDataStore;
 import org.junit.After;

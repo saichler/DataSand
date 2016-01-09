@@ -1,6 +1,7 @@
 package org.datasand.codec.observers;
 
-import org.datasand.codec.TypeDescriptor;
+import org.datasand.codec.VTable;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -12,12 +13,12 @@ public class DefaultPOJOClassExtractor implements IClassExtractorObserver{
     }
 
     @Override
-    public Class<?> getBuilderClass(TypeDescriptor td) {
-        return td.getTypeClass();
+    public Class<?> getBuilderClass(VTable vTable) {
+        return vTable.getJavaClassType();
     }
 
     @Override
-    public String getBuilderMethod(TypeDescriptor td) {
+    public String getBuilderMethod(VTable td) {
         return null;
     }
 

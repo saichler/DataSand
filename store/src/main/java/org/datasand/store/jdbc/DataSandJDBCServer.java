@@ -14,7 +14,7 @@ import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.Encoder;
 import org.datasand.store.Criteria;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.bytearray.ByteArrayObjectDataStore;

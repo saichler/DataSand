@@ -5,7 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.codec.bytearray;
+package org.datasand.codec;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -72,6 +72,7 @@ public class VTable {
                     children.put(vColumn, vColumn);
                     VTable child = new VTable(vColumn.getJavaClass());
                     child.parents.put(vColumn, vColumn);
+                    child.analyze(beenHere);
                 }
             } else {
                 if (Observers.instance.isTypeAttribute(vColumn)) {

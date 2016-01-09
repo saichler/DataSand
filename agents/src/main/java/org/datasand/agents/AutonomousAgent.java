@@ -8,8 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.datasand.codec.bytearray.BytesArray;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 import org.datasand.network.NetworkID;
 import org.datasand.network.NetworkNodeConnection;
 import org.datasand.network.Packet;

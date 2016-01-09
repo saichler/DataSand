@@ -7,8 +7,8 @@ import java.util.Map;
 import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
-import org.datasand.codec.bytearray.BytesArray;
-import org.datasand.codec.bytearray.Encoder;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 import org.datasand.network.NetworkID;
 
 public class FileManagerAgent extends AutonomousAgent{

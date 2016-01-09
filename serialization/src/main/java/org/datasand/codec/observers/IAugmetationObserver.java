@@ -1,9 +1,11 @@
 package org.datasand.codec.observers;
 
+import org.datasand.codec.BytesArray;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public interface IAugmetationObserver {
-    public void encodeAugmentations(Object value, EncodeDataContainer ba);
-    public void decodeAugmentations(Object builder, EncodeDataContainer ba,Class<?> augmentedClass);
+    public void encodeAugmentations(Object value, BytesArray ba);
+    public void decodeAugmentations(Object builder, BytesArray ba,Class<?> augmentedClass);
 }

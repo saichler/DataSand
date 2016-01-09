@@ -1,8 +1,8 @@
 package org.datasand.codec.observers;
 
 import java.lang.reflect.Method;
+import org.datasand.codec.VColumn;
 
-import org.datasand.codec.AttributeDescriptor;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -20,7 +20,7 @@ public class DefaultMethodFilterObserver implements IMethodFilterObserver{
     }
 
     @Override
-    public boolean isValidAttribute(AttributeDescriptor ad) {
+    public boolean isValidAttribute(VColumn vColumn) {
         return true;
     }
 }

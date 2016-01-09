@@ -9,7 +9,7 @@ package org.datasand.codec.serialize;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.datasand.codec.bytearray.MD5ID;
+import org.datasand.codec.MD5ID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -22,6 +22,13 @@ public class SerializersManager {
 
     public SerializersManager(){
 
+    }
+
+    public void registerSerializer(Class<?> cls,ISerializer serializer){
+        MD5ID md5ID = MD5ID.create(cls.getName());
+        this.md5ToSerializer.put(md5ID,serializer);
+        this.classToMD5.put(cls,md5ID);
+        this.md5ToClass.put(md5ID,cls);
     }
 
     public ISerializer getSerializerByClass(Class cls){

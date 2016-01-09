@@ -1,30 +1,10 @@
 package org.datasand.codec;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
-
-import org.datasand.codec.bytearray.BytesArray;
-import org.datasand.codec.bytearray.MD5ID;
-import org.datasand.codec.serialize.ISerializer;
-
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class TypeDescriptor {
-
+/*
     public static boolean REGENERATE_SERIALIZERS = false;
     private static Map<String, Field> refFieldsCache = new HashMap<String, Field>();
 
@@ -790,5 +770,5 @@ public class TypeDescriptor {
 
     public AttributeDescriptor addAttribute(String _logicalFieldName,String _logicalTableName, String _origFieldName,String _origTableName) {
         return null;
-    }
+    }*/
 }

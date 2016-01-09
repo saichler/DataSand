@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 import org.datasand.codec.observers.IAugmetationObserver;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 /**

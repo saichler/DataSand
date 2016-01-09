@@ -12,7 +12,7 @@ import java.util.List;
 import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;
-import org.datasand.codec.bytearray.BytesArray;
+import org.datasand.codec.BytesArray;
 import org.datasand.codec.json.JsonEncodeDataContainer;
 import org.datasand.codec.xml.XMLEncodeDataContainer;
 import org.datasand.store.ObjectDataStore;

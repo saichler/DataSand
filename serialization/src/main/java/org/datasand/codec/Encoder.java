@@ -5,7 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.codec.bytearray;
+package org.datasand.codec;
 
 import java.lang.reflect.Array;
 import java.net.Inet6Address;
@@ -24,6 +24,14 @@ public class Encoder {
 
     public static final byte[] NULL = new byte[] {'-','N','U','L','L','-'};
     private static final SerializersManager serializersManager = new SerializersManager();
+
+    public static final void registerSerializer(Class<?> cls,ISerializer serializer){
+        serializersManager.registerSerializer(cls,serializer);
+    }
+
+    public static final ISerializer getSerializerByClass(Class<?> cls){
+        return serializersManager.getSerializerByClass(cls);
+    }
 
     //Object
     public static final void encodeObject(Object value,BytesArray ba){
