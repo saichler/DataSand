@@ -146,6 +146,20 @@ public class NetworkID implements ISerializer {
         return false;
     }
 
+    public void encode(NetworkID netID, byte[] data,int location) {
+        byte ip[] = new byte[4];
+        Encoder.encodeInt32(netID.getIPv4Address(),ip,0);
+        System.arraycopy(ip,0,data,location,ip.length);
+
+        byte port[] = new byte[2];
+        Encoder.encodeInt16(netID.getPort(),port,0);
+        System.arraycopy(port,0,data,location+4,port.length);
+
+        byte subSystem[] = new byte[2];
+        Encoder.encodeInt16(netID.getSubSystemID(),subSystem,0);
+        System.arraycopy(subSystem,0,data,location+6,subSystem.length);
+    }
+
     @Override
     public void encode(Object value, BytesArray ba) {
         NetworkID id = (NetworkID)value;

@@ -113,7 +113,10 @@ public class Packet implements ISerializer {
         m.packetID = Encoder.decodeInt16(ba);
         m.priority = ((int) ba.getBytes()[ba.getLocation()]) / 2;
         m.multiPart = ba.getBytes()[ba.getLocation()] % 2 == 1;
-        m.data = Encoder.decodeByteArray(ba);
+        ba.advance(1);
+        if(m.getSource().getPort()==9999 && ba.getBytes().length>Packet.PACKET_DATA_LOCATION) {
+            m.data = Encoder.decodeByteArray(ba);
+        }
         return m;
     }
 

@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 /**
@@ -142,11 +141,11 @@ public class NetworkNode extends Thread {
     }
 
     public void send(Packet m) {
+        BytesArray ba = new BytesArray(new byte[Packet.PACKET_DATA_LOCATION + m.getData().length]);
         if (this.connection != null) {
             try {
-                BytesArray ba = new BytesArray(new byte[Packet.PACKET_DATA_LOCATION + m.getData().length]);
                 m.encode(m, ba);
-                this.connection.sendPacket(ba.getData());
+                this.connection.sendPacket(ba);
             } catch (Exception err) {
                 err.printStackTrace();
             }
@@ -161,9 +160,8 @@ public class NetworkNode extends Thread {
                         int destPort = pMap.getKey();
                         NetworkNodeConnection c = pMap.getValue();
                         try {
-                            BytesArray ba = new BytesArray(new byte[Packet.PACKET_DATA_LOCATION+ m.getData().length]);
                             m.encode(m, ba);
-                            byte[] unreachable = c.sendPacket(ba.getData());
+                            BytesArray unreachable = c.sendPacket(ba);
                             if(unreachable!=null){
                                 unreachable = NetworkNodeConnection.addUnreachableAddressForMulticast(unreachable, destAddress, destPort);
                                 if(sourceCon!=null){
@@ -177,16 +175,14 @@ public class NetworkNode extends Thread {
                         }
                     }
                 }
-                byte pData[] = new byte[Packet.PACKET_DATA_LOCATION+ m.getData().length];
-                m.encode(m, pData, 0);
-                this.receivedPacket(pData);
+                m.encode(m, ba);
+                this.receivedPacket(ba);
             }else{
                 NetworkNodeConnection c = this.getNodeConnection(m.getDestination().getIPv4Address(), m.getDestination().getPort(),true);
                 if (c != null) {
                     try {
-                        byte pData[] = new byte[Packet.PACKET_DATA_LOCATION+ m.getData().length];
-                        m.encode(m, pData, 0);
-                        byte unreachable[] = c.sendPacket(pData);
+                        m.encode(m, ba);
+                        BytesArray unreachable = c.sendPacket(ba);
                         if(unreachable!=null){
                             unregisterNetworkNodeConnection(m.getDestination());
                             this.receivedPacket(unreachable);
@@ -195,10 +191,9 @@ public class NetworkNode extends Thread {
                         err.printStackTrace();
                     }
                 } else {
-                    byte pData[] = new byte[Packet.PACKET_DATA_LOCATION+ m.getData().length];
-                    m.encode(m, pData, 0);
-                    byte data[] = NetworkNodeConnection.markAsUnreachable(pData);
-                    this.receivedPacket(data);
+                    m.encode(m,ba);
+                    BytesArray unreachable = NetworkNodeConnection.markAsUnreachable(ba);
+                    this.receivedPacket(ba);
                 }
             }
         }
@@ -243,8 +238,8 @@ public class NetworkNode extends Thread {
         public void run(){
             if(unicast) return;
             while(running){
-                BytesArray ba = new BytesArray(new byte[8], null);
-                Encoder.getSerializer(NetworkID.class, null).encode(getLocalHost(), ba);
+                BytesArray ba = new BytesArray(new byte[8]);
+                Encoder.getSerializerByClass(NetworkID.class).encode(getLocalHost(), ba);
                 byte data[] = ba.getData();
                 try{
                     DatagramPacket packet = new DatagramPacket(data,data.length,InetAddress.getByName("255.255.255.255"),49999);
@@ -288,8 +283,8 @@ public class NetworkNode extends Thread {
             }
         }
         private void processIncomingPacket(DatagramPacket p){
-            BytesArray ba = new BytesArray(p.getData(), null);
-            NetworkID id = (NetworkID) Encoder.getSerializer(NetworkID.class, null).decode(ba,0);
+            BytesArray ba = new BytesArray(p.getData());
+            NetworkID id = (NetworkID) Encoder.getSerializerByClass(NetworkID.class).decode(ba);
             if(!id.equals(getLocalHost())){
                 NetworkNodeConnection node = getNodeConnection(id.getIPv4Address(), id.getPort(), true);
                 if(node==null){
@@ -361,25 +356,25 @@ public class NetworkNode extends Thread {
         }
     }
 
-    public void broadcast(byte data[]) {
-        int sourceAddress = Encoder.decodeInt32(data,Packet.PACKET_SOURCE_LOCATION);
-        int sourcePort = Encoder.decodeInt16(data,Packet.PACKET_SOURCE_LOCATION+4);
+    public void broadcast(BytesArray ba) {
+        int sourceAddress = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION);
+        int sourcePort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+4);
         NetworkNodeConnection sourceCon = getNodeConnection(sourceAddress, sourcePort,false);
         List<NetworkID> unreachableDest = new LinkedList<NetworkID>();
         for (Map.Entry<Integer, Map<Integer, NetworkNodeConnection>> addrEntry : this.routingTable.entrySet()) {
             for (Map.Entry<Integer, NetworkNodeConnection> portEntry : addrEntry.getValue().entrySet()) {
-                byte unreachable[] = null;
+                BytesArray unreachable = null;
                 if (sourceAddress != this.getLocalHost().getIPv4Address()) {
                     if (addrEntry.getKey() == this.getLocalHost().getIPv4Address()) {
                         try {
-                            unreachable = portEntry.getValue().sendPacket(data);
+                            unreachable = portEntry.getValue().sendPacket(ba);
                         } catch (Exception err) {
                             err.printStackTrace();
                         }
                     }
                 } else {
                     try {
-                        unreachable = portEntry.getValue().sendPacket(data);
+                        unreachable = portEntry.getValue().sendPacket(ba);
                     } catch (Exception err) {
                         err.printStackTrace();
                     }
@@ -405,11 +400,11 @@ public class NetworkNode extends Thread {
                 unregisterNetworkNodeConnection(unreach);
             }
         }
-        this.receivedPacket(data);
+        this.receivedPacket(ba);
     }
 
-    public void receivedPacket(byte data[]) {
-        packetProcessor.addPacket(data);
+    public void receivedPacket(BytesArray ba) {
+        packetProcessor.addPacket(ba);
     }
 
     public NetworkNodeConnection getNodeConnection(int address, int port,boolean includeUnicastOnlyNodes) {
@@ -467,26 +462,26 @@ public class NetworkNode extends Thread {
     }
 
     private class PacketProcessor extends Thread {
-        private LinkedList<byte[]> incomingFrames = new LinkedList<byte[]>();
+        private LinkedList<BytesArray> incomingFrames = new LinkedList<BytesArray>();
         private Map<Packet, MultiPartContainer> multiparts = new HashMap<Packet, MultiPartContainer>();
 
         private class MultiPartContainer {
-            private List<byte[]> parts = new LinkedList<byte[]>();
+            private List<BytesArray> parts = new LinkedList<BytesArray>();
             private int expectedCount = -1;
 
-            public byte[] toFrame() {
-                byte[] firstPart = parts.get(0);
-                byte[] data = new byte[(firstPart.length - Packet.PACKET_DATA_LOCATION)
+            public BytesArray toFrame() {
+                BytesArray firstPart = parts.get(0);
+                byte[] data = new byte[(firstPart.getBytes().length - Packet.PACKET_DATA_LOCATION)
                         * parts.size() + Packet.PACKET_DATA_LOCATION];
                 System.arraycopy(firstPart, 0, data, 0,
                         Packet.PACKET_DATA_LOCATION);
                 int location = Packet.PACKET_DATA_LOCATION;
-                for (byte[] p : parts) {
-                    System.arraycopy(p, Packet.PACKET_DATA_LOCATION, data,
-                            location, p.length - Packet.PACKET_DATA_LOCATION);
-                    location += (p.length - Packet.PACKET_DATA_LOCATION);
+                for (BytesArray p : parts) {
+                    System.arraycopy(p.getBytes(), Packet.PACKET_DATA_LOCATION, data,
+                            location, p.getBytes().length - Packet.PACKET_DATA_LOCATION);
+                    location += (p.getBytes().length - Packet.PACKET_DATA_LOCATION);
                 }
-                return data;
+                return new BytesArray(data);
             }
         }
 
@@ -495,29 +490,27 @@ public class NetworkNode extends Thread {
             this.start();
         }
 
-        public void addPacket(byte[] packet) {
-            boolean multiPart = packet[Packet.PACKET_MULTIPART_AND_PRIORITY_LOCATION] % 2 == 1;
+        public void addPacket(BytesArray ba) {
+            boolean multiPart = ba.getBytes()[Packet.PACKET_MULTIPART_AND_PRIORITY_LOCATION] % 2 == 1;
 
             // The packet is a complete frame
             if (!multiPart) {
                 synchronized (incomingFrames) {
-                    incomingFrames.add(packet);
+                    incomingFrames.add(ba);
                     incomingFrames.notifyAll();
                 }
             } else {
-                Packet pID = (Packet) serializer.decode(packet, 0,
-                        Packet.PACKET_DATA_LOCATION);
+                Packet pID = (Packet) serializer.decode(ba);
                 MultiPartContainer mpc = multiparts.get(pID);
                 if (mpc == null) {
                     mpc = new MultiPartContainer();
                     multiparts.put(pID, mpc);
-                    mpc.expectedCount = Encoder.decodeInt32(packet,
-                            Packet.PACKET_DATA_LOCATION);
+                    mpc.expectedCount = Encoder.decodeInt32(ba.getBytes(), Packet.PACKET_DATA_LOCATION);
                 } else {
-                    mpc.parts.add(packet);
+                    mpc.parts.add(ba);
                     if (mpc.parts.size() == mpc.expectedCount) {
                         multiparts.remove(pID);
-                        byte frame[] = mpc.toFrame();
+                        BytesArray frame = mpc.toFrame();
                         synchronized (incomingFrames) {
                             incomingFrames.add(frame);
                             incomingFrames.notifyAll();
@@ -529,7 +522,7 @@ public class NetworkNode extends Thread {
 
         public void run() {
             while (running) {
-                byte frame[] = null;
+                BytesArray frame = null;
                 synchronized (incomingFrames) {
                     if (incomingFrames.size() == 0) {
                         try {
@@ -543,7 +536,7 @@ public class NetworkNode extends Thread {
                 }
 
                 if (frame != null) {
-                    Packet f = (Packet) serializer.decode(frame, 0,frame.length);
+                    Packet f = (Packet) serializer.decode(frame);
                     if (frameListener != null) {
                         if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
                             frameListener.processDestinationUnreachable(f);
@@ -556,8 +549,7 @@ public class NetworkNode extends Thread {
                         } else
                             frameListener.process(f);
                     } else {
-                        if (f.getSource().getIPv4Address() == 0
-                                && f.getSource().getSubSystemID() == 9999) {
+                        if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
                             System.out.println("Unreachable:" + f);
                         } else if (f.getDestination().getIPv4Address() == 0
                                 && f.getDestination().getSubSystemID() == NetworkNodeConnection.DESTINATION_BROADCAST) {

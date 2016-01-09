@@ -50,7 +50,7 @@ public class NetworkTest {
             nodes[i] = new NetworkNode(null);
         }
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (Exception err) {
         }
         System.out.println("Ready");
@@ -60,7 +60,7 @@ public class NetworkTest {
                 .getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
         try {
-            Thread.sleep(1000);
+            Thread.sleep(5000);
         } catch (Exception err) {
         }
         for (int i = 0; i < nodes.length; i++) {

@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
-
+import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -103,7 +103,8 @@ public class NetworkNodeConnection extends Thread {
         }
     }
 
-    public byte[] sendPacket(byte[] data) throws IOException {
+    public BytesArray sendPacket(BytesArray ba) throws IOException {
+        byte data[] = ba.getBytes();
         synchronized (out) {
             if(running){
                 try{
@@ -114,10 +115,10 @@ public class NetworkNodeConnection extends Thread {
                 }catch(SocketException serr){
                     System.out.println("Connection was probably terminated for "+socket.getInetAddress().getHostName()+":"+socket.getPort());
                     this.shutdown();
-                    return markAsUnreachable(data);
+                    return markAsUnreachable(ba);
                 }
             }else{
-                return markAsUnreachable(data);
+                return markAsUnreachable(ba);
             }
         }
     }
@@ -214,21 +215,24 @@ public class NetworkNodeConnection extends Thread {
         System.out.println(this.getName()+" was closed.");
     }
 
-    public static final byte[] markAsUnreachable(byte[] data) {
-        byte[] mark = new byte[data.length + Packet.PACKET_DATA_LOCATION];
-        System.arraycopy(data, 0, mark, 0, Packet.PACKET_DATA_LOCATION);
-        System.arraycopy(data, 0, mark, Packet.PACKET_DATA_LOCATION,data.length);
+    public static final BytesArray markAsUnreachable(BytesArray ba) {
+        byte[] mark = new byte[ba.getBytes().length + Packet.PACKET_DATA_LOCATION];
+        System.arraycopy(ba.getBytes(), 0, mark, 0, Packet.PACKET_DATA_LOCATION);
+        System.arraycopy(ba.getBytes(), 0, mark, Packet.PACKET_DATA_LOCATION,ba.getBytes().length);
         System.arraycopy(mark, Packet.PACKET_SOURCE_LOCATION, mark,Packet.PACKET_DEST_LOCATION, 8);
+
         PROTOCOL_ID_UNREACHABLE.encode(PROTOCOL_ID_UNREACHABLE, mark,Packet.PACKET_SOURCE_LOCATION);
-        return mark;
+        return new BytesArray(mark);
     }
 
-    public static final byte[] addUnreachableAddressForMulticast(byte data[],int destAddress,int destPort){
+
+    public static final BytesArray addUnreachableAddressForMulticast(BytesArray ba,int destAddress,int destPort){
+        byte[] data = ba.getBytes();
         byte[] _unreachable = new byte[data.length+6];
         System.arraycopy(data, 0, _unreachable,0, data.length);
         Encoder.encodeInt32(destAddress, _unreachable, data.length);
         Encoder.encodeInt16(destPort, _unreachable, data.length+4);
-        return _unreachable;
+        return new BytesArray(_unreachable);
     }
 
     private class Switch extends Thread {
@@ -240,7 +244,7 @@ public class NetworkNodeConnection extends Thread {
 
         public void run() {
             while (running) {
-                byte data[] = null;
+                byte packetData[] = null;
                 synchronized (incoming) {
                     if (incoming.size() == 0) {
                         try {
@@ -249,70 +253,69 @@ public class NetworkNodeConnection extends Thread {
                         }
                     }
                     if (incoming.size() > 0) {
-                        data = incoming.next();
+                        packetData = incoming.next();
                     }
                 }
 
-                if (data != null && data.length > 0) {
-                    int destAddr = Encoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
-                    int destPort = Encoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
+                if (packetData != null && packetData.length > 0) {
+                    BytesArray ba = new BytesArray(packetData);
+                    int destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
+                    int destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
                     if (destAddr == 0) {
                         if (networkNode.getLocalHost().getPort() != 50000) {
-                            networkNode.receivedPacket(data);
+                            networkNode.receivedPacket(ba);
                         } else {
-                            networkNode.broadcast(data);
+                            networkNode.broadcast(ba);
                         }
                     } else if (destAddr == networkNode.getLocalHost().getIPv4Address() && destPort == networkNode.getLocalHost().getPort()) {
-                        networkNode.receivedPacket(data);
+                        networkNode.receivedPacket(ba);
                     } else if (destAddr == networkNode.getLocalHost().getIPv4Address() && networkNode.getLocalHost().getPort() == 50000 && destPort != 50000) {
                         NetworkNodeConnection other = networkNode.getNodeConnection(destAddr, destPort,true);
                         if (other != null && other.running) {
                             try {
-                                other.sendPacket(data);
+                                other.sendPacket(ba);
                             } catch (Exception err) {
                                 err.printStackTrace();
                             }
                         } else {
-                            data = markAsUnreachable(data);
-                            destAddr = Encoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
-                            destPort = Encoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
+                            ba = markAsUnreachable(ba);
+                            destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
+                            destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
                             NetworkNodeConnection source = networkNode.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
-                                    source.sendPacket(data);
+                                    source.sendPacket(ba);
                                 } catch (Exception err) {
                                     err.printStackTrace();
                                 }
                             } else
                                 System.err.println("Source unreachable:"
                                         + new NetworkID(destAddr, destPort,
-                                                Encoder.decodeInt16(data,
-                                                        16)));
+                                                Encoder.decodeInt16(ba.getBytes(), 16)));
                         }
                     } else if (destAddr != networkNode.getLocalHost().getIPv4Address() && networkNode.getLocalHost().getPort() == 50000) {
                         NetworkNodeConnection other = networkNode.getNodeConnection(destAddr, 50000,true);
                         if (other != null) {
                             try {
-                                other.sendPacket(data);
+                                other.sendPacket(ba);
                             } catch (Exception err) {
                                 err.printStackTrace();
                             }
                         } else {
-                            data = markAsUnreachable(data);
-                            destAddr = Encoder.decodeInt32(data,Packet.PACKET_DEST_LOCATION);
-                            destPort = Encoder.decodeInt16(data,Packet.PACKET_DEST_LOCATION + 4);
+                            ba = markAsUnreachable(ba);
+                            destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
+                            destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
                             NetworkNodeConnection source = networkNode.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
-                                    source.sendPacket(data);
+                                    source.sendPacket(ba);
                                 } catch (Exception err) {
                                     err.printStackTrace();
                                 }
                             } else
                                 System.err.println("Source unreachable:"
                                         + new NetworkID(destAddr, destPort,
-                                                Encoder.decodeInt16(data,
-                                                        16)));
+                                                Encoder.decodeInt16(ba.getBytes(), 16)));
                         }
                     }
 

@@ -1,6 +1,5 @@
 package org.datasand.agents.cnode;
 
-import org.datasand.network.NetworkClassCodes;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
