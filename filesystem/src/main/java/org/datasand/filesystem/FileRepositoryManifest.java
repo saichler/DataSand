@@ -7,8 +7,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 
 public class FileRepositoryManifest {
 	
@@ -90,12 +90,12 @@ public class FileRepositoryManifest {
 	
 	public static void encode(Object obj,BytesArray ba){
 		FileRepositoryManifest rm = (FileRepositoryManifest)obj;
-		ba.getEncoder().encodeString(rm.directory, ba);
-		ba.getEncoder().encodeSize(rm.fileExtentions.size(),ba);
+		Encoder.encodeString(rm.directory, ba);
+		Encoder.encodeInt32(rm.fileExtentions.size(),ba);
 		for(String ext:rm.fileExtentions){
-			ba.getEncoder().encodeString(ext, ba);
+			Encoder.encodeString(ext, ba);
 		}
-		ba.getEncoder().encodeSize(rm.filesInRepository.size(), ba);
+		Encoder.encodeInt32(rm.filesInRepository.size(), ba);
 		for(FileDescription fd:rm.filesInRepository.values()){
 			encodeFileDesc(fd, ba);
 		}
@@ -103,12 +103,12 @@ public class FileRepositoryManifest {
 	
 	public static Object decode(BytesArray ba){
 		FileRepositoryManifest rm = new FileRepositoryManifest();
-		rm.directory = ba.getEncoder().decodeString(ba);
-		int size = ba.getEncoder().decodeSize(ba);
+		rm.directory = Encoder.decodeString(ba);
+		int size = Encoder.decodeInt32(ba);
 		for(int i=0;i<size;i++){
-			rm.fileExtentions.add(ba.getEncoder().decodeString(ba));
+			rm.fileExtentions.add(Encoder.decodeString(ba));
 		}
-		size = ba.getEncoder().decodeSize(ba);
+		size = Encoder.decodeInt32(ba);
 		for(int i=0;i<size;i++){
 			FileDescription fd = (FileDescription)decodeFileDesc(ba);
 			rm.filesInRepository.put(fd.name, fd);
@@ -118,22 +118,22 @@ public class FileRepositoryManifest {
 	
 	public static void encodeFileDesc(Object obj,BytesArray ba){
 		FileDescription fd = (FileDescription)obj;
-		ba.getEncoder().encodeString(fd.name, ba);
-		ba.getEncoder().encodeInt64(fd.lastChanged, ba);
-		ba.getEncoder().encodeInt64(fd.length, ba);
-		ba.getEncoder().encodeInt16(fd.version, ba);
-		ba.getEncoder().encodeInt64(fd.md5A, ba);
-		ba.getEncoder().encodeInt64(fd.md5B, ba);
+		Encoder.encodeString(fd.name, ba);
+		Encoder.encodeInt64(fd.lastChanged, ba);
+		Encoder.encodeInt64(fd.length, ba);
+		Encoder.encodeInt16(fd.version, ba);
+		Encoder.encodeInt64(fd.md5A, ba);
+		Encoder.encodeInt64(fd.md5B, ba);
 	}
 
 	public static FileDescription decodeFileDesc(BytesArray ba){
 		FileDescription fd = new FileDescription();
-		fd.name = ba.getEncoder().decodeString(ba);
-		fd.lastChanged = ba.getEncoder().decodeInt64(ba);
-		fd.length = ba.getEncoder().decodeInt64(ba);
-		fd.version = ba.getEncoder().decodeInt16(ba);
-		fd.md5A = ba.getEncoder().decodeInt64(ba);
-		fd.md5B = ba.getEncoder().decodeInt64(ba);
+		fd.name = Encoder.decodeString(ba);
+		fd.lastChanged = Encoder.decodeInt64(ba);
+		fd.length = Encoder.decodeInt64(ba);
+		fd.version = Encoder.decodeInt16(ba);
+		fd.md5A = Encoder.decodeInt64(ba);
+		fd.md5B = Encoder.decodeInt64(ba);
 		return fd;
 	}
 	

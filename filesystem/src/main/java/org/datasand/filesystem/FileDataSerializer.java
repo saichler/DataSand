@@ -1,38 +1,18 @@
 package org.datasand.filesystem;
 
-import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.BytesArray;
+import org.datasand.codec.serialize.ISerializer;
 
 public class FileDataSerializer implements ISerializer{
 
 	@Override
-	public void encode(Object value, byte[] byteArray, int location) {
+	public void encode(Object value, BytesArray ba) {
+		FileData.encode(value, ba);
 	}
 
 	@Override
-	public void encode(Object value, EncodeDataContainer ba) {
-		FileData.encode(value, (BytesArray)ba);
+	public Object decode(BytesArray ba) {
+		return FileData.decode(ba);
 	}
 
-	@Override
-	public Object decode(byte[] byteArray, int location, int length) {
-		return null;
-	}
-
-	@Override
-	public Object decode(EncodeDataContainer ba, int length) {
-		return FileData.decode((BytesArray)ba, length);
-	}
-
-	@Override
-	public String getShardName(Object obj) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object getRecordKey(Object obj) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }

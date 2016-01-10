@@ -3,7 +3,6 @@ package org.datasand.filesystem;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
@@ -18,8 +17,8 @@ public class FileManagerAgent extends AutonomousAgent{
 	public static final int TYPE_FILE_DATA = 2;
 
 	static {
-		Encoder.registerSerializer(FileData.class, new FileDataSerializer(), FILE_MANAGER_MULTICAST_GROUP);
-		Encoder.registerSerializer(FileRepositoryManifest.class, new FileRepositoryManifestSerializer(), FILE_MANAGER_MULTICAST_GROUP+1);
+		Encoder.registerSerializer(FileData.class, new FileDataSerializer());
+		Encoder.registerSerializer(FileRepositoryManifest.class, new FileRepositoryManifestSerializer());
 	}
 
 	private Map<String,FileRepositoryManifest> repositories = new HashMap<String, FileRepositoryManifest>();
@@ -82,11 +81,11 @@ public class FileManagerAgent extends AutonomousAgent{
 			Message fileDataMsg = new Message(TYPE_FILE_DATA,fileData);
 			this.send(fileDataMsg, dest);
 
-			BytesArray ba = new BytesArray(1024,this.getAgentManager().getTypeDescriptorsContainer().getEmptyTypeDescriptor());
+			BytesArray ba = new BytesArray(1024);
 			while(ba.getLocation()>2){
 				send(ba.getData(), dest);
 				ba.resetLocation();
-				ba.getEncoder().encodeObject(fileData, ba, FileData.class);
+				Encoder.encodeObject(fileData, ba);
 			}
 		}
 	}
