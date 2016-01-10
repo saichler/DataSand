@@ -22,6 +22,8 @@ public class Packet implements ISerializer {
 
     private NetworkID source = null;
     private NetworkID destination = null;
+    private NetworkID originalAddress = null;
+
     private int packetID = -1;
     private boolean multiPart = false;
     private int priority = 2;
@@ -117,8 +119,10 @@ public class Packet implements ISerializer {
         m.multiPart = ba.getBytes()[ba.getLocation()] % 2 == 1;
         ba.advance(1);
         if(ba.getBytes().length>Packet.PACKET_DATA_LOCATION) {
-            if(m.source.getPort()==9999 || m.source.getSubSystemID()==9999){
-                ba.advance(8);
+            if(m.source.getIPv4Address()==NetworkNodeConnection.PROTOCOL_ID_UNREACHABLE.getIPv4Address()
+                    && m.source.getPort()==NetworkNodeConnection.PROTOCOL_ID_UNREACHABLE.getPort() &&
+                       m.source.getSubSystemID()==NetworkNodeConnection.PROTOCOL_ID_UNREACHABLE.getSubSystemID()){
+                this.originalAddress = (NetworkID) NetworkID.serializer.decode(ba);
                 m.data = Encoder.decodeByteArray(ba);
             }else {
                 int location = ba.getLocation();

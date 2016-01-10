@@ -216,11 +216,17 @@ public class NetworkNodeConnection extends Thread {
     }
 
     public static final BytesArray markAsUnreachable(BytesArray ba) {
-        byte[] mark = new byte[ba.getBytes().length + Packet.PACKET_DATA_LOCATION];
-        System.arraycopy(ba.getBytes(), 0, mark, 0, Packet.PACKET_DATA_LOCATION);
-        System.arraycopy(ba.getBytes(), 0, mark, Packet.PACKET_DATA_LOCATION,ba.getBytes().length);
-        System.arraycopy(mark, Packet.PACKET_SOURCE_LOCATION, mark,Packet.PACKET_DEST_LOCATION, 8);
-
+        byte[] mark = new byte[ba.getBytes().length+Packet.PACKET_SOURCE_LENGHT];
+        //copy all bytes
+        System.arraycopy(ba.getBytes(), 0, mark, 0, ba.getBytes().length);
+        //copy data to +8
+        System.arraycopy(ba.getBytes(),Packet.PACKET_DATA_LOCATION,mark,Packet.PACKET_DATA_LOCATION+Packet.PACKET_SOURCE_LENGHT,
+                ba.getBytes().length-Packet.PACKET_DATA_LOCATION);
+        //copy destionation to begin of data
+        System.arraycopy(ba.getBytes(),Packet.PACKET_DEST_LOCATION,mark,Packet.PACKET_DATA_LOCATION,Packet.PACKET_DEST_LENGTH);
+        //copy source to destination
+        System.arraycopy(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION,mark,Packet.PACKET_DEST_LOCATION,Packet.PACKET_SOURCE_LENGHT);
+        //mark source as unreachable
         PROTOCOL_ID_UNREACHABLE.encode(PROTOCOL_ID_UNREACHABLE, mark,Packet.PACKET_SOURCE_LOCATION);
         return new BytesArray(mark);
     }
