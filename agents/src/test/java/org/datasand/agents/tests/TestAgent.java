@@ -13,7 +13,6 @@ public class TestAgent extends AutonomousAgent {
     public TestAgent(NetworkID localHost, AutonomousAgentManager m) {
         super(19, m);
         TestObject o = new TestObject();
-        m.getTypeDescriptorsContainer().getTypeDescriptorByObject(o);
     }
 
     @Override

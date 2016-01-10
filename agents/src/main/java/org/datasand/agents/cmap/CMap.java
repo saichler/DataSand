@@ -8,7 +8,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.cnode.CNode;
@@ -27,7 +26,7 @@ public class CMap<K,V> extends CNode<Map<K,V>,CMapEntry<K,V>> implements Map<K,V
     private int size = 0;
     private ICMapListener<K, V> listener = null;
     static{
-        Encoder.registerSerializer(CMapEntry.class, new CMapEntry(), MAP_ENTRY_CLASS_CODE);
+        Encoder.registerSerializer(CMapEntry.class, new CMapEntry());
     }
     public CMap(int subSystemID,AutonomousAgentManager m, int multicastGroupID,ICMapListener<K, V> _listener){
         super(subSystemID,m,multicastGroupID);

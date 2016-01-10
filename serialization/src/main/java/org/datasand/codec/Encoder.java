@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.serialize.SerializersManager;
+import org.datasand.codec.serialize.StringSerializer;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -24,6 +25,10 @@ public class Encoder {
 
     public static final byte[] NULL = new byte[] {'-','N','U','L','L','-'};
     private static final SerializersManager serializersManager = new SerializersManager();
+
+    static {
+        registerSerializer(String.class, new StringSerializer());
+    }
 
     public static final void registerSerializer(Class<?> cls,ISerializer serializer){
         serializersManager.registerSerializer(cls,serializer);
@@ -52,10 +57,19 @@ public class Encoder {
         if(isNULL(ba)){
             return null;
         }else{
-            long a = decodeInt64(ba);
-            long b = decodeInt64(ba);
-            ISerializer serializer = serializersManager.getSerializerByLongs(a,b);
-            return serializer.decode(ba);
+            if(ba.getBytes().length==0){
+                return null;
+            }
+            try {
+                long a = decodeInt64(ba);
+                long b = decodeInt64(ba);
+                ba.advance(16);
+                ISerializer serializer = serializersManager.getSerializerByLongs(a, b);
+                return serializer.decode(ba);
+            }catch (Exception err){
+                err.printStackTrace();
+                return null;
+            }
         }
     }
 

@@ -13,9 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
-
 import org.datasand.codec.ThreadPool;
-import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.network.IFrameListener;
 import org.datasand.network.NetworkID;
 import org.datasand.network.NetworkNode;
@@ -32,23 +30,17 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
     private Object agentsSyncObject = new Object();
     private Map<Integer, Set<AutonomousAgent>> multicasts = new HashMap<Integer, Set<AutonomousAgent>>();
     private boolean running = true;
-    private TypeDescriptorsContainer typeContainer = null;
 
-    public AutonomousAgentManager(TypeDescriptorsContainer _container) {
-        this(_container,false);
+    public AutonomousAgentManager() {
+        this(false);
     }
 
-    public AutonomousAgentManager(TypeDescriptorsContainer _container,boolean unicastOnly) {
+    public AutonomousAgentManager(boolean unicastOnly) {
         this.networkNode = new NetworkNode(this,unicastOnly);
-        this.typeContainer = _container;
         this.setName("Autonomous Agent Manager - " + networkNode.toString());
         this.start();
         //Sleep for 100 to allow the threads to start up
         try{Thread.sleep(100);}catch(Exception err){}
-    }
-
-    public TypeDescriptorsContainer getTypeDescriptorsContainer(){
-        return this.typeContainer;
     }
 
     protected Object getSyncObject() {

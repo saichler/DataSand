@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.network.NetworkID;
@@ -34,7 +33,7 @@ public abstract class AutonomousAgent implements Runnable {
     public boolean _ForTestOnly_pseudoSendEnabled = false;
 
     static {
-        Encoder.registerSerializer(Message.class, new Message(), 32);
+        Encoder.registerSerializer(Message.class, new Message());
     }
 
     public AutonomousAgent(int subSystemID,AutonomousAgentManager _manager) {
@@ -86,7 +85,7 @@ public abstract class AutonomousAgent implements Runnable {
     }
 
     public void run() {
-        currentFrame.decode(manager.getTypeDescriptorsContainer());
+        currentFrame.decode();
         if(currentFrame.getDecodedObject()==timeoutID){
             this.checkForTimeoutMessages();
         }else
@@ -116,13 +115,8 @@ public abstract class AutonomousAgent implements Runnable {
             processMessage(obj, destination, destination);
             return;
         }
-        BytesArray ba = null;
-        if(Encoder.getRegisteredSerializer(obj.getClass())!=null){
-            ba = new BytesArray(1024,this.manager.getTypeDescriptorsContainer().getEmptyTypeDescriptor());
-        }else{
-            ba = new BytesArray(1024,this.manager.getTypeDescriptorsContainer().getTypeDescriptorByObject(obj));
-        }
-        ba.getEncoder().encodeObject(obj, ba,this.manager.getTypeDescriptorsContainer().getElementClass(obj));
+        BytesArray ba = new BytesArray(1024);
+        Encoder.encodeObject(obj, ba);
         manager.getNetworkNode().send(ba.getData(), this.agentID, destination);
     }
 

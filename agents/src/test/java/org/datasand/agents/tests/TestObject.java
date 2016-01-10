@@ -1,6 +1,17 @@
 package org.datasand.agents.tests;
 
+import java.io.IOException;
+import java.util.HashSet;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.VTable;
+import org.datasand.codec.serialize.SerializerGenerator;
+
 public class TestObject {
+
+    static{
+        Encoder.registerSerializer(TestObject.class,new TestObjectSerializer());
+    }
+
     private String name = null;
     private String address = null;
     private int zipcode = -1;
@@ -51,5 +62,15 @@ public class TestObject {
     public int hashCode() {
         // TODO Auto-generated method stub
         return super.hashCode();
+    }
+
+    public static void main(String args[]){
+        VTable t = new VTable(TestObject.class);
+        t.analyze(new HashSet<Class<?>>());
+        try {
+            SerializerGenerator.generateSerializer(t);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

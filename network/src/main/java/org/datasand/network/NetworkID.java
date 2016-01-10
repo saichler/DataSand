@@ -9,6 +9,7 @@ import org.datasand.codec.serialize.ISerializer;
  */
 public class NetworkID implements ISerializer {
     private int[] address = null;
+    public static final NetworkID serializer = new NetworkID();
     static {
         Encoder.registerSerializer(NetworkID.class,new NetworkID());
     }

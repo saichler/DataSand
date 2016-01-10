@@ -62,6 +62,12 @@ public class BytesArray {
         System.arraycopy(bytes, mark, result, 0, result.length);
         return result;
     }
+    public void insert(BytesArray ba,int startLocation){
+        byte otherData[] = ba.getBytes();
+        this.adjustSize(otherData.length-startLocation);
+        System.arraycopy(otherData, startLocation, this.bytes, this.location,otherData.length-startLocation);
+        this.advance(otherData.length-startLocation);
+    }
 
     /*
     public static byte[] toSingleByteArray(ByteArrayEncodeDataContainer source){

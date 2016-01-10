@@ -2,15 +2,15 @@ package org.datasand.agents.tests;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
-
+import java.util.HashSet;
 import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.cmap.CMap;
-import org.datasand.agents.cmap.TypeDescriptorListener;
-import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.TypeDescriptorsContainer;
+import org.datasand.codec.VTable;
+import org.datasand.codec.serialize.SerializerGenerator;
 import org.datasand.network.NetworkID;
 import org.datasand.network.NetworkNode;
 import org.datasand.network.NetworkNodeConnection;
@@ -30,7 +30,6 @@ public class AgentsTest {
         try {
             bout = new ByteArrayOutputStream();
             System.setOut(new PrintStream(bout));
-            TypeDescriptor.REGENERATE_SERIALIZERS=true;
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -58,14 +57,12 @@ public class AgentsTest {
             nodes[i] = new NetworkNode(null);
         }
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (Exception err) {
         }
         System.out.println("Ready");
-        nodes[3].send(new byte[5], nodes[3].getLocalHost(),
-                NetworkNodeConnection.PROTOCOL_ID_BROADCAST);
-        NetworkID unreach = new NetworkID(nodes[3].getLocalHost()
-                .getIPv4Address(), 56565, 0);
+        nodes[3].send(new byte[5], nodes[3].getLocalHost(),NetworkNodeConnection.PROTOCOL_ID_BROADCAST);
+        NetworkID unreach = new NetworkID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
         try {
             Thread.sleep(1000);
@@ -88,16 +85,15 @@ public class AgentsTest {
 
     @Test
     public void testBroadcastToAgent() {
-        TypeDescriptorsContainer container = new TypeDescriptorsContainer("./node1");
         AutonomousAgentManager nodes[] = new AutonomousAgentManager[10];
         AutonomousAgent agent[] = new AutonomousAgent[nodes.length];
         for (int i = 0; i < nodes.length; i++) {
-            nodes[i] = new AutonomousAgentManager(container);
+            nodes[i] = new AutonomousAgentManager();
             agent[i] = new TestAgent(nodes[i].getNetworkNode().getLocalHost(),nodes[i]);
         }
 
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (Exception err) {
         }
 
@@ -127,7 +123,6 @@ public class AgentsTest {
 
     @Test
     public void testMulticast() {
-        TypeDescriptorsContainer container = new TypeDescriptorsContainer("./node1");
         AutonomousAgentManager nodes[] = new AutonomousAgentManager[10];
         AutonomousAgent agent[] = new AutonomousAgent[nodes.length];
         // Arbitrary number greater than 10 and not equal to 9999 (which is the
@@ -137,7 +132,7 @@ public class AgentsTest {
                 NetworkNodeConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
                 MULTICAST_GROUP, MULTICAST_GROUP);
         for (int i = 0; i < nodes.length; i++) {
-            nodes[i] = new AutonomousAgentManager(container);
+            nodes[i] = new AutonomousAgentManager();
             agent[i] = new TestAgent(nodes[i].getNetworkNode().getLocalHost(),
                     nodes[i]);
             // only 5 agents are registered for this multicast
@@ -171,12 +166,11 @@ public class AgentsTest {
 
     @Test
     public void testUnicast() {
-        TypeDescriptorsContainer container = new TypeDescriptorsContainer("./node1");
         AutonomousAgentManager nodes[] = new AutonomousAgentManager[10];
         AutonomousAgent agent[] = new AutonomousAgent[nodes.length];
         NetworkID destination = null;
         for (int i = 0; i < nodes.length; i++) {
-            nodes[i] = new AutonomousAgentManager(container);
+            nodes[i] = new AutonomousAgentManager();
             agent[i] = new TestAgent(nodes[i].getNetworkNode().getLocalHost(),
                     nodes[i]);
             if (i == 7)
@@ -208,9 +202,8 @@ public class AgentsTest {
 
     @Test
     public void testCMapString() {
-        TypeDescriptorsContainer container = new TypeDescriptorsContainer("./node1");
-        AutonomousAgentManager m1 = new AutonomousAgentManager(container);
-        AutonomousAgentManager m2 = new AutonomousAgentManager(container);
+        AutonomousAgentManager m1 = new AutonomousAgentManager();
+        AutonomousAgentManager m2 = new AutonomousAgentManager();
         CMap<String, String> map1 = new CMap<String,String>(125, m1,252,null);
         CMap<String, String> map2 = new CMap<String,String>(125, m2,252,null);
 
@@ -239,9 +232,8 @@ public class AgentsTest {
     @Test
     public void testCMapTestObject() {
         setOrigOut();
-        TypeDescriptorsContainer container = new TypeDescriptorsContainer("./node1");
-        AutonomousAgentManager m1 = new AutonomousAgentManager(container);
-        AutonomousAgentManager m2 = new AutonomousAgentManager(container);
+        AutonomousAgentManager m1 = new AutonomousAgentManager();
+        AutonomousAgentManager m2 = new AutonomousAgentManager();
         CMap<String, TestObject> map1 = new CMap<String, TestObject>(125, m1,252,null);
         CMap<String, TestObject> map2 = new CMap<String, TestObject>(125, m2,252,null);
 
@@ -289,19 +281,18 @@ public class AgentsTest {
     @Test
     public void testUnreachable(){
         setOrigOut();
-        TypeDescriptorsContainer container = new TypeDescriptorsContainer("./node1");
-        AutonomousAgentManager m1 = new AutonomousAgentManager(container);
+        AutonomousAgentManager m1 = new AutonomousAgentManager();
         CMap<String, TestObject> map1 = new CMap<String, TestObject>(125, m1,252,null);
 
         map1.put("TestKey1", createTestObject());
         map1.put("TestKey2", createTestObject());
 
-        AutonomousAgentManager m2 = new AutonomousAgentManager(container);
+        AutonomousAgentManager m2 = new AutonomousAgentManager();
         CMap<String, TestObject> map2 = new CMap<String, TestObject>(125, m2,252,null);
         map2.put("TestKey7", createTestObject());
         map1.remove("TestKey1");
 
-        AutonomousAgentManager m3 = new AutonomousAgentManager(container);
+        AutonomousAgentManager m3 = new AutonomousAgentManager();
         CMap<String, TestObject> map3 = new CMap<String, TestObject>(125, m3,252,null);
 
         map1.put("TestKey1", createTestObject());
@@ -320,7 +311,7 @@ public class AgentsTest {
         Assert.assertEquals(map1.get("TestKey3"), map3.get("TestKey3"));
         Assert.assertEquals(map1.get("TestKey4"), map2.get("TestKey4"));
 
-        AutonomousAgentManager m4 = new AutonomousAgentManager(container);
+        AutonomousAgentManager m4 = new AutonomousAgentManager();
         CMap<String, TestObject> map4 = new CMap<String, TestObject>(125, m4,252,null);
         map4.put("TestKey11", createTestObject());
 
@@ -352,13 +343,14 @@ public class AgentsTest {
         map3._ForTestOnly_pseudoSendEnabled = false;
         map3.sendARPBroadcast();
         map4.sendARPBroadcast();
+        map2.sendARPBroadcast();
 
-        m4 = new AutonomousAgentManager(container);
+        m4 = new AutonomousAgentManager();
         map4 = new CMap<String, TestObject>(125, m4,252,null);
 
         try {
             System.out.println("Sleeping 5 seconds to allow node 4 to load and sync");
-            Thread.sleep(5000);
+            Thread.sleep(60000);
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -415,13 +407,13 @@ public class AgentsTest {
         //m4.shutdown();
     }
 
+    /*
     @Test
     public void testClusterTypeDescriptors(){
 
         File node1 = new File("./node1");
         node1.mkdirs();
-        TypeDescriptorsContainer container1 = new TypeDescriptorsContainer("./node1");
-        AutonomousAgentManager m1 = new AutonomousAgentManager(container1);
+        AutonomousAgentManager m1 = new AutonomousAgentManager();
         CMap<String, TypeDescriptor> cm1 = new CMap<String, TypeDescriptor>(223, m1,255,new TypeDescriptorListener<String,TypeDescriptor>(container1));
         container1.setClusterMap(cm1);
 
@@ -440,7 +432,7 @@ public class AgentsTest {
         Assert.assertEquals(true, td2!=null);
         m1.shutdown();
         m2.shutdown();
-    }
+    }*/
 
     @AfterClass
     public static void clean(){

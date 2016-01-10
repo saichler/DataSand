@@ -2,9 +2,9 @@ package org.datasand.agents;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.serialize.ISerializer;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -51,15 +51,10 @@ public class Message implements ISerializer{
     }
 
     @Override
-    public void encode(Object value, byte[] byteArray, int location) {
-
-    }
-
-    @Override
-    public void encode(Object value, EncodeDataContainer edc) {
+    public void encode(Object value, BytesArray ba) {
         Message m = (Message)value;
-        edc.getEncoder().encodeInt32(m.getMessageType(), edc);        
-        edc.getEncoder().encodeInt64(m.messageID, edc);
+        Encoder.encodeInt32(m.getMessageType(), ba);
+        Encoder.encodeInt64(m.messageID, ba);
         if(passThroughOutgoingMessage.containsKey(m.getMessageType()) && m.getMessageData() instanceof BytesArray){
         	//this is a passthrough message
         	//copy the data bytes from the other container to this message
@@ -67,38 +62,21 @@ public class Message implements ISerializer{
         	//4 - for the message type
         	//8 - for the message id
         	// == 14
-        	((BytesArray)edc).insert((BytesArray)m.getMessageData(),14);
+        	ba.insert((BytesArray)m.getMessageData(),14);
         }else
-        	edc.getEncoder().encodeObject(m.messageData, edc);
+        	Encoder.encodeObject(m.messageData, ba);
     }
 
     @Override
-    public Object decode(byte[] byteArray, int location, int length) {
-        return null;
-    }
-
-    @Override
-    public Object decode(EncodeDataContainer edc, int length) {
+    public Object decode(BytesArray ba) {
         Message m = new Message();
-        m.messageType = edc.getEncoder().decodeInt32(edc);        
-        m.messageID = edc.getEncoder().decodeInt64(edc);
+        m.messageType = Encoder.decodeInt32(ba);
+        m.messageID = Encoder.decodeInt64(ba);
         if(passThroughIncomingMessage.containsKey(m.messageType)){
-        	m.messageData = edc;
+        	m.messageData = ba;
         }else{
-        	m.messageData = edc.getEncoder().decodeObject(edc);
+        	m.messageData = Encoder.decodeObject(ba);
         }
         return m;
-    }
-
-    @Override
-    public String getShardName(Object obj) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Object getRecordKey(Object obj) {
-        // TODO Auto-generated method stub
-        return null;
     }
 }
