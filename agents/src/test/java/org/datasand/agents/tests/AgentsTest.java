@@ -350,7 +350,7 @@ public class AgentsTest {
 
         try {
             System.out.println("Sleeping 5 seconds to allow node 4 to load and sync");
-            Thread.sleep(60000);
+            Thread.sleep(5000);
         } catch (Exception err) {
             err.printStackTrace();
         }

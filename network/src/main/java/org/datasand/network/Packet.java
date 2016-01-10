@@ -28,7 +28,7 @@ public class Packet implements ISerializer {
     private boolean multiPart = false;
     private int priority = 2;
     private byte[] data = null;
-    private Object decodedObject = null;
+    private Object message = null;
 
     private static int nextPacketID = 1000;
     static {
@@ -38,9 +38,8 @@ public class Packet implements ISerializer {
     private Packet() {
     }
 
-    public Packet(Object _decodedObject, NetworkID _source, NetworkID _dest) {
+    public Packet(NetworkID _source, NetworkID _dest) {
         this(_source, _dest, (byte[]) null);
-        this.decodedObject = _decodedObject;
     }
 
     public Packet(NetworkID _source, NetworkID _destination, byte[] _data) {
@@ -64,6 +63,12 @@ public class Packet implements ISerializer {
         if (this.data == null) {
             this.data = new byte[0];
         }
+    }
+
+    public Packet(Object message,NetworkID source){
+        this.source = source;
+        this.destination = source;
+        this.message = message;
     }
 
     public NetworkID getSource() {
@@ -106,6 +111,16 @@ public class Packet implements ISerializer {
             Encoder.encodeByte(m_p,ba);
         }
         Encoder.encodeByteArray(p.data,ba);
+    }
+
+    public Object decode(){
+        if(this.message!=null){
+            return this.message;
+        }else{
+            BytesArray ba = new BytesArray(this.data);
+            this.message =  Encoder.decodeObject(ba);
+            return this.message;
+        }
     }
 
     @Override
@@ -160,34 +175,6 @@ public class Packet implements ISerializer {
         return buff.toString();
     }
 
-    public void decode() {
-        if (this.decodedObject == null) {
-            if(this.getSource().equals(NetworkNodeConnection.PROTOCOL_ID_UNREACHABLE)){
-                //byte origData[] = new byte[this.getData().length-PACKET_DATA_LOCATION];
-                //System.arraycopy(this.getData(), PACKET_DATA_LOCATION, origData, 0, origData.length);
-                BytesArray ba = new BytesArray(this.getData());
-                try{
-                    decodedObject = Encoder.decodeObject(ba);
-                }catch(Exception err){
-                    System.err.println("Unable to decode...");
-                    err.printStackTrace();
-                }
-            }else{
-                BytesArray ba = new BytesArray(this.getData());
-                try{
-                    decodedObject = Encoder.decodeObject(ba);}
-                catch(Exception err){
-                    System.err.println("Unable to decode...");
-                    err.printStackTrace();
-                }
-            }
-        }
-    }
-
-    public Object getDecodedObject() {
-        return this.decodedObject;
-    }
-
     public NetworkID getUnreachableOrigAddress(){
         int destAddress = Encoder.decodeInt32(this.getData(),PACKET_DEST_LOCATION);
         int destPort = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION+4);
@@ -196,5 +183,9 @@ public class Packet implements ISerializer {
             destPort = Encoder.decodeInt16(this.getData(), this.getData().length-2);
         }
         return new NetworkID(destAddress, destPort, 0);
+    }
+
+    public Object getMessage(){
+        return this.message;
     }
 }

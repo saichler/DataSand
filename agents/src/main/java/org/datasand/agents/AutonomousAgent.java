@@ -28,7 +28,7 @@ public abstract class AutonomousAgent implements Runnable {
     private long lastRepetitiveCheck = 0;
     private Map<Long,MessageEntry> journal = new LinkedHashMap<Long, MessageEntry>();
     private Map<NetworkID,PeerEntry> peers = new HashMap<NetworkID,PeerEntry>();
-    private Message timeoutID = new Message();
+    private static final Message timeoutID = new Message();
 
     public boolean _ForTestOnly_pseudoSendEnabled = false;
 
@@ -86,16 +86,16 @@ public abstract class AutonomousAgent implements Runnable {
 
     public void run() {
         currentFrame.decode();
-        if(currentFrame.getDecodedObject()==timeoutID){
+        if(currentFrame.getMessage()==timeoutID){
             this.checkForTimeoutMessages();
         }else
         if(currentFrame.getSource().getSubSystemID()==NetworkNodeConnection.DESTINATION_UNREACHABLE){
-            processDestinationUnreachable((Message)currentFrame.getDecodedObject(),currentFrame.getUnreachableOrigAddress());
+            processDestinationUnreachable((Message)currentFrame.getMessage(),currentFrame.getUnreachableOrigAddress());
         }else
-        if (currentFrame.getDecodedObject() instanceof ISideTask) {
-            this.getAgentManager().runSideTask((ISideTask) currentFrame.getDecodedObject());
+        if (currentFrame.getMessage() instanceof ISideTask) {
+            this.getAgentManager().runSideTask((ISideTask) currentFrame.getMessage());
         } else {
-            processMessage((Message)currentFrame.getDecodedObject(),currentFrame.getSource(),currentFrame.getDestination());
+            processMessage((Message)currentFrame.getMessage(),currentFrame.getSource(),currentFrame.getDestination());
         }
         currentFrame = null;
         synchronized (manager.getSyncObject()) {
@@ -125,7 +125,7 @@ public abstract class AutonomousAgent implements Runnable {
     }
 
     public void registerRepetitiveMessage(long interval,long intervalStart,int priority,Message message){
-        Packet p = new Packet(message,this.getAgentID(), this.getAgentID());
+        Packet p = new Packet(message,this.getAgentID());
         RepetitiveFrameEntry entry = new RepetitiveFrameEntry(p, interval,intervalStart, priority);
         if(entry.shouldExecute()){
             incoming.add(entry.frame, entry.priority);

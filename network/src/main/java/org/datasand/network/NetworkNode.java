@@ -31,7 +31,7 @@ public class NetworkNode extends Thread {
 
     private PacketProcessor packetProcessor = null;
     private IFrameListener frameListener = null;
-    private Packet serializer = new Packet((Object) null, null, null);
+    private Packet serializer = new Packet((Object) null, null);
     private boolean unicast = false;
     private DiscoverNetworkAdjacentsListener discoveryListener = null;
 
