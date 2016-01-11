@@ -57,11 +57,6 @@ public class BytesArray {
         this.location = 0;
     }
 
-    public byte[] getMarked(int mark) {
-        byte[] result = new byte[location - mark];
-        System.arraycopy(bytes, mark, result, 0, result.length);
-        return result;
-    }
     public void insert(BytesArray ba,int startLocation){
         byte otherData[] = ba.getBytes();
         this.adjustSize(otherData.length-startLocation);
@@ -69,7 +64,17 @@ public class BytesArray {
         this.advance(otherData.length-startLocation);
     }
 
+    public void setLocation(int loc){
+        this.location = loc;
+    }
+
     /*
+    public byte[] getMarked(int mark) {
+        byte[] result = new byte[location - mark];
+        System.arraycopy(bytes, mark, result, 0, result.length);
+        return result;
+    }
+
     public static byte[] toSingleByteArray(ByteArrayEncodeDataContainer source){
         ByteArrayEncodeDataContainer enc = new ByteArrayEncodeDataContainer(1024,source.getTypeDescriptor());
         byte data[] = source.getData();
