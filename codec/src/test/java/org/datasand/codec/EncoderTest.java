@@ -16,6 +16,35 @@ import org.junit.Test;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class EncoderTest {
+
+    @Test
+    public void testBoolean(){
+        BytesArray ba = new BytesArray(0);
+        Encoder.encodeBoolean(true,ba);
+        ba.resetLocation();
+        Boolean i = Encoder.decodeBoolean(ba);
+        Assert.assertEquals(true,i);
+        ba.resetLocation();
+        Encoder.encodeBoolean(null,ba);
+        ba.resetLocation();
+        i = Encoder.decodeBoolean(ba);
+        Assert.assertFalse(i);
+    }
+
+    @Test
+    public void testString(){
+        BytesArray ba = new BytesArray(0);
+        Encoder.encodeString("test",ba);
+        ba.resetLocation();
+        String i = Encoder.decodeString(ba);
+        Assert.assertEquals("test",i);
+        ba.resetLocation();
+        Encoder.encodeString(null,ba);
+        ba.resetLocation();
+        i = Encoder.decodeString(ba);
+        Assert.assertNull(i);
+    }
+
     @Test
     public void testInt16(){
         BytesArray ba = new BytesArray(0);
@@ -23,6 +52,15 @@ public class EncoderTest {
         ba.resetLocation();
         int i = Encoder.decodeInt16(ba);
         Assert.assertEquals(50000,i);
+    }
+
+    @Test
+    public void testByte(){
+        BytesArray ba = new BytesArray(0);
+        Encoder.encodeByte((byte)17,ba);
+        ba.resetLocation();
+        byte i = Encoder.decodeByte(ba);
+        Assert.assertEquals(17,i);
     }
 
     @Test
@@ -125,4 +163,39 @@ public class EncoderTest {
         a = Encoder.decodeObject(ba);
         Assert.assertNull(a);
     }
+
+    @Test
+    public void testEncodeIntArray(){
+        int[] arr = new int[1];
+        arr[0] = 567;
+        BytesArray ba = new BytesArray(0);
+        Encoder.encodeIntArray(arr,ba);
+        ba.resetLocation();
+        int[] a = Encoder.decodeIntArray(ba);
+        Assert.assertEquals(arr.length,a.length);
+        Assert.assertEquals(arr[0],a[0]);
+        ba.resetLocation();
+        Encoder.encodeIntArray(null,ba);
+        ba.resetLocation();
+        a = Encoder.decodeIntArray(ba);
+        Assert.assertNull(a);
+    }
+
+    @Test
+    public void testEncodeByteArray(){
+        byte[] arr = new byte[1];
+        arr[0] = (byte)189;
+        BytesArray ba = new BytesArray(0);
+        Encoder.encodeByteArray(arr,ba);
+        ba.resetLocation();
+        byte[] a = Encoder.decodeByteArray(ba);
+        Assert.assertEquals(arr.length,a.length);
+        Assert.assertEquals(arr[0],a[0]);
+        ba.resetLocation();
+        Encoder.encodeByteArray(null,ba);
+        ba.resetLocation();
+        a = Encoder.decodeByteArray(ba);
+        Assert.assertNull(a);
+    }
+
 }
