@@ -47,7 +47,6 @@ public class Encoder {
             MD5ID id = serializersManager.getMD5ByObject(value);
             encodeInt64(id.getMd5Long1(),ba);
             encodeInt64(id.getMd5Long2(),ba);
-            ba.advance(16);
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
             serializer.encode(value,ba);
         }
@@ -63,7 +62,6 @@ public class Encoder {
             try {
                 long a = decodeInt64(ba);
                 long b = decodeInt64(ba);
-                ba.advance(16);
                 ISerializer serializer = serializersManager.getSerializerByLongs(a, b);
                 return serializer.decode(ba);
             }catch (Exception err){

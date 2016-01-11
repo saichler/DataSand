@@ -7,16 +7,14 @@
  */
 package org.datasand.codec;
 
+import org.junit.Test;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ClassLoaderManager {
-    static {
-        new ClassLoaderManager();
-    }
-    private ClassLoaderManager(){
-    }
-    public static ClassLoader getClassLoader(String str){
-        return ClassLoaderManager.class.getClassLoader();
+public class ClassLoaderManagerTest {
+    @Test
+    public void test(){
+        ClassLoaderManager.getClassLoader(this.getClass().getName());
     }
 }
