@@ -31,6 +31,7 @@ public class SerializationTest {
     @After
     public void tearDown() throws InterruptedException {
         deleteSerializers();
+        deleteClassFiles(new File("./src"));
     }
     public void deleteSerializers(){
         File f = new File("./serializers");
