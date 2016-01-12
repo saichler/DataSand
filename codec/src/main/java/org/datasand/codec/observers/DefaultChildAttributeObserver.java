@@ -10,7 +10,10 @@ public class DefaultChildAttributeObserver implements IChildAttributeObserver{
 
     @Override
     public boolean isChildAttribute(VColumn vColumn) {
-        if(vColumn.isCollection() && !vColumn.getJavaMethodReturnType().getPackage().getName().startsWith("java"))
+        if(vColumn.getJavaMethodReturnType().isPrimitive()){
+            return false;
+        }
+        if(!vColumn.getJavaMethodReturnType().getPackage().getName().startsWith("java"))
             return true;
         return false;
     }

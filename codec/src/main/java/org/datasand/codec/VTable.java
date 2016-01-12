@@ -9,6 +9,8 @@ package org.datasand.codec;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -22,13 +24,15 @@ public class VTable {
     private final Class<?> javaClassType;
     private final String name;
     private VColumn keyColumn = null;
-    private final Map<VColumn,VColumn> children = new HashMap<>();
-    private final Map<VColumn,VColumn> parents = new HashMap<>();
+    private final Map<VColumn,VTable> children = new HashMap<>();
+    private final Map<VColumn,VTable> parents = new HashMap<>();
     private final List<VColumn> columns = new ArrayList<>();
+    private final Map<String,VColumn> nameToColumn = new HashMap<>();
 
     public VTable(Class<?> cls){
         this.javaClassType = cls;
-        this.name = this.javaClassType.getSimpleName();
+        this.name = this.javaClassType.getSimpleName().toUpperCase();
+        VSchema.instance.registerVTable(this);
     }
 
     public Class<?> getJavaClassType() {
@@ -39,12 +43,24 @@ public class VTable {
         return columns;
     }
 
-    public Map<VColumn, VColumn> getParents() {
+    public Map<VColumn, VTable> getParents() {
         return parents;
     }
 
-    public Map<VColumn, VColumn> getChildren() {
+    public Map<VColumn, VTable> getChildren() {
         return children;
+    }
+
+    public VColumn getColumnByName(String name){
+        return this.nameToColumn.get(name.toUpperCase());
+    }
+
+    public String getName(){
+        return this.name;
+    }
+
+    public boolean analyze(){
+        return analyze(new HashSet<Class<?>>());
     }
 
     public boolean analyze(HashSet<Class<?>> beenHere){
@@ -68,19 +84,27 @@ public class VTable {
             }
 
             if (Observers.instance.isChildAttribute(vColumn)) {
-                if(!beenHere.contains(vColumn.getJavaClass())) {
-                    children.put(vColumn, vColumn);
-                    VTable child = new VTable(vColumn.getJavaClass());
-                    child.parents.put(vColumn, vColumn);
+                if(!beenHere.contains(vColumn.getJavaMethodReturnType())) {
+                    VTable child = new VTable(vColumn.getJavaMethodReturnType());
+                    children.put(vColumn, child);
+                    child.parents.put(vColumn, this);
                     child.analyze(beenHere);
                 }
             } else {
-                if (Observers.instance.isTypeAttribute(vColumn)) {
-
-                }
                 columns.add(vColumn);
+                nameToColumn.put(vColumn.getvColumnName().toUpperCase(),vColumn);
             }
         }
+        Collections.sort(columns, new Comparator<VColumn>() {
+            @Override
+            public int compare(VColumn o1, VColumn o2) {
+                if(o1.getvColumnName().hashCode()<o2.getvColumnName().hashCode()) {
+                    return -1;
+                }else{
+                    return 1;
+                }
+            }
+        });
         return true;
     }
 }

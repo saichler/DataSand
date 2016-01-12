@@ -17,4 +17,8 @@ public class VSchema {
     public VTable getVTable(Class<?> cls){
         return vtables.get(cls);
     }
+
+    public void registerVTable(VTable tbl){
+        this.vtables.put(tbl.getJavaClassType(),tbl);
+    }
 }

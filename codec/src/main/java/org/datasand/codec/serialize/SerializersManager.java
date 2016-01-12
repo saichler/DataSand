@@ -7,9 +7,13 @@
  */
 package org.datasand.codec.serialize;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.datasand.codec.MD5ID;
+import org.datasand.codec.Observers;
+import org.datasand.codec.VSchema;
+import org.datasand.codec.VTable;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -37,11 +41,29 @@ public class SerializersManager {
     }
 
     public MD5ID getMD5ByClass(Class cls){
-        return classToMD5.get(cls);
+        MD5ID id = classToMD5.get(cls);
+        if(id==null){
+            VTable t = VSchema.instance.getVTable(cls);
+            if(t==null){
+                t = new VTable(cls);
+                t.analyze();
+                VSchema.instance.registerVTable(t);
+            }
+
+            try {
+                ISerializer s = SerializerGenerator.generateSerializer(t);
+                registerSerializer(cls,s);
+                id = getMD5ByClass(cls);
+            } catch (IOException | IllegalAccessException | InstantiationException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        return id;
     }
 
     public MD5ID getMD5ByObject(Object o){
-        return classToMD5.get(o.getClass());
+        Class<?> cls = Observers.instance.getClassExtractor().getObjectClass(o);
+        return getMD5ByClass(cls);
     }
 
     public ISerializer getSerializerByMD5(MD5ID id){
@@ -53,7 +75,8 @@ public class SerializersManager {
     }
 
     public ISerializer getSerializerByObject(Object o){
-        return getSerializerByClass(o.getClass());
+        Class<?> objectClass = Observers.instance.getClassExtractor().getObjectClass(o);
+        return getSerializerByClass(objectClass);
     }
 
     public ISerializer getSerializerByLongs(long a,long b){

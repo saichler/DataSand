@@ -7,6 +7,7 @@
  */
 package org.datasand.codec;
 
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.Inet6Address;
 import java.net.InterfaceAddress;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.datasand.codec.serialize.ISerializer;
+import org.datasand.codec.serialize.SerializerGenerator;
 import org.datasand.codec.serialize.SerializersManager;
 import org.datasand.codec.serialize.StringSerializer;
 
@@ -35,7 +37,19 @@ public class Encoder {
     }
 
     public static final ISerializer getSerializerByClass(Class<?> cls){
-        return serializersManager.getSerializerByClass(cls);
+        ISerializer serializer =  serializersManager.getSerializerByClass(cls);
+        if(serializer==null){
+            VTable table = VSchema.instance.getVTable(cls);
+            if(table!=null){
+                try {
+                    serializer = SerializerGenerator.generateSerializer(table);
+                    serializersManager.registerSerializer(cls,serializer);
+                } catch (IOException | IllegalAccessException | InstantiationException | ClassNotFoundException e) {
+                    VLogger.error("Failed to create a serializer to class "+cls.getName(),e);
+                }
+            }
+        }
+        return serializer;
     }
 
     //Object

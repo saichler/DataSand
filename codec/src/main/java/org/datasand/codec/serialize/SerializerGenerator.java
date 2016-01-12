@@ -11,7 +11,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.HashSet;
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
 import org.datasand.codec.Observers;
 import org.datasand.codec.VColumn;
 import org.datasand.codec.VSchema;
@@ -46,51 +51,33 @@ public class SerializerGenerator {
         return buff.toString();
     }
 
-    public static void main(String args[]){
-        VTable table = new VTable(VColumn.class);
-        table.analyze(new HashSet<Class<?>>());
-        try {
-            generateSerializer(table);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void generateSerializer(VTable vTable) throws IOException {
+    public static ISerializer generateSerializer(VTable vTable) throws IOException, IllegalAccessException, InstantiationException, ClassNotFoundException {
         String clsTxt = generateSerializerText(vTable);
-        String fileName = replaceAll(vTable.getJavaClassType().getPackage().getName(),".","/")+"/"+vTable.getJavaClassType().getSimpleName();
-        File origFile = findJavaFile(new File(System.getProperty("user.dir")),fileName+".java");
-        String serializerFileName = origFile.getParent()+"/"+vTable.getJavaClassType().getSimpleName()+"Serializer.java";
-
+        String filePath = "./serializers/"+replaceAll(vTable.getJavaClassType().getPackage().getName(),".","/");
+        File dir = new File(filePath);
+        if(!dir.exists()){
+            dir.mkdirs();
+        }
+        String serializerFileName = dir.getAbsolutePath()+"/"+vTable.getJavaClassType().getSimpleName()+"Serializer.java";
         File f = new File(serializerFileName);
         FileOutputStream out = new FileOutputStream(f);
         out.write(clsTxt.getBytes());
         out.close();
-    }
-
-    public static final File findJavaFile(File dir,String fileName){
-        File f[] = dir.listFiles();
-        for(File file:f){
-            if(file.isDirectory()){
-                File found = findJavaFile(file,fileName);
-                if(found!=null){
-                    return found;
-                }
-            }else
-            if(file.getPath().endsWith(fileName)){
-                return file;
-            }
-        }
-        return null;
+        return compileSerializer(f,vTable);
     }
 
     private static String generateSerializerText(VTable vTable){
         StringBuffer buff = new StringBuffer();
 
         append("", 0, buff);
-        append("package " + vTable.getJavaClassType().getPackage().getName() + ";", 0,buff);
+        append("package "+vTable.getJavaClassType().getPackage().getName()+";", 0,buff);
+        append("import java.util.List;", 0, buff);
         append("import org.datasand.codec.BytesArray;", 0, buff);
+        append("import org.datasand.codec.Encoder;", 0, buff);
         append("import org.datasand.codec.serialize.ISerializer;", 0, buff);
+        for(VTable c:vTable.getChildren().values()){
+            append("import "+ c.getJavaClassType().getName()+";", 0, buff);
+        }
         String className = vTable.getJavaClassType().getName();
         className = replaceAll(className, "$", ".");
         append("import " + className + ";", 0, buff);
@@ -134,25 +121,23 @@ public class SerializerGenerator {
         }
 
         if(Observers.instance.supportAugmentations(vTable)){
-            append("ba.setCurrentAttributeName(\"Augmentations\");",8,buff);
             append("Encoder.encodeAugmentations(value, ba);", 8, buff);
         }
 
         if (Observers.instance.isChildAttribute(vTable)) {
             for (VColumn child : vTable.getChildren().keySet()) {
                 VTable subTable = VSchema.instance.getVTable(child.getJavaMethodReturnType());
-                append("ba.setCurrentAttributeName(\""+child.getvColumnName()+"\");",8,buff);
                 if(child.isCollection()){
-                    append("Encoder.encodeAndAddList(element."+child.getJavaGetMethodName()+"(), ba,"+subTable.getJavaClassType().getSimpleName()+".class);",8,buff);
+                    append("Encoder.encodeList(element."+child.getJavaGetMethodName()+"(), ba);",8,buff);
                 }else{
-                    append("Encoder.encodeAndAddObject(element."+child.getJavaGetMethodName()+"(), ba,"+subTable.getJavaClassType().getSimpleName()+".class);",8,buff);
+                    append("Encoder.encodeObject(element."+child.getJavaGetMethodName()+"(), ba);",8,buff);
                 }
             }
         }
 
         append("}", 4, buff);
         append("@Override", 4, buff);
-        append("public Object decode(BytesArray ba, int length) {", 4, buff);
+        append("public Object decode(BytesArray ba) {", 4, buff);
         if (builderClass!=null) {
             append(builderClass.getSimpleName()+" builder = new "+ builderClass.getSimpleName()+"();", 8, buff);
             for (VColumn vColumn : vTable.getColumns()) {
@@ -196,18 +181,16 @@ public class SerializerGenerator {
             }
 
             if(Observers.instance.supportAugmentations(vTable)){
-                append("ba.setCurrentAttributeName(\"Augmentations\");",8,buff);
                 append("Encoder.decodeAugmentations(builder, ba,"+ vTable.getJavaClassType().getSimpleName() + ".class);", 8,buff);
             }
 
             if (Observers.instance.isChildAttribute(vTable)) {
                 for (VColumn child : vTable.getChildren().keySet()) {
-                    VTable subTable = VSchema.instance.getVTable(child.getJavaClass());
-                    append("ba.setCurrentAttributeName(\""+child.getvColumnName()+"\");",8,buff);
+                    VTable subTable = VSchema.instance.getVTable(child.getJavaMethodReturnType());
                     if(child.isCollection()){
-                        append("builder.set"+child.getvColumnName()+"(Encoder.decodeAndList(ba,"+subTable.getJavaClassType().getSimpleName()+".class));",8,buff);
+                        append("builder.set"+child.getvColumnName()+"((List<"+subTable.getJavaClassType().getSimpleName()+">)Encoder.decodeList(ba));",8,buff);
                     }else{
-                        append("builder.set"+child.getvColumnName()+"(("+subTable.getJavaClassType().getSimpleName()+")Encoder.decodeAndObject(ba));",8,buff);
+                        append("builder.set"+child.getvColumnName()+"(("+subTable.getJavaClassType().getSimpleName()+")Encoder.decodeObject(ba));",8,buff);
                     }
                 }
             }
@@ -265,4 +248,16 @@ public class SerializerGenerator {
         append("}", 0, buff);
         return buff.toString();
     }
+
+    public static ISerializer compileSerializer(File javaFile,VTable vTable) throws IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        compiler.run(null, null, null, javaFile.getPath());
+        URLClassLoader cl = new URLClassLoader(new URL[]{ new File("./serializers").toURI().toURL() });
+
+        Class<?> serializerClass = Class.forName(vTable.getJavaClassType().getName()+ "Serializer",true,cl);
+        ISerializer serializer = (ISerializer) serializerClass.newInstance();
+        cl.close();
+        return serializer;
+    }
+
 }
