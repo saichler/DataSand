@@ -1,4 +1,5 @@
 # DataSand
+******************** CURRENTLY REWRITING AND REFACTORING SOME STUFF, STAY TUNED    ***********************************************8
 Data Sand is an open source project built to be a framework for the "Internet of Everything", "Fog Computing" & "Edge Computing" aiming to make it ridiculously simple & easy to build, store, share & query applications/services/data using the “Social Networking” approach.
 
 ## Internet Of Everything
