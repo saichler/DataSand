@@ -55,4 +55,24 @@ public class HierarchyBytesArray extends BytesArray{
             child.resetLocation();
         }
     }
+
+    public byte[] getHierarchyData(){
+        BytesArray ba = new BytesArray(this.getBytes().length);
+        Encoder.encodeByteArray(this.getData(),ba);
+        for(HierarchyBytesArray child:this.children){
+            Encoder.encodeByteArray(child.getData(),ba);
+        }
+        return ba.getData();
+    }
+
+    public void setHierarchyData(byte data[]){
+        BytesArray ba = new BytesArray(data);
+        this.bytes = Encoder.decodeByteArray(ba);
+        while(ba.getLocation()<ba.getBytes().length){
+            byte childData[] = Encoder.decodeByteArray(ba);
+            HierarchyBytesArray child = new HierarchyBytesArray();
+            child.setHierarchyData(childData);
+            this.children.add(child);
+        }
+    }
 }

@@ -12,7 +12,7 @@ package org.datasand.codec;
  */
 public class BytesArray {
     private int location = 0;
-    private byte[] bytes = null;
+    protected byte[] bytes = null;
 
     public BytesArray(byte[] bytes) {
         this.bytes = bytes;

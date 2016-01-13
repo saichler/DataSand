@@ -10,6 +10,9 @@ package org.datasand.codec;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.datasand.codec.test.PojoObject;
+import org.datasand.codec.test.SubPojoList;
+import org.datasand.codec.test.SubPojoObject;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,6 +54,21 @@ public class HierarchyBytesArrayTest {
         Encoder.encodeObject(before,ba);
         Assert.assertEquals(2,ba.getChildren().size());
         ba.resetLocation();
+        PojoObject after = (PojoObject) Encoder.decodeObject(ba);
+        Assert.assertEquals(before,after);
+    }
+
+    @Test
+    public void testHierarchyEncodingSingleStream(){
+        PojoObject before = createPojo();
+        HierarchyBytesArray ba = new HierarchyBytesArray();
+        Encoder.encodeObject(before,ba);
+        Assert.assertEquals(2,ba.getChildren().size());
+
+        byte data[] = ba.getHierarchyData();
+        ba = new HierarchyBytesArray();
+        ba.setHierarchyData(data);
+
         PojoObject after = (PojoObject) Encoder.decodeObject(ba);
         Assert.assertEquals(before,after);
     }

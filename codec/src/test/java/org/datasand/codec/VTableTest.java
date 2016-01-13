@@ -9,6 +9,9 @@ package org.datasand.codec;
 
 import java.util.HashSet;
 import java.util.Map;
+import org.datasand.codec.test.PojoObject;
+import org.datasand.codec.test.SubPojoList;
+import org.datasand.codec.test.SubPojoObject;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -1,4 +1,4 @@
-package org.datasand.codec;
+package org.datasand.codec.test;
 
 
 public class SubPojoObject {

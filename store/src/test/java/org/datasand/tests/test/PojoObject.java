@@ -1,4 +1,4 @@
-package org.datasand.codec;
+package org.datasand.tests.test;
 
 import java.util.ArrayList;
 import java.util.List;

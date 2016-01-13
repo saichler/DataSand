@@ -1,4 +1,4 @@
-package org.datasand.codec;
+package org.datasand.tests.test;
 
 public class SubPojoList {
     private String name = null;
