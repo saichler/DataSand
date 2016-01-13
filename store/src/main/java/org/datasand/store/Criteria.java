@@ -1,8 +1,9 @@
 package org.datasand.store;
 
 import java.io.Serializable;
-
-import org.datasand.codec.AttributeDescriptor;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.VColumn;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -44,31 +45,31 @@ public class Criteria implements Serializable {
         parse(data, parentOperation);
     }
 
-    public static void encode(Object value,EncodeDataContainer edc){
+    public static void encode(Object value,BytesArray edc){
         Criteria c = (Criteria)value;
-        edc.getEncoder().encodeInt16(c.operation, edc);
-        edc.getEncoder().encodeString(c.criteria, edc);
-        edc.getEncoder().encodeObject(c.leftValue, edc);
-        edc.getEncoder().encodeObject(c.rightValue, edc);
+        Encoder.encodeInt16(c.operation, edc);
+        Encoder.encodeString(c.criteria, edc);
+        Encoder.encodeObject(c.leftValue, edc);
+        Encoder.encodeObject(c.rightValue, edc);
         if(c.left!=null){
             encode(c.left,edc);
         }else{
-            edc.getEncoder().encodeNULL(edc);
+            Encoder.encodeNULL(edc);
         }
         if(c.right!=null){
             encode(c.right,edc);
         }else{
-            edc.getEncoder().encodeNULL(edc);
+            Encoder.encodeNULL(edc);
         }
     }
 
-    public static Criteria decode(EncodeDataContainer edc){
-        if(edc.getEncoder().isNULL(edc)) return null;
+    public static Criteria decode(BytesArray edc){
+        if(Encoder.isNULL(edc)) return null;
         Criteria c = new Criteria();
-        c.operation = edc.getEncoder().decodeInt16(edc);
-        c.criteria = edc.getEncoder().decodeString(edc);
-        c.leftValue = edc.getEncoder().decodeObject(edc);
-        c.rightValue = edc.getEncoder().decodeObject(edc);
+        c.operation = Encoder.decodeInt16(edc);
+        c.criteria = Encoder.decodeString(edc);
+        c.leftValue = Encoder.decodeObject(edc);
+        c.rightValue = Encoder.decodeObject(edc);
         c.left = (Criteria)decode(edc);
         c.right = (Criteria)decode(edc);
         return c;
@@ -293,21 +294,21 @@ public class Criteria implements Serializable {
         return criteria;
     }
 
-    public String getCriteriaForProperty(AttributeDescriptor col) {
+    public String getCriteriaForProperty(VColumn col) {
         StringBuffer result = new StringBuffer();
         if (criteria == null) {
             return "";
         }
 
         if (leftValue != null && rightValue != null) {
-            if (leftValue.toString().toLowerCase().equals(col.getColumnName().toLowerCase()) ||
+            if (leftValue.toString().toLowerCase().equals(col.getvColumnName().toLowerCase()) ||
                 leftValue.toString().toLowerCase().equals(col.toString().toLowerCase()) ||
-                leftValue.toString().toLowerCase().equals(col.getTableName().toLowerCase()+"."+col.getColumnName().toLowerCase())) {
+                leftValue.toString().toLowerCase().equals(col.getvTableName().toLowerCase()+"."+col.getvColumnName().toLowerCase())) {
                 result.append("? ").append(operators[operation]).append(" ").append(rightValue);
             }else
-            if (rightValue.toString().toLowerCase().equals(col.getColumnName().toLowerCase()) ||
+            if (rightValue.toString().toLowerCase().equals(col.getvColumnName().toLowerCase()) ||
                     rightValue.toString().toLowerCase().equals(col.toString().toLowerCase()) ||
-                    rightValue.toString().toLowerCase().equals(col.getTableName().toLowerCase()+"."+col.getColumnName().toLowerCase())) {
+                    rightValue.toString().toLowerCase().equals(col.getvTableName().toLowerCase()+"."+col.getvColumnName().toLowerCase())) {
                     result.append("? ").append(operators[operation]).append(" ").append(leftValue);
             }
             return result.toString();

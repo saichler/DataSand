@@ -54,6 +54,10 @@ public class Encoder {
 
     //Object
     public static final void encodeObject(Object value,BytesArray ba){
+        if(ba instanceof HierarchyBytesArray && ba.getLocation()!=0){
+            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+            ba = hba.addNewChild();
+        }
         if(value==null){
             encodeNULL(ba);
         }else{
@@ -61,12 +65,19 @@ public class Encoder {
             MD5ID id = serializersManager.getMD5ByObject(value);
             encodeInt64(id.getMd5Long1(),ba);
             encodeInt64(id.getMd5Long2(),ba);
+            if(ba instanceof HierarchyBytesArray){
+                ((HierarchyBytesArray)ba).setJavaTypeMD5(id);
+            }
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
             serializer.encode(value,ba);
         }
     }
 
     public static final Object decodeObject(BytesArray ba){
+        if(ba instanceof HierarchyBytesArray && ba.getLocation()>0){
+            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+            ba = hba.nextChild();
+        }
         if(isNULL(ba)){
             return null;
         }else{
@@ -404,6 +415,10 @@ public class Encoder {
 
     //List
     public static final void encodeList(List<?> list, BytesArray ba) {
+        if(ba instanceof HierarchyBytesArray && ba.getLocation()!=0){
+            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+            ba = hba.addNewChild();
+        }
         if (list == null || list.size()==0) {
             encodeNULL(ba);
         } else {
@@ -411,6 +426,9 @@ public class Encoder {
             MD5ID id = serializersManager.getMD5ByClass(list.get(0).getClass());
             encodeInt64(id.getMd5Long1(),ba);
             encodeInt64(id.getMd5Long2(),ba);
+            if(ba instanceof HierarchyBytesArray){
+                ((HierarchyBytesArray)ba).setJavaTypeMD5(id);
+            }
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
             for (Object o: list) {
                 serializer.encode(o,ba);
@@ -419,6 +437,10 @@ public class Encoder {
     }
 
     public static final List<?> decodeList(BytesArray ba) {
+        if(ba instanceof HierarchyBytesArray && ba.getLocation()>0){
+            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+            ba = hba.nextChild();
+        }
         if (isNULL(ba)) {
             return null;
         }
