@@ -8,6 +8,7 @@ import org.datasand.tests.test.PojoObject;
 import org.datasand.tests.test.SubPojoList;
 import org.datasand.tests.test.SubPojoObject;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -52,6 +53,8 @@ public class POJODBTest {
     public void test(){
         PojoObject pojo = buildPojo(1);
         database.put(null,pojo);
+        PojoObject next = (PojoObject) database.get(PojoObject.class,0);
+        Assert.assertEquals(pojo,next);
     }
     /*
     @Test

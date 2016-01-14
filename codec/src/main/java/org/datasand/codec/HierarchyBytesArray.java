@@ -66,6 +66,10 @@ public class HierarchyBytesArray extends BytesArray{
         return ba.getData();
     }
 
+    public void setBytesData(byte data[]){
+        this.bytes = data;
+    }
+
     public void setHierarchyData(byte data[]){
         BytesArray ba = new BytesArray(data);
         this.bytes = Encoder.decodeByteArray(ba);

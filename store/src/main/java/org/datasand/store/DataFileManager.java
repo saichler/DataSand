@@ -9,6 +9,7 @@ import java.util.Map;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.MD5ID;
 import org.datasand.codec.VLogger;
+import org.datasand.codec.VSchema;
 
 /**
  * Created by root on 1/14/16.
@@ -33,7 +34,7 @@ public class DataFileManager {
         }
         if(dataFileList.isEmpty()){
             try {
-                DataFile df = new DataFile(new File("./database/"+cls.getName()+".data"));
+                DataFile df = new DataFile(new File("./database/"+cls.getName()+".data"), VSchema.instance.getVTable(cls));
                 dataFileList.add(df);
             } catch (FileNotFoundException e) {
                 VLogger.error("Unable to create data file",e);

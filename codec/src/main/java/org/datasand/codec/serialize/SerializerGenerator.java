@@ -11,15 +11,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.HashSet;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 import org.datasand.codec.Observers;
 import org.datasand.codec.VColumn;
-import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
 
 /**
@@ -75,7 +72,7 @@ public class SerializerGenerator {
         append("import org.datasand.codec.BytesArray;", 0, buff);
         append("import org.datasand.codec.Encoder;", 0, buff);
         append("import org.datasand.codec.serialize.ISerializer;", 0, buff);
-        for(VTable c:vTable.getChildren().values()){
+        for(VTable c:vTable.getChildren()){
             append("import "+ c.getJavaClassType().getName()+";", 0, buff);
         }
         String className = vTable.getJavaClassType().getName();
@@ -125,12 +122,11 @@ public class SerializerGenerator {
         }
 
         if (Observers.instance.isChildAttribute(vTable)) {
-            for (VColumn child : vTable.getChildren().keySet()) {
-                VTable subTable = VSchema.instance.getVTable(child.getJavaMethodReturnType());
-                if(child.isCollection()){
-                    append("Encoder.encodeList(element."+child.getJavaGetMethodName()+"(), ba);",8,buff);
+            for (VTable child : vTable.getChildren()) {
+                if(child.getVColumn().isCollection()){
+                    append("Encoder.encodeList(element."+child.getVColumn().getJavaGetMethodName()+"(), ba);",8,buff);
                 }else{
-                    append("Encoder.encodeObject(element."+child.getJavaGetMethodName()+"(), ba);",8,buff);
+                    append("Encoder.encodeObject(element."+child.getVColumn().getJavaGetMethodName()+"(), ba);",8,buff);
                 }
             }
         }
@@ -185,12 +181,11 @@ public class SerializerGenerator {
             }
 
             if (Observers.instance.isChildAttribute(vTable)) {
-                for (VColumn child : vTable.getChildren().keySet()) {
-                    VTable subTable = VSchema.instance.getVTable(child.getJavaMethodReturnType());
-                    if(child.isCollection()){
-                        append("builder.set"+child.getvColumnName()+"((List<"+subTable.getJavaClassType().getSimpleName()+">)Encoder.decodeList(ba));",8,buff);
+                for (VTable child : vTable.getChildren()) {
+                    if(child.getVColumn().isCollection()){
+                        append("builder.set"+child.getVColumn().getvColumnName()+"((List<"+child.getJavaClassType().getSimpleName()+">)Encoder.decodeList(ba));",8,buff);
                     }else{
-                        append("builder.set"+child.getvColumnName()+"(("+subTable.getJavaClassType().getSimpleName()+")Encoder.decodeObject(ba));",8,buff);
+                        append("builder.set"+child.getVColumn().getvColumnName()+"(("+child.getJavaClassType().getSimpleName()+")Encoder.decodeObject(ba));",8,buff);
                     }
                 }
             }

@@ -8,7 +8,7 @@
 package org.datasand.codec;
 
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import org.datasand.codec.test.PojoObject;
 import org.datasand.codec.test.SubPojoList;
 import org.datasand.codec.test.SubPojoObject;
@@ -23,12 +23,12 @@ public class VTableTest {
     public void test(){
         VTable table = new VTable(PojoObject.class);
         table.analyze(new HashSet<Class<?>>());
-        Map<VColumn,VTable> m = table.getChildren();
+        List<VTable> m = table.getChildren();
         Assert.assertEquals(2,m.size());
         Assert.assertEquals(5,table.getColumns().size());
         Assert.assertEquals(0,table.getParents().size());
         Assert.assertNotNull(table.getColumnByName("teststring"));
-        for(VTable t:m.values()){
+        for(VTable t:m){
             Assert.assertTrue(t.getName().equals(SubPojoObject.class.getSimpleName().toUpperCase()) || t.getName().equals(SubPojoList.class.getSimpleName().toUpperCase()));
             if(t.getName().equals(SubPojoList.class.getSimpleName().toUpperCase())){
                 Assert.assertEquals(1,t.getColumns().size());

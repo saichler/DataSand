@@ -24,7 +24,9 @@ public class VTable {
     private final Class<?> javaClassType;
     private final String name;
     private VColumn keyColumn = null;
-    private final Map<VColumn,VTable> children = new HashMap<>();
+    private VColumn parentVColumn = null;
+    private final Map<VColumn,VTable> childrenToColumn = new HashMap<>();
+    private final List<VTable> children = new ArrayList<>();
     private final Map<VColumn,VTable> parents = new HashMap<>();
     private final List<VColumn> columns = new ArrayList<>();
     private final Map<String,VColumn> nameToColumn = new HashMap<>();
@@ -47,7 +49,7 @@ public class VTable {
         return parents;
     }
 
-    public Map<VColumn, VTable> getChildren() {
+    public List<VTable> getChildren() {
         return children;
     }
 
@@ -61,6 +63,10 @@ public class VTable {
 
     public boolean analyze(){
         return analyze(new HashSet<Class<?>>());
+    }
+
+    public VColumn getVColumn(){
+        return this.parentVColumn;
     }
 
     public boolean analyze(HashSet<Class<?>> beenHere){
@@ -86,7 +92,9 @@ public class VTable {
             if (Observers.instance.isChildAttribute(vColumn)) {
                 if(!beenHere.contains(vColumn.getJavaMethodReturnType())) {
                     VTable child = new VTable(vColumn.getJavaMethodReturnType());
-                    children.put(vColumn, child);
+                    childrenToColumn.put(vColumn, child);
+                    children.add(child);
+                    child.parentVColumn = vColumn;
                     child.parents.put(vColumn, this);
                     child.analyze(beenHere);
                 }
