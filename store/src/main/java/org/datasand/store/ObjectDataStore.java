@@ -13,6 +13,7 @@ import org.datasand.codec.TypeDescriptorsContainer;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public abstract class ObjectDataStore {
+    /*
     protected Map<String, Shard> location = new HashMap<String, Shard>();
     private static int MAX_X_VECTOR = 10;
     private static int MAX_Y_VECTOR = 10;
@@ -216,4 +217,5 @@ public abstract class ObjectDataStore {
     public abstract void commit();
     public abstract void close();
     public abstract boolean isClosed();
+    */
 }

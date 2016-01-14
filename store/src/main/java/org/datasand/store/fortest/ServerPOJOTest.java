@@ -1,11 +1,7 @@
 package org.datasand.store.fortest;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.datasand.store.bytearray.ByteArrayObjectDataStore;
-
 public class ServerPOJOTest {
+    /*
     public static void main(String args[]){
         ByteArrayObjectDataStore stores[] = new ByteArrayObjectDataStore[5];
         int recCountPerStore = 10000;
@@ -36,5 +32,5 @@ public class ServerPOJOTest {
         list.add(l2);
         obj.setList(list);
         return obj;
-    }
+    }*/
 }
