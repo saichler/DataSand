@@ -1,12 +1,7 @@
 package org.datasand.store.fortest;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
-
-import org.datasand.store.jdbc.DataSandJDBCDriver;
-
 public class ClientPOJOTest {
+    /*
     public static void main(String args[]){
         DataSandJDBCDriver driver = new DataSandJDBCDriver();
         Connection conn = null;
@@ -30,5 +25,5 @@ public class ClientPOJOTest {
         if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
         if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
         if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
-    }
+    }*/
 }

@@ -1,21 +1,11 @@
 package org.datasand.store.bytearray;
 
-import java.io.File;
-import java.io.PrintStream;
-
-import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.MD5ID;
-import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.BytesArray;
 import org.datasand.store.ObjectDataStore;
-import org.datasand.store.Shard;
-import org.datasand.store.jdbc.DataSandJDBCResultSet;
-import org.datasand.store.jdbc.DataSandJDBCServer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class ByteArrayObjectDataStore extends ObjectDataStore{
-
+/*
     private DataSandJDBCServer server = null;
 
     public ByteArrayObjectDataStore(String _dataLocation, boolean _shouldSortFields) {
@@ -295,4 +285,5 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
         MD5ID md5 = MD5ID.createX(ba.getData());
         return md5;
     }
+    */
 }

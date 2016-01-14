@@ -52,6 +52,10 @@ public class Encoder {
         return serializer;
     }
 
+    public static final Class<?> getClassByMD5(MD5ID id){
+        return serializersManager.getClassByMD5(id);
+    }
+
     //Object
     public static final void encodeObject(Object value,BytesArray ba){
         if(ba instanceof HierarchyBytesArray && ba.getLocation()!=0){

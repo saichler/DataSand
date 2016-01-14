@@ -12,6 +12,9 @@ package org.datasand.codec;
  */
 public class VLogger {
     public static final void error(String message,Exception e){
-
+        System.err.println(message);
+        if(e!=null){
+            e.printStackTrace();
+        }
     }
 }

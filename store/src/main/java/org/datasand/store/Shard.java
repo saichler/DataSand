@@ -1,19 +1,10 @@
 package org.datasand.store;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.TypeDescriptor;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class Shard {
+    /*
     private int xVector = -1;
     private int yVector = -1;
     private int zVector = -1;
@@ -306,5 +297,5 @@ public class Shard {
             }
             return df;
         }
-    }
+    }*/
 }

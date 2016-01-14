@@ -14,18 +14,19 @@ import org.datasand.codec.MD5ID;
 import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
+import org.datasand.store.DataLocation;
 import org.datasand.store.DataPersister;
 import org.datasand.store.Shard;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class ByteArrayDataPersister extends DataPersister{
-
+/*
     private File file = null;
     private RandomAccessFile randomAccessFile = null;
-    private Map<MD5ID, ByteArrayDataLocation> locations = new HashMap<MD5ID, ByteArrayDataLocation>();
+    private Map<MD5ID, DataLocation> locations = new HashMap<MD5ID, DataLocation>();
     private Map<Integer, int[]> parentIndexToRecordIndex = new HashMap<Integer, int[]>();
-    private List<ByteArrayDataLocation> locationsByIndex = new ArrayList<ByteArrayDataLocation>();
+    private List<DataLocation> locationsByIndex = new ArrayList<DataLocation>();
     private String dataFileLocation = null;
     private String dataFileDefLocation = null;
     private long fileSize = 0;
@@ -49,13 +50,13 @@ public class ByteArrayDataPersister extends DataPersister{
             BytesArray ba = new BytesArray(1024,container.getEmptyTypeDescriptor());
             ba.getEncoder().encodeInt32(changeNumber, ba);
             ba.getEncoder().encodeInt32(locations.size(), ba);
-            for (Map.Entry<MD5ID, ByteArrayDataLocation> entry : locations.entrySet()) {
+            for (Map.Entry<MD5ID, DataLocation> entry : locations.entrySet()) {
                 ba.getEncoder().encodeInt64(entry.getKey().getA(), ba);
                 ba.getEncoder().encodeInt64(entry.getKey().getB(), ba);
                 entry.getValue().encode(ba);
             }
             ba.getEncoder().encodeInt32(locationsByIndex.size(), ba);
-            for (ByteArrayDataLocation loc:locationsByIndex) {
+            for (DataLocation loc:locationsByIndex) {
                 loc.encode(ba);
             }
 
@@ -91,11 +92,11 @@ public class ByteArrayDataPersister extends DataPersister{
                     long a = ba.getEncoder().decodeInt64(ba);
                     long b = ba.getEncoder().decodeInt64(ba);
                     MD5ID md5 = MD5ID.createX(a, b);
-                    locations.put(md5, ByteArrayDataLocation.decode(ba, 0));
+                    locations.put(md5, DataLocation.decode(ba, 0));
                 }
                 size = ba.getEncoder().decodeInt32(ba);
                 for (int i = 0; i < size; i++) {
-                    locationsByIndex.add(ByteArrayDataLocation.decode(ba, 0));
+                    locationsByIndex.add(DataLocation.decode(ba, 0));
                 }
                 size = ba.getEncoder().decodeInt32(ba);
                 for (int i = 0; i < size; i++) {
@@ -130,7 +131,7 @@ public class ByteArrayDataPersister extends DataPersister{
         return this.locations.containsKey(x);
     }
 
-    private void wipe(ByteArrayDataLocation l) throws IOException{
+    private void wipe(DataLocation l) throws IOException{
         byte wipe[] = new String("Deleted!").getBytes();
         randomAccessFile.seek(l.getStartPosition()+HEADER_SIZE);
         randomAccessFile.write(wipe);
@@ -157,7 +158,7 @@ public class ByteArrayDataPersister extends DataPersister{
                 }
             }
 
-            ByteArrayDataLocation l = null;
+            DataLocation l = null;
             if(recordIndex!=-1){
                 l = locationsByIndex.get(recordIndex);
             }else
@@ -195,7 +196,7 @@ public class ByteArrayDataPersister extends DataPersister{
         return locationsByIndex.size() - 1;
     }
 
-    private void readToBuffer(ByteArrayDataLocation l) throws IOException{
+    private void readToBuffer(DataLocation l) throws IOException{
         flushWriteBuffer();
         int bufferStartPos = (int)(l.getStartPosition()-readBufferLocation)+HEADER_SIZE;
         if(USE_READ_BUFFERING && (!isReadBufferInitialize || bufferStartPos<0 || bufferStartPos+l.getLength()>=READ_BUFFER_SIZE)){
@@ -252,7 +253,7 @@ public class ByteArrayDataPersister extends DataPersister{
     }
 
     private int writeNew(byte data[], MD5ID x, int parentRecordIndex){
-        ByteArrayDataLocation newL = new ByteArrayDataLocation((int) fileSize, data.length+HEADER_SIZE,this.locationsByIndex.size(),parentRecordIndex);
+        DataLocation newL = new DataLocation((int) fileSize, data.length+HEADER_SIZE,this.locationsByIndex.size(),parentRecordIndex);
         if (x != null) {
             locations.put(x, newL);
         }
@@ -284,7 +285,7 @@ public class ByteArrayDataPersister extends DataPersister{
         return locationsByIndex.size()-1;
     }
 
-    private int updateNew(byte data[],ByteArrayDataLocation dl){
+    private int updateNew(byte data[],DataLocation dl){
         dl.updateLocationInfo((int)fileSize,HEADER_SIZE+data.length);
         try {
             if (lastLocation != fileSize) {
@@ -320,19 +321,19 @@ public class ByteArrayDataPersister extends DataPersister{
 
     public byte[] delete(Object key) {
         synchronized (locations) {
-            ByteArrayDataLocation loc = locations.get(key);
+            DataLocation loc = locations.get(key);
             return doDelete(loc);
         }
     }
 
     public byte[] read(Object key) {
         synchronized (locations) {
-            ByteArrayDataLocation loc = locations.get(key);
+            DataLocation loc = locations.get(key);
             return doRead(loc);
         }
     }
 
-    private byte[] doDelete(ByteArrayDataLocation l){
+    private byte[] doDelete(DataLocation l){
         if (l != null) {
             try {
                 if (randomAccessFile == null) {
@@ -352,7 +353,7 @@ public class ByteArrayDataPersister extends DataPersister{
         return null;
     }
 
-    private byte[] doRead(ByteArrayDataLocation l){
+    private byte[] doRead(DataLocation l){
         if (l != null) {
             try {
                 if (randomAccessFile == null) {
@@ -385,7 +386,7 @@ public class ByteArrayDataPersister extends DataPersister{
             return null;
 
         synchronized (locations) {
-            ByteArrayDataLocation l = locationsByIndex.get(index);
+            DataLocation l = locationsByIndex.get(index);
             return doRead(l);
         }
     }
@@ -394,7 +395,7 @@ public class ByteArrayDataPersister extends DataPersister{
         if (index >= locationsByIndex.size())
             return null;
         synchronized (locations) {
-            ByteArrayDataLocation l = locationsByIndex.get(index);
+            DataLocation l = locationsByIndex.get(index);
             return doDelete(l);
         }
     }
@@ -425,7 +426,7 @@ public class ByteArrayDataPersister extends DataPersister{
                     int index = 0;
                     byte data[][] = new byte[recordIndexs.length][];
                     for (int recIndex : recordIndexs) {
-                        ByteArrayDataLocation l = locationsByIndex.get(recIndex);
+                        DataLocation l = locationsByIndex.get(recIndex);
                         data[index] = doRead(l);
                         index++;
                     }
@@ -448,7 +449,7 @@ public class ByteArrayDataPersister extends DataPersister{
                     int index = 0;
                     byte data[][] = new byte[recordIndexs.length][];
                     for (int recIndex : recordIndexs) {
-                        ByteArrayDataLocation l = locationsByIndex.get(recIndex);
+                        DataLocation l = locationsByIndex.get(recIndex);
                         data[index] = doDelete(l);
                         index++;
                     }
@@ -473,5 +474,5 @@ public class ByteArrayDataPersister extends DataPersister{
             }
             locations.clear();
         }
-    }
+    }*/
 }

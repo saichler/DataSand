@@ -5,6 +5,7 @@ import org.datasand.codec.TypeDescriptorsContainer;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public abstract class DataPersister {
+    /*
     protected Shard shard = null;
     protected Class<?> type = null;
     protected TypeDescriptorsContainer container = null;
@@ -32,4 +33,5 @@ public abstract class DataPersister {
     public abstract Integer getParentIndexByKey(Object key);
     public abstract int[] getRecordIndexesByParentIndex(int parentRecordIndex);
     public abstract void close();
+    */
 }

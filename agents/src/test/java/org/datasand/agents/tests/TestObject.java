@@ -63,14 +63,4 @@ public class TestObject {
         // TODO Auto-generated method stub
         return super.hashCode();
     }
-
-    public static void main(String args[]){
-        VTable t = new VTable(TestObject.class);
-        t.analyze(new HashSet<Class<?>>());
-        try {
-            SerializerGenerator.generateSerializer(t);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 }

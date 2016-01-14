@@ -60,7 +60,8 @@ public class HierarchyBytesArray extends BytesArray{
         BytesArray ba = new BytesArray(this.getBytes().length);
         Encoder.encodeByteArray(this.getData(),ba);
         for(HierarchyBytesArray child:this.children){
-            Encoder.encodeByteArray(child.getData(),ba);
+            byte childData[] = child.getHierarchyData();
+            Encoder.encodeByteArray(childData,ba);
         }
         return ba.getData();
     }
@@ -75,4 +76,6 @@ public class HierarchyBytesArray extends BytesArray{
             this.children.add(child);
         }
     }
+
+
 }
