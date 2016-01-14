@@ -215,14 +215,13 @@ public class VColumn {
         }
     }
 
-    public static final void encode(Object value, BytesArray ba) {
-        VColumn vcol = (VColumn)value;
+    public static final void encode(VColumn vcol, BytesArray ba) {
         Encoder.encodeString(vcol.javaGetMethodName,ba);
         Encoder.encodeString(vcol.javaClassName,ba);
         Encoder.encodeString(vcol.augmentedTableName,ba);
     }
 
-    public static final Object decode(BytesArray ba) {
+    public static final VColumn decode(BytesArray ba) {
         VColumn vcol = new VColumn(Encoder.decodeString(ba),Encoder.decodeString(ba));
         vcol.augmentedTableName = Encoder.decodeString(ba);
         return vcol;
@@ -247,5 +246,12 @@ public class VColumn {
             return getGenericType((ParameterizedType) rType);
         }
         return null;
+    }
+
+    public boolean ofVTable(VTable table){
+        if(table.getJavaClassTypeName().equals(this.getJavaClassName())){
+            return true;
+        }
+        return false;
     }
 }

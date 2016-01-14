@@ -22,6 +22,7 @@ import java.util.Map;
 public class VTable {
 
     private final Class<?> javaClassType;
+    private final String javaClassTypeName;
     private final String name;
     private VColumn keyColumn = null;
     private VColumn parentVColumn = null;
@@ -33,12 +34,17 @@ public class VTable {
 
     public VTable(Class<?> cls){
         this.javaClassType = cls;
+        this.javaClassTypeName = cls.getName();
         this.name = this.javaClassType.getSimpleName().toUpperCase();
         VSchema.instance.registerVTable(this);
     }
 
     public Class<?> getJavaClassType() {
         return javaClassType;
+    }
+
+    public String getJavaClassTypeName() {
+        return javaClassTypeName;
     }
 
     public List<VColumn> getColumns() {
@@ -114,5 +120,13 @@ public class VTable {
             }
         });
         return true;
+    }
+
+    public static final void encode(VTable table,BytesArray ba){
+
+    }
+
+    public static final VTable decode(BytesArray ba){
+        return null;
     }
 }
