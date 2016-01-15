@@ -10,11 +10,11 @@ import org.datasand.codec.TypeDescriptorsContainer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCMetaData implements DatabaseMetaData{
+public class MetaData implements DatabaseMetaData{
 
     private TypeDescriptorsContainer tsc = null;
 
-    public DataSandJDBCMetaData(TypeDescriptorsContainer _tsc){
+    public MetaData(TypeDescriptorsContainer _tsc){
         this.tsc = _tsc;
     }
     @Override

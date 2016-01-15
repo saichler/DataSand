@@ -6,7 +6,6 @@ import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
 import java.sql.Clob;
-import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
@@ -15,7 +14,6 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Savepoint;
-import java.sql.Statement;
 import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
-
 import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
@@ -31,12 +28,12 @@ import org.datasand.agents.MessageEntry;
 import org.datasand.codec.BytesArray;
 import org.datasand.network.NetworkID;
 import org.datasand.store.ObjectDataStore;
-import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
+import org.datasand.store.jdbc.ResultSet.RSID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCConnection extends AutonomousAgent implements Connection {
-    private DataSandJDBCMetaData metaData = null;
+public class Connection extends AutonomousAgent implements java.sql.Connection {
+    private MetaData metaData = null;
     private ObjectDataStore dataDataStore;
     private NetworkID destination = null;
     private Map<RSID,QueryContainer> queries = new HashMap<RSID,QueryContainer>();
@@ -44,19 +41,19 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
     private Message repetitve = new Message(-1,null);
 
     static{
-    	Message.passThroughIncomingMessage.put(DataSandJDBCMessage.TYPE_DELEGATE_QUERY_RECORD, DataSandJDBCMessage.TYPE_DELEGATE_QUERY_RECORD);
-    	Message.passThroughOutgoingMessage.put(DataSandJDBCMessage.TYPE_QUERY_RECORD, DataSandJDBCMessage.TYPE_QUERY_RECORD);
+    	Message.passThroughIncomingMessage.put(JDBCMessage.TYPE_DELEGATE_QUERY_RECORD, JDBCMessage.TYPE_DELEGATE_QUERY_RECORD);
+    	Message.passThroughOutgoingMessage.put(JDBCMessage.TYPE_QUERY_RECORD, JDBCMessage.TYPE_QUERY_RECORD);
     }
     
-    public DataSandJDBCConnection(AutonomousAgentManager manager,ObjectDataStore _dataStore) {
+    public Connection(AutonomousAgentManager manager, ObjectDataStore _dataStore) {
         super(107,manager);
         this.dataDataStore = _dataStore;
         this.setARPGroup(107);
-        this.sendARP(DataSandJDBCMessage.TYPE_HELLO_GROUP);
+        this.sendARP(JDBCMessage.TYPE_HELLO_GROUP);
         this.registerRepetitiveMessage(10000, 10000, 0,repetitve);
     }
 
-    public DataSandJDBCConnection(AutonomousAgentManager manager,String addr) {
+    public Connection(AutonomousAgentManager manager, String addr) {
         super(107,manager);
         try{
             if(manager.getNetworkNode().getLocalHost().getPort()==50000){
@@ -69,7 +66,7 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
             err.printStackTrace();
         }
     }
-    public Connection getProxy() {
+    public java.sql.Connection getProxy() {
         return this;
         /*
         return (Connection) Proxy.newProxyInstance(this.getClass()
@@ -87,29 +84,29 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
             err.printStackTrace();
         }
     }
-    public void sendToDestination(DataSandJDBCMessage m){
+    public void sendToDestination(JDBCMessage m){
         this.send(m, destination);
     }
     @Override
     public void processMessage(Message message, NetworkID source,NetworkID destination) {
         if(message==repetitve){
-            sendARP(DataSandJDBCMessage.TYPE_HELLO_GROUP);
+            sendARP(JDBCMessage.TYPE_HELLO_GROUP);
             return;
         }
-        if(message instanceof DataSandJDBCMessage){
-            DataSandJDBCMessage msg = (DataSandJDBCMessage)message;
+        if(message instanceof JDBCMessage){
+            JDBCMessage msg = (JDBCMessage)message;
 
             switch (msg.getMessageType()) {
-            case DataSandJDBCMessage.TYPE_METADATA_REPLY:
+            case JDBCMessage.TYPE_METADATA_REPLY:
                 this.metaData = msg.getMetaData();
                 synchronized (this) {
                     this.notifyAll();
                 }
                 break;
-            case DataSandJDBCMessage.TYPE_METADATA:
-                send(new DataSandJDBCMessage(this.dataDataStore.getTypeDescriptorsContainer()),source);
+            case JDBCMessage.TYPE_METADATA:
+                send(new JDBCMessage("MetaData"),source);
                 break;
-            case DataSandJDBCMessage.TYPE_DELEGATE_QUERY:
+            case JDBCMessage.TYPE_DELEGATE_QUERY:
                 try{
                     System.out.println("Starting to execute Query-"+getAgentID()+" From aggregator="+source);
                     DataSandJDBCServer.execute(msg.getRS(), this.dataDataStore,true);
@@ -117,78 +114,78 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
                     updaters.put(msg.getRS().getRSID(), u);
                     new Thread(u).start();
                 }catch (Exception err) {
-                    send(new DataSandJDBCMessage(err, msg.getRSID()),source);
+                    send(new JDBCMessage(err, msg.getRSID()),source);
                 }
                 break;
-            case DataSandJDBCMessage.TYPE_EXECUTE_QUERY:
+            case JDBCMessage.TYPE_EXECUTE_QUERY:
                 System.out.println("Execute Query:"+getAgentID());
                 try {
                     QueryContainer qc = new QueryContainer(source, msg.getRS());
                     this.queries.put(msg.getRSID(),qc);
                     DataSandJDBCServer.execute(msg.getRS(), this.dataDataStore,false);
-                    send(new DataSandJDBCMessage(msg.getRS(),0),source);
+                    send(new JDBCMessage(msg.getRS(),0),source);
                 } catch (Exception err) {
-                    send(new DataSandJDBCMessage(err, msg.getRSID()),source);
+                    send(new JDBCMessage(err, msg.getRSID()),source);
                 }
                 break;
-            case DataSandJDBCMessage.TYPE_QUERY_REPLY:
-                DataSandJDBCResultSet rs1 = DataSandJDBCStatement.getQuery(msg.getRS().getRSID());
+            case JDBCMessage.TYPE_QUERY_REPLY:
+                ResultSet rs1 = Statement.getQuery(msg.getRS().getRSID());
                 rs1.updateData(msg.getRS());
                 break;
-            case DataSandJDBCMessage.TYPE_DELEGATE_QUERY_RECORD:
+            case JDBCMessage.TYPE_DELEGATE_QUERY_RECORD:
             {
                 QueryContainer c = queries.get(msg.getRSID());
                 if(msg.getMessageData() instanceof DataSandJDBCDataContainer){
-	                DataSandJDBCMessage m = new DataSandJDBCMessage(msg.getRecords(),msg.getRSID());
+	                JDBCMessage m = new JDBCMessage(msg.getRecords(),msg.getRSID());
 	                this.send(m, c.source);
                 }else{
-	                DataSandJDBCMessage m = new DataSandJDBCMessage((BytesArray)msg.getMessageData(),msg.getRSID());
+	                JDBCMessage m = new JDBCMessage((BytesArray)msg.getMessageData(),msg.getRSID());
 	                this.send(m, c.source);
                 }
             }
                 break;
-            case DataSandJDBCMessage.TYPE_QUERY_RECORD:
-                DataSandJDBCResultSet rs2 = DataSandJDBCStatement.getQuery(msg.getRSID());
+            case JDBCMessage.TYPE_QUERY_RECORD:
+                ResultSet rs2 = Statement.getQuery(msg.getRSID());
                 for(Map record:msg.getRecords()){
                 	rs2.addRecord(record,false);
                 }
                 break;
-            case DataSandJDBCMessage.TYPE_QUERY_FINISH:
-                DataSandJDBCResultSet rs3 = DataSandJDBCStatement.removeQuery(msg.getRSID());
+            case JDBCMessage.TYPE_QUERY_FINISH:
+                ResultSet rs3 = Statement.removeQuery(msg.getRSID());
                 rs3.setFinished(true);
                 break;
-            case DataSandJDBCMessage.TYPE_DELEGATE_QUERY_FINISH:
+            case JDBCMessage.TYPE_DELEGATE_QUERY_FINISH:
             {
                 System.out.println("Finished Query "+getAgentID());
                 QueryContainer c = queries.get(msg.getRSID());
                 MessageEntry e = this.getJournalEntry(c.msg);
                 e.removePeer(source);
                 if(e.isFinished()){
-                    DataSandJDBCMessage end = new DataSandJDBCMessage(msg.getRSID());
+                    JDBCMessage end = new JDBCMessage(msg.getRSID());
                     send(end,c.source);
                 }
             }
                 break;
-            case DataSandJDBCMessage.TYPE_QUERY_ERROR:
+            case JDBCMessage.TYPE_QUERY_ERROR:
                 System.err.println("ERROR Executing Query\n");
                 msg.getERROR().printStackTrace();
-                DataSandJDBCResultSet rs4 = DataSandJDBCStatement.removeQuery(msg.getRSID());
+                ResultSet rs4 = Statement.removeQuery(msg.getRSID());
                 rs4.setError(msg.getERROR());
                 rs4.setFinished(true);
                 synchronized (rs4) {
                     rs4.notifyAll();
                 }
-            case DataSandJDBCMessage.TYPE_DELEGATE_WAITING:
+            case JDBCMessage.TYPE_DELEGATE_WAITING:
                 QueryContainer qc = queries.get(msg.getRSID());
-                send(new DataSandJDBCMessage(msg.getWaiting(),msg.getRSID(),0),qc.source);
+                send(new JDBCMessage(msg.getWaiting(),msg.getRSID(),0),qc.source);
                 break;
-            case DataSandJDBCMessage.TYPE_NODE_WAITING_MARK:
-                send(new DataSandJDBCMessage(msg.getWaiting(),msg.getRSID(),0,0),source);
+            case JDBCMessage.TYPE_NODE_WAITING_MARK:
+                send(new JDBCMessage(msg.getWaiting(),msg.getRSID(),0,0),source);
                 break;
-            case DataSandJDBCMessage.TYPE_NODE_WAITING_MARK_REPLY:
-                send(new DataSandJDBCMessage(msg.getWaiting(),msg.getRSID(),0,0,0),msg.getWaiting());
+            case JDBCMessage.TYPE_NODE_WAITING_MARK_REPLY:
+                send(new JDBCMessage(msg.getWaiting(),msg.getRSID(),0,0,0),msg.getWaiting());
                 break;
-            case DataSandJDBCMessage.TYPE_DELEGATE_CONTINUE:
+            case JDBCMessage.TYPE_DELEGATE_CONTINUE:
                 QueryUpdater u = updaters.get(msg.getRSID());
                 synchronized(u.waitingObject){
                     u.waitingObject.notifyAll();
@@ -196,7 +193,7 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
                 break;
             }
         }else
-        if(message.getMessageType()==DataSandJDBCMessage.TYPE_HELLO_GROUP){
+        if(message.getMessageType()== JDBCMessage.TYPE_HELLO_GROUP){
             getPeerEntry(source);
         }
     }
@@ -216,9 +213,9 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
         private Map<NetworkID,Boolean> destToFinish = new HashMap<NetworkID,Boolean>();
         private NetworkID source = null;
         private Message msg = null;
-        public QueryContainer(NetworkID _source,DataSandJDBCResultSet _rs){
+        public QueryContainer(NetworkID _source,ResultSet _rs){
             this.source = _source;
-            msg = new DataSandJDBCMessage(_rs,0,0);
+            msg = new JDBCMessage(_rs,0,0);
             sendARP(msg);
             addARPJournal(msg,true);
         }
@@ -226,27 +223,27 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
 
     private class QueryUpdater implements Runnable {
 
-        private DataSandJDBCResultSet rs = null;
+        private ResultSet rs = null;
         private NetworkID source = null;
         private Object waitingObject = new Object();
 
-        public QueryUpdater(DataSandJDBCResultSet _rs,NetworkID _source) {
+        public QueryUpdater(ResultSet _rs, NetworkID _source) {
             this.rs = _rs;
             this.source = _source;
         }
 
         public void run() {
             int count = 0;
-            List<Map> records = new ArrayList<Map>(DataSandJDBCResultSet.RECORD_Threshold);
+            List<Map> records = new ArrayList<Map>(ResultSet.RECORD_Threshold);
             while (rs.next()) {
             	records.add(rs.getCurrent());
                 count++;
-                if(count>=DataSandJDBCResultSet.RECORD_Threshold){
-                    DataSandJDBCMessage recs = new DataSandJDBCMessage(records, rs.getRSID(),0);
+                if(count>= ResultSet.RECORD_Threshold){
+                    JDBCMessage recs = new JDBCMessage(records, rs.getRSID(),0);
                     send(recs,source);
                     synchronized(waitingObject){
                     	records.clear();
-                        DataSandJDBCMessage m = new DataSandJDBCMessage(getAgentID(),rs.getRSID());
+                        JDBCMessage m = new JDBCMessage(getAgentID(),rs.getRSID());
                         send(m,source);
                         try{waitingObject.wait();}catch(Exception err){err.printStackTrace();}
                         count = 0;
@@ -254,11 +251,11 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
                 }
             }
             if(!records.isEmpty()){
-                DataSandJDBCMessage recs = new DataSandJDBCMessage(records, rs.getRSID(),0);
+                JDBCMessage recs = new JDBCMessage(records, rs.getRSID(),0);
                 send(recs,source);                
             }
             updaters.remove(rs.getRSID());
-            DataSandJDBCMessage end = new DataSandJDBCMessage(rs.getRSID(),0,0);
+            JDBCMessage end = new JDBCMessage(rs.getRSID(),0,0);
             send(end,source);
         }
     }
@@ -324,21 +321,21 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
     }
 
     @Override
-    public Statement createStatement() throws SQLException {
-        return new DataSandJDBCStatement(this).getProxy();
+    public java.sql.Statement createStatement() throws SQLException {
+        return new Statement(this).getProxy();
     }
 
     @Override
-    public Statement createStatement(int resultSetType,
-            int resultSetConcurrency, int resultSetHoldability)
+    public java.sql.Statement createStatement(int resultSetType,
+                                              int resultSetConcurrency, int resultSetHoldability)
             throws SQLException {
-        return new DataSandJDBCStatement(this).getProxy();
+        return new Statement(this).getProxy();
     }
 
     @Override
-    public Statement createStatement(int resultSetType, int resultSetConcurrency)
+    public java.sql.Statement createStatement(int resultSetType, int resultSetConcurrency)
             throws SQLException {
-        return new DataSandJDBCStatement(this).getProxy();
+        return new Statement(this).getProxy();
     }
 
     @Override
@@ -381,7 +378,7 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
     @Override
     public DatabaseMetaData getMetaData() throws SQLException {
         if (this.metaData == null) {
-            DataSandJDBCMessage cmd = new DataSandJDBCMessage(-1,-1);
+            JDBCMessage cmd = new JDBCMessage(-1,-1);
             synchronized (this) {
                 send(cmd,destination);
                 try {
@@ -461,41 +458,41 @@ public class DataSandJDBCConnection extends AutonomousAgent implements Connectio
             int resultSetConcurrency, int resultSetHoldability)
             throws SQLException {
         System.err.println("SQL 1=" + sql);
-        return new DataSandJDBCStatement(this, sql).getProxy();
+        return new Statement(this, sql).getProxy();
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType,
             int resultSetConcurrency) throws SQLException {
         System.err.println("SQL 2=" + sql);
-        return new DataSandJDBCStatement(this, sql).getProxy();
+        return new Statement(this, sql).getProxy();
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys)
             throws SQLException {
         System.err.println("SQL 3=" + sql);
-        return new DataSandJDBCStatement(this, sql).getProxy();
+        return new Statement(this, sql).getProxy();
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int[] columnIndexes)
             throws SQLException {
         System.err.println("SQL 4=" + sql);
-        return new DataSandJDBCStatement(this, sql).getProxy();
+        return new Statement(this, sql).getProxy();
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, String[] columnNames)
             throws SQLException {
         System.err.println("SQL 5=" + sql);
-        return new DataSandJDBCStatement(this, sql).getProxy();
+        return new Statement(this, sql).getProxy();
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         System.err.println("SQL 6=" + sql);
-        return new DataSandJDBCStatement(this, sql).getProxy();
+        return new Statement(this, sql).getProxy();
     }
 
     @Override

@@ -1,4 +1,4 @@
-package org.datasand.store;
+package org.datasand.store.jdbc;
 
 import java.io.Serializable;
 import org.datasand.codec.BytesArray;

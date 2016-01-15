@@ -162,16 +162,16 @@ public class VColumn {
         return this.isbyte;
     }
 
-    public Object get(Object element, Map<?, ?> augmentationMap, Class<?> elementClass) throws InvocationTargetException, IllegalAccessException {
+    public Object get(Object object) {
         if (this.javaGetMethod == null) {
             initMethod();
         }
-        if (this.javaClass.equals(elementClass)) {
-            return javaGetMethod.invoke(element, (Object[]) null);
-        } else {
-            Object augmentingElement = augmentationMap.get(this.javaClass);
-            return javaGetMethod.invoke(augmentingElement, (Object[]) null);
+        try {
+            return javaGetMethod.invoke(object, (Object[]) null);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            VLogger.error("Failed to extract value from object",e);
         }
+        return null;
     }
 
     public void setAugmentedTableName(String _augName){

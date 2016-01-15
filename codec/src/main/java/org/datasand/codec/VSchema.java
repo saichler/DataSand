@@ -2,7 +2,6 @@ package org.datasand.codec;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.datasand.codec.serialize.ISerializer;
 
 /**
  * Created by root on 1/8/16.
@@ -10,15 +9,67 @@ import org.datasand.codec.serialize.ISerializer;
 public class VSchema {
     public static VSchema instance = new VSchema();
 
-    private final Map<Class,VTable> vtables = new HashMap<>();
+    private final Map<Class,VTable> classToVTable = new HashMap<>();
+    private final Map<String,VTable> classNameToVTable = new HashMap<>();
 
     private VSchema(){}
 
     public VTable getVTable(Class<?> cls){
-        return vtables.get(cls);
+        return classToVTable.get(cls);
     }
 
     public void registerVTable(VTable tbl){
-        this.vtables.put(tbl.getJavaClassType(),tbl);
+        this.classToVTable.put(tbl.getJavaClassType(),tbl);
+        this.classNameToVTable.put(tbl.getJavaClassTypeName(),tbl);
     }
+
+    public byte[] getRepositoryData() {
+        BytesArray ba = new BytesArray(1024);
+        Encoder.encodeInt16(classToVTable.size(), ba);
+        for (VTable type : classToVTable.values()) {
+            VTable.encode(type,ba);
+        }
+        return ba.getData();
+    }
+
+    public void load(byte data[]){
+        BytesArray ba = new BytesArray(data);
+        int size = Encoder.decodeInt16(ba);
+        for (int i = 0; i < size; i++) {
+            VTable type = VTable.decode(ba);
+            classNameToVTable.put(type.getJavaClassTypeName(), type);
+        }
+    }
+
+    public VTable getVTableByName(String typeName) {
+        VTable result = this.classNameToVTable.get(typeName);
+
+        if(result!=null){
+            return result;
+        }
+
+        if (typeName.indexOf(".") != -1) {
+            typeName = typeName.substring(typeName.lastIndexOf(".") + 1);
+        }
+
+        for (VTable t : classNameToVTable.values()) {
+            if (t.getJavaClassTypeName().endsWith(typeName)) {
+                return t;
+            }
+        }
+
+        for (VTable t : classNameToVTable.values()) {
+            if (t.getName().endsWith(typeName.toUpperCase())) {
+                return t;
+            }
+        }
+
+        for (VTable t : classNameToVTable.values()) {
+            if (t.getJavaClassTypeName().toLowerCase().indexOf(typeName.toLowerCase()) != -1) {
+                return t;
+            }
+        }
+        return null;
+    }
+
 }

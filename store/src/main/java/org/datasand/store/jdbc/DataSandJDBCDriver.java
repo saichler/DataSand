@@ -1,6 +1,5 @@
 package org.datasand.store.jdbc;
 
-import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
@@ -19,7 +18,7 @@ public class DataSandJDBCDriver implements Driver {
 
     public static DataSandJDBCDriver drv = new DataSandJDBCDriver();
     static {
-        Encoder.registerSerializer(DataSandJDBCMessage.class, new DataSandJDBCMessage(), 432);
+        Encoder.registerSerializer(JDBCMessage.class, new JDBCMessage(), 432);
         Encoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer(), 433);
     }
     public DataSandJDBCDriver() {
@@ -37,12 +36,12 @@ public class DataSandJDBCDriver implements Driver {
     }
 
     @Override
-    public Connection connect(String url, Properties arg1) throws SQLException {
+    public java.sql.Connection connect(String url, Properties arg1) throws SQLException {
         System.err.println("Data Sand JDBC Connection");
         try {
             TypeDescriptorsContainer tsc = new TypeDescriptorsContainer("JDBC-Connection");
             AutonomousAgentManager manager = new AutonomousAgentManager(tsc,true);
-            return new DataSandJDBCConnection(manager, url);
+            return new Connection(manager, url);
         } catch (Exception err) {
             err.printStackTrace();
         }

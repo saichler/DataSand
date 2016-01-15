@@ -21,6 +21,7 @@ import java.util.Map;
  */
 public class VTable {
 
+    //The java class for this vtable
     private final Class<?> javaClassType;
     private final String javaClassTypeName;
     private final String name;
@@ -120,6 +121,15 @@ public class VTable {
             }
         });
         return true;
+    }
+
+    public int getHierarchyLevel(){
+        if(this.parentVColumn==null) {
+            return 0;
+        }else{
+            VTable parentTable = VSchema.instance.getVTable(this.parentVColumn.getJavaClass());
+            return parentTable.getHierarchyLevel()+1;
+        }
     }
 
     public static final void encode(VTable table,BytesArray ba){

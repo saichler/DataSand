@@ -2,16 +2,15 @@ package org.datasand.store.jdbc;
 
 import java.util.List;
 import java.util.Map;
-
 import org.datasand.agents.Message;
-import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 import org.datasand.network.NetworkID;
-import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
+import org.datasand.store.jdbc.ResultSet.RSID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCMessage extends Message {
+public class JDBCMessage extends Message {
 
     public static final int TYPE_EXECUTE_QUERY = 1;
     public static final int TYPE_QUERY_REPLY = 2;
@@ -32,76 +31,76 @@ public class DataSandJDBCMessage extends Message {
     //Temp rsid when the message is pass through
     private RSID rsid = null;
 
-    public DataSandJDBCMessage() {
+    public JDBCMessage() {
         super();
     }
 
-    public DataSandJDBCMessage(long id,int type,Object data){
+    public JDBCMessage(long id, int type, Object data){
         super(id,type,data);
     }
 
-    public DataSandJDBCMessage(Exception _err, RSID _RSID) {
+    public JDBCMessage(Exception _err, RSID _RSID) {
         super(TYPE_QUERY_ERROR,new DataSandJDBCDataContainer(_err, _RSID));
     }
 
-    public DataSandJDBCMessage(TypeDescriptorsContainer bl) {
+    public JDBCMessage(String bl) {
         super(TYPE_METADATA_REPLY,new DataSandJDBCDataContainer(bl,null));
     }
 
-    public DataSandJDBCMessage(DataSandJDBCResultSet _rs,int temp) {
+    public JDBCMessage(ResultSet _rs, int temp) {
         super(TYPE_QUERY_REPLY,new DataSandJDBCDataContainer(_rs,_rs.getRSID()));
     }
 
-    public DataSandJDBCMessage(DataSandJDBCResultSet _rs) {
+    public JDBCMessage(ResultSet _rs) {
         super(TYPE_EXECUTE_QUERY,new DataSandJDBCDataContainer(_rs,_rs.getRSID()));
     }
 
-    public DataSandJDBCMessage(DataSandJDBCResultSet _rs,int temp,int temp2) {
+    public JDBCMessage(ResultSet _rs, int temp, int temp2) {
         super(TYPE_DELEGATE_QUERY,new DataSandJDBCDataContainer(_rs,_rs.getRSID()));
     }
 
-    public DataSandJDBCMessage(List<Map> _records, RSID _rsID,int temp) {
+    public JDBCMessage(List<Map> _records, RSID _rsID, int temp) {
         super(TYPE_DELEGATE_QUERY_RECORD,new DataSandJDBCDataContainer(_records,_rsID));
     }
 
-    public DataSandJDBCMessage(List<Map> records, RSID _rsID) {
+    public JDBCMessage(List<Map> records, RSID _rsID) {
         super(TYPE_QUERY_RECORD,new DataSandJDBCDataContainer(records, _rsID));
     }
 
-    public DataSandJDBCMessage(BytesArray edc, RSID _rsID) {
+    public JDBCMessage(BytesArray edc, RSID _rsID) {
         super(TYPE_QUERY_RECORD,edc);
     }
 
-    public DataSandJDBCMessage(RSID _rsID) {
+    public JDBCMessage(RSID _rsID) {
         super(TYPE_QUERY_FINISH,new DataSandJDBCDataContainer(null,_rsID));
     }
 
-    public DataSandJDBCMessage(RSID _rsID,int temp,int temp2) {
+    public JDBCMessage(RSID _rsID, int temp, int temp2) {
         super(TYPE_DELEGATE_QUERY_FINISH,new DataSandJDBCDataContainer(null,_rsID));
     }
 
-    public DataSandJDBCMessage(int _temp,int _temp2){
+    public JDBCMessage(int _temp, int _temp2){
         super(TYPE_METADATA,new DataSandJDBCDataContainer(null,null));
     }
 
-    public DataSandJDBCMessage(NetworkID netID,RSID rsID){
+    public JDBCMessage(NetworkID netID, RSID rsID){
         super(TYPE_DELEGATE_WAITING,new DataSandJDBCDataContainer(netID,rsID));
     }
 
-    public DataSandJDBCMessage(NetworkID netID,RSID rsID,int temp){
+    public JDBCMessage(NetworkID netID, RSID rsID, int temp){
         super(TYPE_NODE_WAITING_MARK,new DataSandJDBCDataContainer(netID,rsID));
     }
 
-    public DataSandJDBCMessage(NetworkID netID,RSID rsID,int temp,int temp1){
+    public JDBCMessage(NetworkID netID, RSID rsID, int temp, int temp1){
         super(TYPE_NODE_WAITING_MARK_REPLY,new DataSandJDBCDataContainer(netID,rsID));
     }
 
-    public DataSandJDBCMessage(NetworkID netID,RSID rsID,int temp,int temp1,int temp2){
+    public JDBCMessage(NetworkID netID, RSID rsID, int temp, int temp1, int temp2){
         super(TYPE_DELEGATE_CONTINUE,new DataSandJDBCDataContainer(netID,rsID));
     }
 
-    public DataSandJDBCResultSet getRS() {
-        return (DataSandJDBCResultSet)((DataSandJDBCDataContainer)this.getMessageData()).getData();
+    public ResultSet getRS() {
+        return (ResultSet)((DataSandJDBCDataContainer)this.getMessageData()).getData();
     }
 
     public List<Map> getRecords() {
@@ -124,9 +123,9 @@ public class DataSandJDBCMessage extends Message {
     		//2 - for the DataSandObjectContainer Type
     		// == 16
     		edc.advance(16);
-    		int a = edc.getEncoder().decodeInt32(edc);
-    		long b = edc.getEncoder().decodeInt64(edc);
-    		int c = edc.getEncoder().decodeInt32(edc);
+    		int a = Encoder.decodeInt32(edc);
+    		long b = Encoder.decodeInt64(edc);
+    		int c = Encoder.decodeInt32(edc);
     		this.rsid = new RSID(a,b,c);
     		return this.rsid;
     	}
@@ -137,22 +136,22 @@ public class DataSandJDBCMessage extends Message {
         return (Exception)((DataSandJDBCDataContainer)this.getMessageData()).getData();
     }
 
-    public DataSandJDBCMetaData getMetaData(){
-        return (DataSandJDBCMetaData)((DataSandJDBCDataContainer)this.getMessageData()).getData();
+    public MetaData getMetaData(){
+        return (MetaData)((DataSandJDBCDataContainer)this.getMessageData()).getData();
     }
     public NetworkID getWaiting(){
         return (NetworkID)((DataSandJDBCDataContainer)this.getMessageData()).getData();
     }
     @Override
-    public void encode(Object value, EncodeDataContainer edc) {
+    public void encode(Object value, BytesArray edc) {
         // TODO Auto-generated method stub
         super.encode(value, edc);
     }
 
     @Override
-    public Object decode(EncodeDataContainer edc, int length) {
-        Message m = (Message)super.decode(edc, length);
-        DataSandJDBCMessage m2 = new DataSandJDBCMessage(m.getMessageID(),m.getMessageType(),m.getMessageData());
+    public Object decode(BytesArray edc) {
+        Message m = (Message)super.decode(edc);
+        JDBCMessage m2 = new JDBCMessage(m.getMessageID(),m.getMessageType(),m.getMessageData());
         return m2;
     }
 }

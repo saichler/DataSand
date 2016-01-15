@@ -11,7 +11,6 @@ import java.sql.Clob;
 import java.sql.Date;
 import java.sql.NClob;
 import java.sql.Ref;
-import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
@@ -33,15 +32,16 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
+import org.datasand.codec.Observers;
 import org.datasand.codec.VColumn;
+import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
 import org.datasand.network.NetworkID;
-import org.datasand.store.Criteria;
 //import org.datasand.store.ObjectDataStore.ObjectWithInfo;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
+public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
 
     public static final int COLLECT_TYPE_RECORDS = 0;
     public static final int COLLECT_TYPE_OBJECTS = 1;
@@ -64,7 +64,7 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
     public int numberOfTasks = 0;
     private Exception err = null;
     private List<Record> EMPTY_RESULT = new LinkedList<Record>();
-    private Map<String,DataSandJDBCResultSet> subQueries = new HashMap<String,DataSandJDBCResultSet>();
+    private Map<String,ResultSet> subQueries = new HashMap<String,ResultSet>();
     public int fromIndex = 0;
     public int toIndex = Integer.MAX_VALUE;
     private int collectedDataType = 0;
@@ -103,7 +103,7 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         }
     }
 
-    protected static void encode(DataSandJDBCResultSet rs,BytesArray edc){
+    protected static void encode(ResultSet rs, BytesArray edc){
         Encoder.encodeInt32(rs.rsid.address, edc);
         Encoder.encodeInt64(rs.rsid.time, edc);
         Encoder.encodeInt32(rs.rsid.localID, edc);
@@ -153,8 +153,8 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         }
     }
 
-    public static DataSandJDBCResultSet decode(BytesArray edc){
-        DataSandJDBCResultSet rs = new DataSandJDBCResultSet();
+    public static ResultSet decode(BytesArray edc){
+        ResultSet rs = new ResultSet();
         rs.rsid.address = Encoder.decodeInt32(edc);
         rs.rsid.time = Encoder.decodeInt64(edc);
         rs.rsid.localID = Encoder.decodeInt32(edc);
@@ -218,7 +218,7 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         return rs;
     }
 
-    public ResultSet getProxy() {
+    public java.sql.ResultSet getProxy() {
         //return (ResultSet) Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[] {ResultSet.class }, new DataSandJDBCProxy(this));
         return this;
     }
@@ -245,24 +245,24 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         fieldsInTable.add(field);
     }
 
-    public DataSandJDBCResultSet addSubQuery(String _sql,String logicalName) {
+    public ResultSet addSubQuery(String _sql, String logicalName) {
         if(subQueries == null)
-            subQueries = new HashMap<String,DataSandJDBCResultSet>();
-        DataSandJDBCResultSet rs = new DataSandJDBCResultSet(_sql);
+            subQueries = new HashMap<String,ResultSet>();
+        ResultSet rs = new ResultSet(_sql);
         this.subQueries.put(logicalName,rs);
         return rs;
     }
 
-    public Map<String,DataSandJDBCResultSet> getSubQueries() {
+    public Map<String,ResultSet> getSubQueries() {
         if(this.subQueries==null)
             this.subQueries = new HashMap<>();
         return this.subQueries;
     }
 
-    private DataSandJDBCResultSet() {
+    private ResultSet() {
     }
 
-    public DataSandJDBCResultSet(String _sql) {
+    public ResultSet(String _sql) {
         this.sql = _sql;
     }
 
@@ -278,7 +278,7 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         return this.err;
     }
 
-    public void updateData(DataSandJDBCResultSet rs) {
+    public void updateData(ResultSet rs) {
         synchronized (this) {
             this.tablesInQuery = rs.tablesInQuery;
             this.tablesInQueryMap = rs.tablesInQueryMap;
@@ -468,16 +468,17 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         return false;
     }
 
-    public List<Record> addRecords(ObjectWithInfo info,boolean root) {
+    public List<Record> addRecords(Object object,boolean root) {
         List<Record> result = new LinkedList<Record>();
+        /*
         Record rec = new Record();
-        rec.element = info.getObject();
-        if(addInfoToRecord(info, rec)){
+        rec.element = object;
+        if(addInfoToRecord(object, rec)){
             if(addParentData(info,rec)){
                 result.add(rec);
                 addRecord(rec.data,true);
             }
-        }
+        }*/
         return result;
     }
 
@@ -494,25 +495,21 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         return value.toString();
     }
 
-    private boolean addInfoToRecord(ObjectWithInfo info,Record rec){
-        Map augmentationMap = null;
-        try{
-            augmentationMap = (Map)info.getTable().getAugmentationField(info.getObject()).get(info.getObject());
-        }catch(Exception err){}
-
-        if(checkCriteria(info, augmentationMap)){
+    private boolean addInfoToRecord(Object object,Record rec){
+        if(checkCriteria(object)){
             switch(collectedDataType){
                 case COLLECT_TYPE_RECORDS:
-                    List<VColumn> tableFields = fieldsByTableInQuery.get(info.getTable().getTypeClassShortName());
+                    VTable table = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(object));
+                    List<VColumn> tableFields = fieldsByTableInQuery.get(table.getName());
                     for(VColumn col:tableFields){
-                        Object value = col.get(info.getObject(),augmentationMap,info.getTable().getTypeClass());
+                        Object value = col.get(object);
                         if(value!=null){
                             rec.data.put(col.toString(), formatValueToString(value));
                         }
                     }
                     break;
                 case COLLECT_TYPE_OBJECTS:
-                    Class objClass = info.getTable().getVTablesContainer().getElementClass(rec.element);
+                    Class objClass = Observers.instance.getClassExtractor().getObjectClass(rec.element);
                     rec.data.put(objClass.getName(), rec.element);
                     break;
             }
@@ -521,12 +518,11 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         return false;
     }
 
-    public boolean addParentData(ObjectWithInfo info, Record rec){
+    public boolean addParentData(Object parentObject, Record rec){
         if(this.tablesInQueryMap.size()>1){
-            VTable parent = info.getTable().getParent();
-            if(parent!=null && this.tablesInQueryMap.containsKey(parent.getTypeClass().getSimpleName())){
-                ObjectWithInfo parentInfo = info.getParenInfo();
-                if(!addInfoToRecord(parentInfo, rec)){
+            VTable parent = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(parentObject));
+            if(parent!=null && this.tablesInQueryMap.containsKey(parent.getName())){
+                if(!addInfoToRecord(parentObject, rec)){
                     return false;
                 }
             }
@@ -534,11 +530,12 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
         return true;
     }
 
-    public boolean checkCriteria(ObjectWithInfo info,Map<?, ?> augmentationMap){
-        if(criteria.containsKey(info.getTable().getTypeClassShortName())){
-            Map<VColumn,List<Criteria>> map = criteria.get(info.getTable().getTypeClassShortName());
-            for(Map.Entry<VColumn, List<Criteria>> entry:map.entrySet()){
-                Object value = entry.getKey().get(info.getObject(), augmentationMap, info.getTable().getTypeClass());
+    public boolean checkCriteria(Object object){
+        VTable vTable = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(object));
+        Map<VColumn,List<Criteria>> columnToCriteria = criteria.get(vTable.getName());
+        if(columnToCriteria!=null){
+            for(Map.Entry<VColumn, List<Criteria>> entry:columnToCriteria.entrySet()){
+                Object value = entry.getKey().get(object);
                 for(Criteria c:entry.getValue()){
                     if(c.checkValue(value)==0){
                         return false;
@@ -1039,7 +1036,7 @@ public class DataSandJDBCResultSet implements ResultSet,ResultSetMetaData {
 
     @Override
     public int getType() throws SQLException {
-        return ResultSet.TYPE_FORWARD_ONLY;
+        return java.sql.ResultSet.TYPE_FORWARD_ONLY;
     }
 
     @Override

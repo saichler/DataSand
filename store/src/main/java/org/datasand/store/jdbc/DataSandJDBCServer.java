@@ -15,7 +15,9 @@ import org.datasand.codec.AttributeDescriptor;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.codec.Encoder;
-import org.datasand.store.Criteria;
+import org.datasand.codec.VColumn;
+import org.datasand.codec.VSchema;
+import org.datasand.codec.VTable;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.bytearray.ByteArrayObjectDataStore;
 /**
@@ -23,16 +25,16 @@ import org.datasand.store.bytearray.ByteArrayObjectDataStore;
  */
 public class DataSandJDBCServer  {
     private ObjectDataStore database = null;
-    private DataSandJDBCConnection agent = null;
+    private Connection agent = null;
 
     static {
-        Encoder.registerSerializer(DataSandJDBCMessage.class, new DataSandJDBCMessage(), 432);
-        Encoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer(), 433);
+        Encoder.registerSerializer(JDBCMessage.class, new JDBCMessage());
+        Encoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer());
     }
 
     public DataSandJDBCServer(ObjectDataStore a) {
         this.database = a;
-        this.agent = new DataSandJDBCConnection(new AutonomousAgentManager(a.getTypeDescriptorsContainer()),this.database);
+        this.agent = new Connection(new AutonomousAgentManager(),this.database);
     }
 
     public void close(){
@@ -46,14 +48,14 @@ public class DataSandJDBCServer  {
     public void connectToClient(String addr) {
     }
 
-    public static void execute(DataSandJDBCResultSet rs, ObjectDataStore database,boolean execute) throws SQLException {
+    public static void execute(ResultSet rs, ObjectDataStore database, boolean execute) throws SQLException {
         if(rs.getSQL().toLowerCase().trim().equals("select 1")){
             rs.setFinished(true);
             return;
         }
         checkAndBreakSubQueries(rs, database,execute);
         if (rs.getSubQueries().size() == 0) {
-            parseTables(rs,database.getTypeDescriptorsContainer());
+            parseTables(rs);
             parseFields(rs,database.getTypeDescriptorsContainer());
             parseCriteria(rs,database.getTypeDescriptorsContainer());
             if(execute){
@@ -68,9 +70,9 @@ public class DataSandJDBCServer  {
         }
     }
 
-    public static void parseExternalQuery(DataSandJDBCResultSet rs) throws SQLException {
+    public static void parseExternalQuery(ResultSet rs) throws SQLException {
         String sql = rs.getSQL();
-        for (Map.Entry<String, DataSandJDBCResultSet> entry : rs.getSubQueries().entrySet()) {
+        for (Map.Entry<String, ResultSet> entry : rs.getSubQueries().entrySet()) {
             int index = sql.toLowerCase().indexOf(entry.getValue().getSQL());
             String extSql = sql.substring(0, index);
             index = extSql.lastIndexOf("(");
@@ -80,9 +82,9 @@ public class DataSandJDBCServer  {
         }
     }
 
-    public static void parseLogicalFields(String sql, DataSandJDBCResultSet rs) throws SQLException {
+    public static void parseLogicalFields(String sql, ResultSet rs) throws SQLException {
         if(sql.trim().toLowerCase().equals("select * from")){
-            for (Map.Entry<String, DataSandJDBCResultSet> entry : rs.getSubQueries().entrySet()) {
+            for (Map.Entry<String, ResultSet> entry : rs.getSubQueries().entrySet()) {
                 for(TypeDescriptor node:entry.getValue().getTables()){
                     rs.addTableToQuery(node);
                 }
@@ -118,7 +120,7 @@ public class DataSandJDBCServer  {
         for(AttributeDescriptor field:columnOrder){
             rs.addFieldToQuery(field,"");
         }
-        for (Map.Entry<String, DataSandJDBCResultSet> entry : rs.getSubQueries().entrySet()) {
+        for (Map.Entry<String, ResultSet> entry : rs.getSubQueries().entrySet()) {
             while (entry.getValue().next()) {
                 Map rec = entry.getValue().getCurrent();
                 Map newRec = new HashMap();
@@ -144,7 +146,7 @@ public class DataSandJDBCServer  {
                 + ",\"LOGICAL_TABLE_1\".\"nodes/node.id\" AS \"COL2\"\n"
                 + "FROM\n"
                 + "(select * from nodes/node;) \"LOGICAL_TABLE_1\"\n";
-        DataSandJDBCResultSet rs = new DataSandJDBCResultSet(sql);
+        ResultSet rs = new ResultSet(sql);
         try {
             parseLogicalFields(sql, rs);
         } catch (Exception err) {
@@ -181,7 +183,7 @@ public class DataSandJDBCServer  {
         return index6;
     }
 
-    public static void checkAndBreakSubQueries(DataSandJDBCResultSet rs,ObjectDataStore database,boolean execute) throws SQLException {
+    public static void checkAndBreakSubQueries(ResultSet rs, ObjectDataStore database, boolean execute) throws SQLException {
         String sql = rs.getSQL().toLowerCase();
         int index = sql.indexOf("select");
         if (index == -1)
@@ -216,12 +218,12 @@ public class DataSandJDBCServer  {
                 index2 = sql.length();
             }
             String logicalName = rs.getSQL().substring(index + 1, index2).trim();
-            DataSandJDBCResultSet subRS = rs.addSubQuery(subQuerySQL, logicalName);
+            ResultSet subRS = rs.addSubQuery(subQuerySQL, logicalName);
             DataSandJDBCServer.execute(subRS, database,execute);
         }
     }
 
-    public static void parseTables(DataSandJDBCResultSet rs,TypeDescriptorsContainer container) throws SQLException {
+    public static void parseTables(ResultSet rs) throws SQLException {
         String lowSQL = rs.getSQL().toLowerCase();
         int from = lowSQL.indexOf("from");
         int where = lowSQL.indexOf("where");
@@ -250,7 +252,7 @@ public class DataSandJDBCServer  {
         StringTokenizer tokens = new StringTokenizer(tableNames, ",");
         while (tokens.hasMoreTokens()) {
             String tableName = tokens.nextToken().trim();
-            TypeDescriptor table = container.getTypeDescriptorByShortClassName(tableName);
+            VTable table = VSchema.instance.getVTableByName(tableName);
             if (table == null) {
                 throw new SQLException("Unknown table name \"" + tableName
                         + "\"");
@@ -259,17 +261,17 @@ public class DataSandJDBCServer  {
         }
     }
 
-    public static void addCriteria(AttributeDescriptor col, Criteria c,DataSandJDBCResultSet rs) {
-        Map<AttributeDescriptor, List<Criteria>> tblCriteria = null;
+    public static void addCriteria(VColumn col, Criteria c, ResultSet rs) {
+        Map<VColumn, List<Criteria>> tblCriteria = null;
         if(col.getAugmentedTableName()==null){
-            rs.getCriteria().get(col.getTableName());
+            rs.getCriteria().get(col.getvTableName());
         }else{
             rs.getCriteria().get(col.getAugmentedTableName());
         }
         if (tblCriteria == null) {
-            tblCriteria = new ConcurrentHashMap<AttributeDescriptor, List<Criteria>>();
+            tblCriteria = new ConcurrentHashMap<VColumn, List<Criteria>>();
             if(col.getAugmentedTableName()==null){
-                rs.getCriteria().put(col.getTableName(), tblCriteria);
+                rs.getCriteria().put(col.getvTableName(), tblCriteria);
             }else{
                 rs.getCriteria().put(col.getAugmentedTableName(), tblCriteria);
             }
@@ -282,7 +284,7 @@ public class DataSandJDBCServer  {
         lstCriteria.add(c);
     }
 
-    public static void parseFields(DataSandJDBCResultSet rs,TypeDescriptorsContainer container) throws SQLException {
+    public static void parseFields(ResultSet rs, TypeDescriptorsContainer container) throws SQLException {
         String lowSQL = rs.getSQL().toLowerCase();
         if (!lowSQL.startsWith("select")) {
             throw new SQLException("Missing 'select' statement.");
@@ -293,23 +295,16 @@ public class DataSandJDBCServer  {
         }
         String fields = rs.getSQL().substring(6, from).trim();
         if(fields.equals("Objects")){
-            rs.setCollectedDataType(DataSandJDBCResultSet.COLLECT_TYPE_OBJECTS);
+            rs.setCollectedDataType(ResultSet.COLLECT_TYPE_OBJECTS);
             fields = "*";
         }
         StringTokenizer tokens = new StringTokenizer(fields, ",");
         while (tokens.hasMoreTokens()) {
             String token = tokens.nextToken().trim();
             if (token.equals("*")) {
-                for (TypeDescriptor table : rs.getTables()) {
-                    for(AttributeDescriptor col:table.getAttributes()){
-                        rs.addFieldToQuery(col,table.getTypeClassShortName());
-                    }
-                    Set<Class<?>> knownAugmentations = table.getKnownAugmentingClasses().keySet();
-                    for(Class<?> augClass:knownAugmentations){
-                        TypeDescriptor augTable = container.getTypeDescriptorByClass(augClass);
-                        for(AttributeDescriptor col:augTable.getAttributes()){
-                            rs.addFieldToQuery(col,table.getTypeClassShortName());
-                        }
+                for (VTable table : rs.getTables()) {
+                    for(VColumn col:table.getColumns()){
+                        rs.addFieldToQuery(col,table.getName());
                     }
                 }
                 return;
@@ -357,7 +352,7 @@ public class DataSandJDBCServer  {
         }
     }
 
-    public static void parseCriteria(DataSandJDBCResultSet rs,TypeDescriptorsContainer container) {
+    public static void parseCriteria(ResultSet rs, TypeDescriptorsContainer container) {
         String lowSQL = rs.getSQL().toLowerCase();
         int where = lowSQL.indexOf("where");
         int order = lowSQL.indexOf("order");

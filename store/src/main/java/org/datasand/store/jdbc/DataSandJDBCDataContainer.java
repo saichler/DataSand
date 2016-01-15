@@ -4,11 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.VSchema;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.network.NetworkID;
-import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
+import org.datasand.store.jdbc.ResultSet.RSID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -31,85 +32,74 @@ public class DataSandJDBCDataContainer implements ISerializer{
     public RSID getRsID() {
         return rsID;
     }
-
+    
     @Override
-    public void encode(Object value, byte[] byteArray, int location) {
-    }
-
-    @Override
-    public void encode(Object value, EncodeDataContainer ba) {
+    public void encode(Object value, BytesArray ba) {
         DataSandJDBCDataContainer dc = (DataSandJDBCDataContainer)value;
         if(dc.rsID!=null){
-            ba.getEncoder().encodeInt32(dc.rsID.getAddress(), ba);
-            ba.getEncoder().encodeInt64(dc.rsID.getTime(), ba);
-            ba.getEncoder().encodeInt32(dc.rsID.getLocalID(), ba);
+            Encoder.encodeInt32(dc.rsID.getAddress(), ba);
+            Encoder.encodeInt64(dc.rsID.getTime(), ba);
+            Encoder.encodeInt32(dc.rsID.getLocalID(), ba);
         }else
-            ba.getEncoder().encodeNULL(ba);
+            Encoder.encodeNULL(ba);
         if(dc.data instanceof NetworkID){
-            ba.getEncoder().encodeInt16(5, ba);
-            ba.getEncoder().encodeObject(dc.data, ba);
+            Encoder.encodeInt16(5, ba);
+            Encoder.encodeObject(dc.data, ba);
         }else
-        if(dc.data instanceof DataSandJDBCResultSet){
-            ba.getEncoder().encodeInt16(1, ba);
-            DataSandJDBCResultSet.encode((DataSandJDBCResultSet)dc.data, ba);
+        if(dc.data instanceof ResultSet){
+            Encoder.encodeInt16(1, ba);
+            ResultSet.encode((ResultSet)dc.data, ba);
         }else
-        if(dc.data instanceof TypeDescriptorsContainer){
-            ba.getEncoder().encodeInt16(2, ba);
-            byte[] data = ((TypeDescriptorsContainer)dc.data).getRepositoryData();
-            ba.getEncoder().encodeByteArray(data,ba);
+        if(dc.data instanceof String){
+            Encoder.encodeInt16(2, ba);
+            byte[] data = VSchema.instance.getRepositoryData();
+            Encoder.encodeByteArray(data,ba);
         }else
         if(dc.data instanceof List){
-            ba.getEncoder().encodeInt16(3, ba);
+            Encoder.encodeInt16(3, ba);
             List<Map> records = (List<Map>)dc.data;
-            ba.getEncoder().encodeInt16(records.size(), ba);
+            Encoder.encodeInt16(records.size(), ba);
             for(Map m:records){
-	            ba.getEncoder().encodeSize(m.size(),ba);
+	            Encoder.encodeInt16(m.size(),ba);
 	            for(Object o:m.entrySet()){
 	                Map.Entry e = (Map.Entry)o;
-	                ba.getEncoder().encodeObject(e.getKey(), ba);
-	                ba.getEncoder().encodeObject(e.getValue(), ba);
+	                Encoder.encodeObject(e.getKey(), ba);
+	                Encoder.encodeObject(e.getValue(), ba);
 	            }
             }
         }else
         if(dc.data instanceof Exception){
-            ba.getEncoder().encodeInt16(4, ba);
+            Encoder.encodeInt16(4, ba);
             Exception e = (Exception)dc.data;
-            ba.getEncoder().encodeString(e.getMessage(),ba);
+            Encoder.encodeString(e.getMessage(),ba);
         }else{
-            ba.getEncoder().encodeInt16(6, ba);
+            Encoder.encodeInt16(6, ba);
         }
     }
 
     @Override
-    public Object decode(byte[] byteArray, int location, int length) {
-        return null;
-    }
-
-    @Override
-    public Object decode(EncodeDataContainer ba, int length) {
+    public Object decode(BytesArray ba) {
         DataSandJDBCDataContainer dc = new DataSandJDBCDataContainer();
-        if(!ba.getEncoder().isNULL(ba)){
-            dc.rsID = new RSID(ba.getEncoder().decodeInt32(ba),ba.getEncoder().decodeInt64(ba),ba.getEncoder().decodeInt32(ba));
+        if(!Encoder.isNULL(ba)){
+            dc.rsID = new RSID(Encoder.decodeInt32(ba),Encoder.decodeInt64(ba),Encoder.decodeInt32(ba));
         }
-        int type = ba.getEncoder().decodeInt16(ba);
+        int type = Encoder.decodeInt16(ba);
         if(type==1){
-            dc.data = DataSandJDBCResultSet.decode(ba);
+            dc.data = ResultSet.decode(ba);
         }else
         if(type==2){
-            byte data[] = ba.getEncoder().decodeByteArray(ba);
-            TypeDescriptorsContainer tc = new TypeDescriptorsContainer("JDBC-Connection");
-            tc.load(data);
-            dc.data=tc;
+            byte data[] = Encoder.decodeByteArray(ba);
+            VSchema.instance.load(data);
         }else
         if(type==3){
-        	int listSize = ba.getEncoder().decodeSize(ba);
+        	int listSize = Encoder.decodeInt16(ba);
         	List<Map> records = new ArrayList<Map>(listSize);
         	for(int i=0;i<listSize;i++){
 	            Map m = new HashMap();
-	            int size = ba.getEncoder().decodeSize(ba);
+	            int size = Encoder.decodeInt16(ba);
 	            for(int j=0;j<size;j++){
-	                Object key = ba.getEncoder().decodeObject(ba);
-	                Object value = ba.getEncoder().decodeObject(ba);
+	                Object key = Encoder.decodeObject(ba);
+	                Object value = Encoder.decodeObject(ba);
 	                m.put(key, value);
 	            }
 	            records.add(m);
@@ -117,25 +107,13 @@ public class DataSandJDBCDataContainer implements ISerializer{
             dc.data = records;
         }else
         if(type==4){
-            String msg = ba.getEncoder().decodeString(ba);
+            String msg = Encoder.decodeString(ba);
             Exception e = new Exception(msg);
             dc.data = e;
         }else
         if(type==5){
-            dc.data = ba.getEncoder().decodeObject(ba);
+            dc.data = Encoder.decodeObject(ba);
         }
         return dc;
-    }
-
-    @Override
-    public String getShardName(Object obj) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Object getRecordKey(Object obj) {
-        // TODO Auto-generated method stub
-        return null;
     }
 }

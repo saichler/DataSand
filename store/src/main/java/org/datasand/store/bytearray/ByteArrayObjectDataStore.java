@@ -90,8 +90,8 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
         }
     }
 
-    public DataSandJDBCResultSet executeSql(String sql,boolean execute){
-        DataSandJDBCResultSet rs = new DataSandJDBCResultSet(sql);
+    public ResultSet executeSql(String sql,boolean execute){
+        ResultSet rs = new ResultSet(sql);
         try{
             DataSandJDBCServer.execute(rs, this,execute);
             return rs;
@@ -102,7 +102,7 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
     }
 
     public void executeSql(String sql, PrintStream out, boolean toCsv) {
-        DataSandJDBCResultSet rs = new DataSandJDBCResultSet(sql);
+        ResultSet rs = new ResultSet(sql);
         try {
             int count = 0;
             DataSandJDBCServer.execute(rs, this,true);
@@ -217,11 +217,11 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
 
     public static class NETask implements Runnable {
 
-        private DataSandJDBCResultSet rs = null;
+        private ResultSet rs = null;
         private TypeDescriptor mainTable = null;
         private ByteArrayObjectDataStore db = null;
 
-        public NETask(DataSandJDBCResultSet _rs, TypeDescriptor _main, ByteArrayObjectDataStore _db) {
+        public NETask(ResultSet _rs, TypeDescriptor _main, ByteArrayObjectDataStore _db) {
             this.rs = _rs;
             this.mainTable = _main;
             this.db = _db;
@@ -230,7 +230,7 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
         public void run() {
             for (int i = rs.fromIndex; i < rs.toIndex; i++) {
                 ObjectWithInfo recInfo = null;
-                if(rs.getCollectedDataType()==DataSandJDBCResultSet.COLLECT_TYPE_RECORDS){
+                if(rs.getCollectedDataType()==ResultSet.COLLECT_TYPE_RECORDS){
                     recInfo = db.readNoChildrenWithLocation(mainTable, i);
                 }else{
                     recInfo = db.readWithLocation(mainTable, i);
@@ -250,7 +250,7 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
         }
     }
 
-    public void execute(DataSandJDBCResultSet rs) {
+    public void execute(ResultSet rs) {
         TypeDescriptor table = rs.getMainTable();
         NETask task = new NETask(rs, table, this);
         rs.numberOfTasks = 1;

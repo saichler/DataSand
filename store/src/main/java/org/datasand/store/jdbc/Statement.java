@@ -7,13 +7,11 @@ import java.net.URL;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.Clob;
-import java.sql.Connection;
 import java.sql.Date;
 import java.sql.NClob;
 import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
 import java.sql.Ref;
-import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.RowId;
 import java.sql.SQLException;
@@ -25,22 +23,22 @@ import java.util.Calendar;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.datasand.store.jdbc.DataSandJDBCResultSet.RSID;
+import org.datasand.store.jdbc.ResultSet.RSID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCStatement implements PreparedStatement {
-    private DataSandJDBCResultSet rs = null;
-    private transient DataSandJDBCConnection connection = null;
-    private static Map<RSID, DataSandJDBCResultSet> queries = new ConcurrentHashMap<RSID, DataSandJDBCResultSet>();
+public class Statement implements PreparedStatement {
+    private ResultSet rs = null;
+    private transient Connection connection = null;
+    private static Map<RSID, ResultSet> queries = new ConcurrentHashMap<RSID, ResultSet>();
     private String sql = null;
 
-    public DataSandJDBCStatement(DataSandJDBCConnection con,String _sql) {
+    public Statement(Connection con, String _sql) {
         this.connection = con;
         this.sql = _sql;
     }
 
-    public DataSandJDBCStatement(DataSandJDBCConnection con) {
+    public Statement(Connection con) {
         this.connection = con;
     }
 
@@ -48,7 +46,7 @@ public class DataSandJDBCStatement implements PreparedStatement {
         this.sql = _sql;
     }
 
-    public DataSandJDBCStatement() {
+    public Statement() {
 
     }
 
@@ -61,20 +59,20 @@ public class DataSandJDBCStatement implements PreparedStatement {
                 */
     }
 
-    public static DataSandJDBCResultSet getQuery(RSID id) {
+    public static ResultSet getQuery(RSID id) {
         return queries.get(id);
     }
 
-    public static DataSandJDBCResultSet removeQuery(RSID id) {
+    public static ResultSet removeQuery(RSID id) {
         return queries.remove(id);
     }
 
     @Override
     public java.sql.ResultSet executeQuery(String _sql) throws SQLException {
-        rs = new DataSandJDBCResultSet(_sql);
+        rs = new ResultSet(_sql);
         queries.put(rs.getRSID(), rs);
         synchronized (rs) {
-            this.connection.sendToDestination(new DataSandJDBCMessage(rs));
+            this.connection.sendToDestination(new JDBCMessage(rs));
             try {
                 rs.wait();
             } catch (Exception err) {
@@ -99,11 +97,11 @@ public class DataSandJDBCStatement implements PreparedStatement {
         this.rs.setFinished(b);
     }
 
-    public DataSandJDBCResultSet getRS() {
+    public ResultSet getRS() {
         return this.rs;
     }
 
-    public ResultSet getResultSet() {
+    public java.sql.ResultSet getResultSet() {
         return this.rs;
     }
 
@@ -203,7 +201,7 @@ public class DataSandJDBCStatement implements PreparedStatement {
     }
 
     @Override
-    public Connection getConnection() throws SQLException {
+    public java.sql.Connection getConnection() throws SQLException {
         // TODO Auto-generated method stub
         return null;
     }
@@ -358,7 +356,7 @@ public class DataSandJDBCStatement implements PreparedStatement {
     }
 
     @Override
-    public ResultSet executeQuery() throws SQLException {
+    public java.sql.ResultSet executeQuery() throws SQLException {
         return this.executeQuery(this.sql);
     }
 
