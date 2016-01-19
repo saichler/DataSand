@@ -67,6 +67,7 @@ public class SerializerGenerator {
         StringBuffer buff = new StringBuffer();
 
         append("", 0, buff);
+        append("/**\n  * Copyright (c) 2015 DataSand,Sharon Aicler and others.  All rights reserved.\n  * Generated Code! Do Not Edit unless you move the java file. \n**/",0,buff);
         append("package "+vTable.getJavaClassType().getPackage().getName()+";", 0,buff);
         append("import java.util.List;", 0, buff);
         append("import org.datasand.codec.BytesArray;", 0, buff);

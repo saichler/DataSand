@@ -1,4 +1,8 @@
 
+/**
+  * Copyright (c) 2015 DataSand,Sharon Aicler and others.  All rights reserved.
+  * Generated Code! Do Not Edit unless you move the java file. 
+**/
 package org.datasand.tests.test;
 import java.util.List;
 import org.datasand.codec.BytesArray;
