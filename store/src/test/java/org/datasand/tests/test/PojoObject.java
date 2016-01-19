@@ -95,4 +95,17 @@ public class PojoObject {
         result = 31 * result + list.hashCode();
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "PojoObject{" +
+                "testIndex=" + testIndex +
+                ", testString='" + testString + '\'' +
+                ", testBoolean=" + testBoolean +
+                ", testLong=" + testLong +
+                ", testShort=" + testShort +
+                ", subPojo=" + subPojo +
+                ", list=" + list +
+                '}';
+    }
 }

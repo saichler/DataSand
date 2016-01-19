@@ -6,11 +6,11 @@ import org.datasand.store.ObjectDataStore;
  */
 public class ByteArrayObjectDataStore extends ObjectDataStore{
 /*
-    private DataSandJDBCServer server = null;
+    private JDBCServer server = null;
 
     public ByteArrayObjectDataStore(String _dataLocation, boolean _shouldSortFields) {
         super(_dataLocation,_shouldSortFields,EncodeDataContainer.ENCODER_TYPE_BYTE_ARRAY);
-        server = new DataSandJDBCServer(this);
+        server = new JDBCServer(this);
     }
 
     public void deleteDatabase() {
@@ -93,7 +93,7 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
     public ResultSet executeSql(String sql,boolean execute){
         ResultSet rs = new ResultSet(sql);
         try{
-            DataSandJDBCServer.execute(rs, this,execute);
+            JDBCServer.execute(rs, this,execute);
             return rs;
         }catch(Exception err){
             err.printStackTrace();
@@ -105,7 +105,7 @@ public class ByteArrayObjectDataStore extends ObjectDataStore{
         ResultSet rs = new ResultSet(sql);
         try {
             int count = 0;
-            DataSandJDBCServer.execute(rs, this,true);
+            JDBCServer.execute(rs, this,true);
             boolean isFirst = true;
             int loc = rs.getFieldsInQuery().size() - 1;
             int totalWidth = 0;

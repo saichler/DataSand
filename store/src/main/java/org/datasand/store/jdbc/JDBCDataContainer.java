@@ -13,14 +13,14 @@ import org.datasand.store.jdbc.ResultSet.RSID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCDataContainer implements ISerializer{
+public class JDBCDataContainer implements ISerializer{
     private Object data = null;
     private RSID rsID = null;
 
-    public DataSandJDBCDataContainer(){
+    public JDBCDataContainer(){
     }
 
-    public DataSandJDBCDataContainer(Object _data,RSID _rsID){
+    public JDBCDataContainer(Object _data, RSID _rsID){
         this.data = _data;
         this.rsID = _rsID;
     }
@@ -35,7 +35,7 @@ public class DataSandJDBCDataContainer implements ISerializer{
     
     @Override
     public void encode(Object value, BytesArray ba) {
-        DataSandJDBCDataContainer dc = (DataSandJDBCDataContainer)value;
+        JDBCDataContainer dc = (JDBCDataContainer)value;
         if(dc.rsID!=null){
             Encoder.encodeInt32(dc.rsID.getAddress(), ba);
             Encoder.encodeInt64(dc.rsID.getTime(), ba);
@@ -79,7 +79,7 @@ public class DataSandJDBCDataContainer implements ISerializer{
 
     @Override
     public Object decode(BytesArray ba) {
-        DataSandJDBCDataContainer dc = new DataSandJDBCDataContainer();
+        JDBCDataContainer dc = new JDBCDataContainer();
         if(!Encoder.isNULL(ba)){
             dc.rsID = new RSID(Encoder.decodeInt32(ba),Encoder.decodeInt64(ba),Encoder.decodeInt32(ba));
         }

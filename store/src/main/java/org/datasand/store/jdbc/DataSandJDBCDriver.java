@@ -7,10 +7,10 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
-
 import org.datasand.agents.AutonomousAgentManager;
-import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.codec.Encoder;
+import org.datasand.codec.VLogger;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -18,8 +18,8 @@ public class DataSandJDBCDriver implements Driver {
 
     public static DataSandJDBCDriver drv = new DataSandJDBCDriver();
     static {
-        Encoder.registerSerializer(JDBCMessage.class, new JDBCMessage(), 432);
-        Encoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer(), 433);
+        Encoder.registerSerializer(JDBCMessage.class, new JDBCMessage());
+        Encoder.registerSerializer(JDBCDataContainer.class, new JDBCDataContainer());
     }
     public DataSandJDBCDriver() {
         try {
@@ -37,15 +37,14 @@ public class DataSandJDBCDriver implements Driver {
 
     @Override
     public java.sql.Connection connect(String url, Properties arg1) throws SQLException {
-        System.err.println("Data Sand JDBC Connection");
+        VLogger.info("Data Sand JDBC Connection");
         try {
-            TypeDescriptorsContainer tsc = new TypeDescriptorsContainer("JDBC-Connection");
-            AutonomousAgentManager manager = new AutonomousAgentManager(tsc,true);
+            AutonomousAgentManager manager = new AutonomousAgentManager(true);
             return new Connection(manager, url);
         } catch (Exception err) {
             err.printStackTrace();
         }
-        System.err.println("Error Data Sand JDBC Connection");
+        VLogger.info("Error Data Sand JDBC Connection");
         return null;
     }
 

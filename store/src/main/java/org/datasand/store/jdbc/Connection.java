@@ -27,6 +27,7 @@ import org.datasand.agents.Message;
 import org.datasand.agents.MessageEntry;
 import org.datasand.codec.BytesArray;
 import org.datasand.network.NetworkID;
+import org.datasand.store.DataStore;
 import org.datasand.store.ObjectDataStore;
 import org.datasand.store.jdbc.ResultSet.RSID;
 /**
@@ -34,7 +35,7 @@ import org.datasand.store.jdbc.ResultSet.RSID;
  */
 public class Connection extends AutonomousAgent implements java.sql.Connection {
     private MetaData metaData = null;
-    private ObjectDataStore dataDataStore;
+    private DataStore dataDataStore;
     private NetworkID destination = null;
     private Map<RSID,QueryContainer> queries = new HashMap<RSID,QueryContainer>();
     private Map<RSID,QueryUpdater> updaters = new HashMap<RSID,QueryUpdater>();
@@ -45,7 +46,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     	Message.passThroughOutgoingMessage.put(JDBCMessage.TYPE_QUERY_RECORD, JDBCMessage.TYPE_QUERY_RECORD);
     }
     
-    public Connection(AutonomousAgentManager manager, ObjectDataStore _dataStore) {
+    public Connection(AutonomousAgentManager manager, DataStore _dataStore) {
         super(107,manager);
         this.dataDataStore = _dataStore;
         this.setARPGroup(107);
@@ -109,7 +110,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
             case JDBCMessage.TYPE_DELEGATE_QUERY:
                 try{
                     System.out.println("Starting to execute Query-"+getAgentID()+" From aggregator="+source);
-                    DataSandJDBCServer.execute(msg.getRS(), this.dataDataStore,true);
+                    JDBCServer.execute(msg.getRS(), this.dataDataStore,true);
                     QueryUpdater u = new QueryUpdater(msg.getRS(),source);
                     updaters.put(msg.getRS().getRSID(), u);
                     new Thread(u).start();
@@ -122,7 +123,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
                 try {
                     QueryContainer qc = new QueryContainer(source, msg.getRS());
                     this.queries.put(msg.getRSID(),qc);
-                    DataSandJDBCServer.execute(msg.getRS(), this.dataDataStore,false);
+                    JDBCServer.execute(msg.getRS(), this.dataDataStore,false);
                     send(new JDBCMessage(msg.getRS(),0),source);
                 } catch (Exception err) {
                     send(new JDBCMessage(err, msg.getRSID()),source);
@@ -135,7 +136,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
             case JDBCMessage.TYPE_DELEGATE_QUERY_RECORD:
             {
                 QueryContainer c = queries.get(msg.getRSID());
-                if(msg.getMessageData() instanceof DataSandJDBCDataContainer){
+                if(msg.getMessageData() instanceof JDBCDataContainer){
 	                JDBCMessage m = new JDBCMessage(msg.getRecords(),msg.getRSID());
 	                this.send(m, c.source);
                 }else{

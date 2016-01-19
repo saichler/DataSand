@@ -17,26 +17,41 @@ import org.datasand.codec.VTable;
  * Created by root on 1/12/16.
  */
 public class DataFile {
-    private final RandomAccessFile raf;
+    private RandomAccessFile raf;
     private int currentIndex = 0;
     private int currentLocation = 0;
+    private int currentBufferLocation = 0;
     private final VTable vTable;
+    private final File file;
+    private static final int BUFFER_SIZE = 1024*1024*10;
 
     final Map<Integer,DataLocation> mainIndex = new HashMap<>();
     final Map<Integer,List<Integer>> parentToChildrenIndex = new HashMap<>();
+    private BytesArray writeBuffer = new BytesArray(BUFFER_SIZE);
 
     public DataFile(File file,VTable vTable) throws FileNotFoundException {
         this.vTable = vTable;
-        if(!file.getParentFile().exists()){
-            file.getParentFile().mkdirs();
+        this.file = file;
+        if(!this.file.getParentFile().exists()){
+            this.file.getParentFile().mkdirs();
         }
-        raf = new RandomAccessFile(file,"rw");
+        raf = new RandomAccessFile(this.file,"rw");
+    }
+
+    public void commit() throws IOException{
+        raf.seek(currentBufferLocation);
+        raf.write(writeBuffer.getBytes(),0,writeBuffer.getLocation());
+        currentBufferLocation+=writeBuffer.getLocation();
+        writeBuffer = new BytesArray(BUFFER_SIZE);
     }
 
     public int write(BytesArray key, HierarchyBytesArray obj,int parentIndex) throws IOException {
         byte data[] = obj.getData();
         DataLocation dl = new DataLocation(currentLocation,data.length,currentIndex,parentIndex);
-        raf.write(data);
+        writeBuffer.insert(data);
+        if(writeBuffer.getBytes().length>BUFFER_SIZE){
+            commit();
+        }
         return updateIndexes(dl,data.length,parentIndex);
     }
 

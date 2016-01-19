@@ -219,7 +219,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
     }
 
     public java.sql.ResultSet getProxy() {
-        //return (ResultSet) Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[] {ResultSet.class }, new DataSandJDBCProxy(this));
+        //return (ResultSet) Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[] {ResultSet.class }, new JDBCProxy(this));
         return this;
     }
 

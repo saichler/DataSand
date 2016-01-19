@@ -6,33 +6,27 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.datasand.agents.AutonomousAgentManager;
-import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.TypeDescriptor;
-import org.datasand.codec.TypeDescriptorsContainer;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VColumn;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
-import org.datasand.store.ObjectDataStore;
-import org.datasand.store.bytearray.ByteArrayObjectDataStore;
+import org.datasand.store.DataStore;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCServer  {
-    private ObjectDataStore database = null;
+public class JDBCServer {
+    private DataStore database = null;
     private Connection agent = null;
 
     static {
         Encoder.registerSerializer(JDBCMessage.class, new JDBCMessage());
-        Encoder.registerSerializer(DataSandJDBCDataContainer.class, new DataSandJDBCDataContainer());
+        Encoder.registerSerializer(JDBCDataContainer.class, new JDBCDataContainer());
     }
 
-    public DataSandJDBCServer(ObjectDataStore a) {
+    public JDBCServer(DataStore a) {
         this.database = a;
         this.agent = new Connection(new AutonomousAgentManager(),this.database);
     }
@@ -48,7 +42,7 @@ public class DataSandJDBCServer  {
     public void connectToClient(String addr) {
     }
 
-    public static void execute(ResultSet rs, ObjectDataStore database, boolean execute) throws SQLException {
+    public static void execute(ResultSet rs, DataStore database, boolean execute) throws SQLException {
         if(rs.getSQL().toLowerCase().trim().equals("select 1")){
             rs.setFinished(true);
             return;
@@ -56,11 +50,11 @@ public class DataSandJDBCServer  {
         checkAndBreakSubQueries(rs, database,execute);
         if (rs.getSubQueries().size() == 0) {
             parseTables(rs);
-            parseFields(rs,database.getTypeDescriptorsContainer());
-            parseCriteria(rs,database.getTypeDescriptorsContainer());
+            parseFields(rs);
+            parseCriteria(rs);
             if(execute){
                 try {
-                    ((ByteArrayObjectDataStore)database).execute(rs);
+                    database.execute(rs);
                 } catch (Exception err) {
                     throw new SQLException("Error", err);
                 }
@@ -85,10 +79,10 @@ public class DataSandJDBCServer  {
     public static void parseLogicalFields(String sql, ResultSet rs) throws SQLException {
         if(sql.trim().toLowerCase().equals("select * from")){
             for (Map.Entry<String, ResultSet> entry : rs.getSubQueries().entrySet()) {
-                for(TypeDescriptor node:entry.getValue().getTables()){
+                for(VTable node:entry.getValue().getTables()){
                     rs.addTableToQuery(node);
                 }
-                for(AttributeDescriptor field:entry.getValue().getFieldsInQuery()){
+                for(VColumn field:entry.getValue().getFieldsInQuery()){
                     rs.addFieldToQuery(field,"");
                 }
                 while (entry.getValue().next()) {
@@ -102,22 +96,20 @@ public class DataSandJDBCServer  {
             return;
         }
 
-        Map<String, TypeDescriptor> logicalNameToNode = new HashMap<String, TypeDescriptor>();
+        Map<String, VTable> logicalNameToNode = new HashMap<String, VTable>();
         Map<String, String> origNameToName = new HashMap<String, String>();
-        List<AttributeDescriptor> columnOrder = new ArrayList<>();
-        int nextLogField = addNextLogicalField(sql, 0,
-                logicalNameToNode, origNameToName,columnOrder);
+        List<VColumn> columnOrder = new ArrayList<>();
+        int nextLogField = addNextLogicalField(sql, 0, logicalNameToNode, origNameToName,columnOrder);
         int next = sql.toLowerCase().indexOf(" as ", nextLogField);
         while (next != -1) {
-            nextLogField = addNextLogicalField(sql, nextLogField + 1,
-                    logicalNameToNode, origNameToName,columnOrder);
+            nextLogField = addNextLogicalField(sql, nextLogField + 1, logicalNameToNode, origNameToName,columnOrder);
             next = sql.toLowerCase().indexOf(" as ", nextLogField + 1);
         }
 
-        for (TypeDescriptor node : logicalNameToNode.values()) {
+        for (VTable node : logicalNameToNode.values()) {
             rs.addTableToQuery(node);
         }
-        for(AttributeDescriptor field:columnOrder){
+        for(VColumn field:columnOrder){
             rs.addFieldToQuery(field,"");
         }
         for (Map.Entry<String, ResultSet> entry : rs.getSubQueries().entrySet()) {
@@ -155,8 +147,8 @@ public class DataSandJDBCServer  {
     }
 
     public static int addNextLogicalField(String sql, int startIndex,
-            Map<String, TypeDescriptor> logicalNameToNode,
-            Map<String, String> origNameToName, List<AttributeDescriptor> columnOrder) {
+            Map<String, VTable> logicalNameToNode,
+            Map<String, String> origNameToName, List<VColumn> columnOrder) {
         int index1 = sql.indexOf("\"", startIndex);
         int index2 = sql.indexOf("\".\"", index1);
         int index3 = sql.indexOf("\"", index2 + 3);
@@ -173,17 +165,17 @@ public class DataSandJDBCServer  {
             origFieldName = origFieldNameFull.substring(origFieldNameFull.indexOf(".") + 1);
         }
         String logicalFieldName = sql.substring(index5 + 1, index6);
-        TypeDescriptor node = logicalNameToNode.get(tblName);
+        VTable node = logicalNameToNode.get(tblName);
         if (node == null) {
-            node = new TypeDescriptor(tblName, origTableName,null);
+            node = null;//new VTable(tblName, origTableName,null);
             logicalNameToNode.put(tblName, node);
         }
-        columnOrder.add(node.addAttribute(logicalFieldName, tblName, origFieldName, origTableName));
+        //columnOrder.add(node.addColumn(logicalFieldName, tblName, origFieldName, origTableName));
         origNameToName.put(origFieldNameFull, tblName + "." + logicalFieldName);
         return index6;
     }
 
-    public static void checkAndBreakSubQueries(ResultSet rs, ObjectDataStore database, boolean execute) throws SQLException {
+    public static void checkAndBreakSubQueries(ResultSet rs, DataStore database, boolean execute) throws SQLException {
         String sql = rs.getSQL().toLowerCase();
         int index = sql.indexOf("select");
         if (index == -1)
@@ -219,7 +211,7 @@ public class DataSandJDBCServer  {
             }
             String logicalName = rs.getSQL().substring(index + 1, index2).trim();
             ResultSet subRS = rs.addSubQuery(subQuerySQL, logicalName);
-            DataSandJDBCServer.execute(subRS, database,execute);
+            JDBCServer.execute(subRS, database,execute);
         }
     }
 
@@ -284,7 +276,7 @@ public class DataSandJDBCServer  {
         lstCriteria.add(c);
     }
 
-    public static void parseFields(ResultSet rs, TypeDescriptorsContainer container) throws SQLException {
+    public static void parseFields(ResultSet rs) throws SQLException {
         String lowSQL = rs.getSQL().toLowerCase();
         if (!lowSQL.startsWith("select")) {
             throw new SQLException("Missing 'select' statement.");
@@ -310,31 +302,22 @@ public class DataSandJDBCServer  {
                 return;
             }
             if (token.indexOf(".") != -1) {
-                TypeDescriptor tbl = container.getTypeDescriptorByShortClassName(token.substring(0, token.indexOf(".")).trim());
+                VTable tbl = VSchema.instance.getVTableByName(token.substring(0, token.indexOf(".")).trim());
                 String p = token.substring(token.indexOf(".") + 1);
                 if (p.equals("*")) {
-                    for (AttributeDescriptor c : tbl.getAttributes()) {
-                        rs.addFieldToQuery(c,tbl.getTypeClassShortName());
+                    for (VColumn c : tbl.getColumns()) {
+                        rs.addFieldToQuery(c,tbl.getName());
                     }
                 } else {
-                    AttributeDescriptor col = tbl.getAttributeByAttributeName(p);
-                    rs.addFieldToQuery(col,tbl.getTypeClassShortName());
+                    VColumn col = tbl.getColumnByName (p);
+                    rs.addFieldToQuery(col,tbl.getName());
                 }
             } else {
-                AttributeDescriptor col = null;
+                VColumn col = null;
                 String tableName = null;
-                for (TypeDescriptor table : rs.getTables()) {
-                    Set<Class<?>> augClass = table.getKnownAugmentingClasses().keySet();
-                    col = table.getAttributeByAttributeName(token);
-                    tableName = table.getTypeClassShortName();
-                    if(col==null){
-                        for(Class<?> c:augClass){
-                            TypeDescriptor augTable = container.getTypeDescriptorByClass(c);
-                            col = augTable.getAttributeByAttributeName(token);
-                            if(col!=null)
-                                break;
-                        }
-                    }
+                for (VTable table : rs.getTables()) {
+                    col = table.getColumnByName(token);
+                    tableName = table.getName();
                     if (col != null) {
                         break;
                     }
@@ -352,7 +335,7 @@ public class DataSandJDBCServer  {
         }
     }
 
-    public static void parseCriteria(ResultSet rs, TypeDescriptorsContainer container) {
+    public static void parseCriteria(ResultSet rs) {
         String lowSQL = rs.getSQL().toLowerCase();
         int where = lowSQL.indexOf("where");
         int order = lowSQL.indexOf("order");
@@ -372,25 +355,15 @@ public class DataSandJDBCServer  {
         String whereStatement = rs.getSQL().substring(where + 5, whereTo)
                 .trim();
         Criteria cr = new Criteria(whereStatement, -1);
-        for (TypeDescriptor tbl : rs.getTables()) {
-            for (AttributeDescriptor col : tbl.getAttributes()) {
+        for (VTable tbl : rs.getTables()) {
+            for (VColumn col : tbl.getColumns()) {
                 String colCriteria = cr.getCriteriaForProperty(col);
                 if (colCriteria != null && !colCriteria.trim().equals("")) {
                     addCriteria(col, new Criteria(colCriteria, -1), rs);
                 }
             }
-            Set<Class<?>> knownAugmentingClasses = tbl.getKnownAugmentingClasses().keySet();
-            for(Class clazz:knownAugmentingClasses){
-                TypeDescriptor augTable = container.getTypeDescriptorByClass(clazz);
-                for (AttributeDescriptor col : augTable.getAttributes()) {
-                    String colCriteria = cr.getCriteriaForProperty(col);
-                    if (colCriteria != null && !colCriteria.trim().equals("")) {
-                        addCriteria(col, new Criteria(colCriteria, -1), rs);
-                    }
-                }
-            }
         }
-        AttributeDescriptor rowIndex = new AttributeDescriptor("RowIndex","");
+        VColumn rowIndex = new VColumn("RowIndex","");
         String rowIndexCriteria = cr.getCriteriaForProperty(rowIndex);
         if(rowIndexCriteria!=null && !rowIndexCriteria.equals("")){
             int fromIndex = 0;

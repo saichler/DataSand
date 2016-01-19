@@ -64,6 +64,12 @@ public class BytesArray {
         this.advance(otherData.length-startLocation);
     }
 
+    public void insert(byte otherData[]){
+        this.adjustSize(otherData.length);
+        System.arraycopy(otherData, 0, this.bytes, this.location,otherData.length);
+        this.advance(otherData.length);
+    }
+
     public void setLocation(int loc){
         this.location = loc;
     }

@@ -2,6 +2,7 @@ package org.datasand.store;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,5 +43,17 @@ public class DataFileManager {
             }
         }
         return dataFileList.get(0);
+    }
+
+    public void commit(){
+        for(List<DataFile> list:dataFiles.values()){
+            for(DataFile df:list){
+                try {
+                    df.commit();
+                } catch (IOException e) {
+                    VLogger.error("Failed to commit to datafile ",e);
+                }
+            }
+        }
     }
 }

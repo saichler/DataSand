@@ -17,4 +17,8 @@ public class VLogger {
             e.printStackTrace();
         }
     }
+
+    public static final void info(String message){
+        System.out.println(message);
+    }
 }

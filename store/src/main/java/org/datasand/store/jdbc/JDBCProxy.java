@@ -5,12 +5,12 @@ import java.lang.reflect.Method;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DataSandJDBCProxy implements InvocationHandler {
+public class JDBCProxy implements InvocationHandler {
 
     private Object myObject = null;
     private Class<?> myObjectClass = null;
 
-    public DataSandJDBCProxy(Object obj) {
+    public JDBCProxy(Object obj) {
         this.myObject = obj;
         this.myObjectClass = this.myObject.getClass();
     }

@@ -2,7 +2,9 @@ package org.datasand.tests;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.datasand.store.DataStore;
 import org.datasand.tests.test.PojoObject;
 import org.datasand.tests.test.SubPojoList;
@@ -50,12 +52,52 @@ public class POJODBTest {
     }
 
     @Test
-    public void test(){
-        PojoObject pojo = buildPojo(1);
-        database.put(null,pojo);
-        PojoObject next = (PojoObject) database.get(PojoObject.class,0);
+    public void testOneRecord(){
+        PojoObject pojo = buildPojo(0);
+        int index = database.put(null,pojo);
+        database.commit();
+        PojoObject next = (PojoObject) database.get(PojoObject.class,index);
         Assert.assertEquals(pojo,next);
     }
+
+    @Test
+    public void test1000Record(){
+        Map<Integer,PojoObject> map = new HashMap<>();
+        for(int i=0;i<1000;i++) {
+            PojoObject pojo = buildPojo(i);
+            int index = database.put(null, pojo);
+            map.put(index,pojo);
+        }
+        database.commit();
+        for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
+            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            Assert.assertEquals(entry.getValue(), next);
+        }
+    }
+
+    @Test
+    public void test100000Record(){
+        long start = System.currentTimeMillis();
+        Map<Integer,PojoObject> map = new HashMap<>();
+        for(int i=0;i<100000;i++) {
+            PojoObject pojo = buildPojo(i);
+            int index = database.put(null, pojo);
+            map.put(index,pojo);
+        }
+        database.commit();
+        long end = System.currentTimeMillis();
+        System.out.println("Time to write 100000 records="+(end-start));
+        int i =0;
+        for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
+            if(i%10000==0) {
+                System.out.println(i);
+            }
+            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            Assert.assertEquals(entry.getValue(), next);
+            i++;
+        }
+    }
+
     /*
     @Test
     public void testPojoPersistency(){
