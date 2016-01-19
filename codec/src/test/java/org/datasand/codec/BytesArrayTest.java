@@ -52,4 +52,13 @@ public class BytesArrayTest {
         Assert.assertEquals(ba1.getBytes().length,ba2.getBytes().length);
 
     }
+
+    @Test
+    public void testInsertBytes(){
+        BytesArray ba = new BytesArray(new byte[1024]);
+        ba.setLocation(1024);
+        byte data[] = new byte[1035];
+        ba.insert(data);
+        Assert.assertEquals(ba.getLocation(),1024+1035);
+    }
 }

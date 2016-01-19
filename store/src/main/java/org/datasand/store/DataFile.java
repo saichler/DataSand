@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2016 DataSand,Sharon Aicler and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.datasand.store;
 
 import java.io.File;
@@ -14,7 +21,8 @@ import org.datasand.codec.HierarchyBytesArray;
 import org.datasand.codec.VTable;
 
 /**
- * Created by root on 1/12/16.
+ * @author Sharon Aicler (saichler@gmail.com)
+ * Created on 1/12/16.
  */
 public class DataFile {
     private RandomAccessFile raf;
