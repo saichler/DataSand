@@ -1,5 +1,6 @@
 package org.datasand.store;
 
+import java.io.File;
 import java.io.IOException;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
@@ -58,6 +59,22 @@ public class DataStore {
 
     public void commit(){
         DataFileManager.instance.commit();
+    }
+
+    public void close() {
+        DataFileManager.instance.close(true);
+    }
+
+    public void truncateAll(){
+        DataFileManager.instance.close(false);
+        File f = new File("./database");
+        if(f.exists()){
+            File files[] = f.listFiles();
+            for(File file:files){
+                file.delete();
+            }
+        }
+        f.delete();
     }
 
     public void execute(ResultSet rs){

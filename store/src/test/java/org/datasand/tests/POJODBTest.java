@@ -27,6 +27,7 @@ public class POJODBTest {
     @After
     public void closeDBAndDeleteIT(){
         if(database!=null){
+            database.truncateAll();
             database = null;
         }
     }
@@ -69,6 +70,22 @@ public class POJODBTest {
             map.put(index,pojo);
         }
         database.commit();
+        for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
+            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            Assert.assertEquals(entry.getValue(), next);
+        }
+    }
+
+    @Test
+    public void test1000RecordLoad(){
+        Map<Integer,PojoObject> map = new HashMap<>();
+        for(int i=0;i<1000;i++) {
+            PojoObject pojo = buildPojo(i);
+            int index = database.put(null, pojo);
+            map.put(index,pojo);
+        }
+        database.close();
+        database = new DataStore();
         for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
             PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
             Assert.assertEquals(entry.getValue(), next);

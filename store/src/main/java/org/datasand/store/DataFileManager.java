@@ -37,7 +37,7 @@ public class DataFileManager {
             try {
                 DataFile df = new DataFile(new File("./database/"+cls.getName()+".data"), VSchema.instance.getVTable(cls));
                 dataFileList.add(df);
-            } catch (FileNotFoundException e) {
+            } catch (IOException e) {
                 VLogger.error("Unable to create data file",e);
                 return null;
             }
@@ -55,5 +55,18 @@ public class DataFileManager {
                 }
             }
         }
+    }
+
+    public void close(boolean commit){
+        for(List<DataFile> list:dataFiles.values()){
+            for(DataFile df:list){
+                try {
+                    df.close(commit);
+                } catch (IOException e) {
+                    VLogger.error("Failed to commit to datafile ",e);
+                }
+            }
+        }
+        dataFiles.clear();
     }
 }

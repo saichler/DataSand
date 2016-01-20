@@ -8,9 +8,11 @@
 package org.datasand.store;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,20 +39,72 @@ public class DataFile {
     final Map<Integer,List<Integer>> parentToChildrenIndex = new HashMap<>();
     private BytesArray writeBuffer = new BytesArray(BUFFER_SIZE);
 
-    public DataFile(File file,VTable vTable) throws FileNotFoundException {
+    public DataFile(File file,VTable vTable) throws IOException {
         this.vTable = vTable;
         this.file = file;
         if(!this.file.getParentFile().exists()){
             this.file.getParentFile().mkdirs();
         }
+        loadIndex();
         raf = new RandomAccessFile(this.file,"rw");
+
+    }
+
+    public void close(boolean commit) throws IOException{
+        if(commit) {
+            commit();
+        }
+        raf.close();
     }
 
     public void commit() throws IOException{
         raf.seek(currentBufferLocation);
         raf.write(writeBuffer.getBytes(),0,writeBuffer.getLocation());
         currentBufferLocation+=writeBuffer.getLocation();
+        saveIndex();
         writeBuffer = new BytesArray(BUFFER_SIZE);
+    }
+
+    private void loadIndex() throws  IOException {
+        File indexFile = new File(file.getAbsolutePath()+".index");
+        if(indexFile.exists() && indexFile.length()>0) {
+            FileInputStream in = new FileInputStream(indexFile);
+            byte data[] = new byte[(int) indexFile.length()];
+            in.read(data);
+            in.close();
+            BytesArray ba = new BytesArray(data);
+            int size = Encoder.decodeInt32(ba);
+            boolean isClean = currentIndex == 0;
+            for (int i = 0; i < size; i++) {
+                DataLocation dl = DataLocation.decode(ba);
+                mainIndex.put(dl.getRecordIndex(), dl);
+                List<Integer> list = parentToChildrenIndex.get(dl.getParentIndex());
+                if (list == null) {
+                    list = new ArrayList<>();
+                    parentToChildrenIndex.put(dl.getParentIndex(), list);
+                }
+                list.add(dl.getRecordIndex());
+                if (isClean) {
+                    if (currentIndex <= dl.getRecordIndex()) {
+                        currentIndex = dl.getRecordIndex() + 1;
+                    }
+                }
+            }
+            currentLocation = (int) file.length();
+            currentBufferLocation = currentLocation;
+        }
+    }
+
+    private void saveIndex() throws IOException{
+        File indexFile = new File(file.getAbsolutePath()+".index");
+        BytesArray ba = new BytesArray(1024);
+        Encoder.encodeInt32(mainIndex.size(),ba);
+        for(DataLocation dl:mainIndex.values()){
+            dl.encode(ba);
+        }
+        FileOutputStream out = new FileOutputStream(indexFile);
+        out.write(ba.getBytes(),0,ba.getLocation());
+        out.close();
     }
 
     public int write(BytesArray key, HierarchyBytesArray obj,int parentIndex) throws IOException {
