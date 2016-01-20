@@ -135,9 +135,14 @@ public class DataFile {
 
     public HierarchyBytesArray read(int index) throws IOException {
         DataLocation dl = this.mainIndex.get(index);
-        raf.seek(dl.getStartPosition());
         byte data[] = new byte[dl.getLength()];
-        raf.read(data);
+        if(dl.getStartPosition()>=file.length()){
+            int bufferStartPosition = (int)(dl.getStartPosition()-file.length());
+            System.arraycopy(writeBuffer.getBytes(),bufferStartPosition,data,0,data.length);
+        }else{
+            raf.seek(dl.getStartPosition());
+            raf.read(data);
+        }
         HierarchyBytesArray ba = new HierarchyBytesArray();
         ba.setBytesData(data);
         for(VTable child:this.vTable.getChildren()){

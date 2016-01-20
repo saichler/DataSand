@@ -62,6 +62,14 @@ public class POJODBTest {
     }
 
     @Test
+    public void testOneRecordNoCommit(){
+        PojoObject pojo = buildPojo(0);
+        int index = database.put(null,pojo);
+        PojoObject next = (PojoObject) database.get(PojoObject.class,index);
+        Assert.assertEquals(pojo,next);
+    }
+
+    @Test
     public void test1000Record(){
         Map<Integer,PojoObject> map = new HashMap<>();
         for(int i=0;i<1000;i++) {
@@ -70,6 +78,20 @@ public class POJODBTest {
             map.put(index,pojo);
         }
         database.commit();
+        for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
+            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            Assert.assertEquals(entry.getValue(), next);
+        }
+    }
+
+    @Test
+    public void test1000RecordNoCommit(){
+        Map<Integer,PojoObject> map = new HashMap<>();
+        for(int i=0;i<1000;i++) {
+            PojoObject pojo = buildPojo(i);
+            int index = database.put(null, pojo);
+            map.put(index,pojo);
+        }
         for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
             PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
             Assert.assertEquals(entry.getValue(), next);
@@ -102,6 +124,28 @@ public class POJODBTest {
             map.put(index,pojo);
         }
         database.commit();
+        long end = System.currentTimeMillis();
+        System.out.println("Time to write 100000 records="+(end-start));
+        int i =0;
+        for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
+            if(i%10000==0) {
+                System.out.println(i);
+            }
+            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            Assert.assertEquals(entry.getValue(), next);
+            i++;
+        }
+    }
+
+    @Test
+    public void test100000RecordNoCommit(){
+        long start = System.currentTimeMillis();
+        Map<Integer,PojoObject> map = new HashMap<>();
+        for(int i=0;i<100000;i++) {
+            PojoObject pojo = buildPojo(i);
+            int index = database.put(null, pojo);
+            map.put(index,pojo);
+        }
         long end = System.currentTimeMillis();
         System.out.println("Time to write 100000 records="+(end-start));
         int i =0;
