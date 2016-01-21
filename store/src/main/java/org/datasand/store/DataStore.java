@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2016 DataSand,Sharon Aicler and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.datasand.store;
 
 import java.io.File;
@@ -12,7 +19,8 @@ import org.datasand.codec.VTable;
 import org.datasand.store.jdbc.ResultSet;
 
 /**
- * Created by root on 1/12/16.
+ * @author Sharon Aicler (saichler@gmail.com)
+ * Created on 1/12/16.
  */
 public class DataStore {
 
@@ -21,6 +29,11 @@ public class DataStore {
         Encoder.encodeObject(object,objectBytesArray);
         DataKey dataKey = getDataKeyFromKey(key);
         return put(dataKey,objectBytesArray,-1);
+    }
+
+    public void prepareTable(Class<?> type){
+        MD5ID id = Encoder.getMD5ByClass(type);
+        DataFileManager.instance.getDataFile(id);
     }
 
     private DataKey getDataKeyFromKey(Object key){
@@ -58,7 +71,7 @@ public class DataStore {
         return myIndex;
     }
 
-    public Object get(Object key,Class<?> type){
+    public Object getByKey(Object key,Class<?> type){
         MD5ID id = Encoder.getMD5ByClass(type);
         VTable vTable = VSchema.instance.getVTable(type);
         DataFile df = DataFileManager.instance.getDataFile(id);
@@ -73,12 +86,41 @@ public class DataStore {
         return null;
     }
 
-    public Object get(Class<?> type,int index){
+    public Object getByIndex(int index,Class<?> type){
         MD5ID id = Encoder.getMD5ByClass(type);
         VTable vTable = VSchema.instance.getVTable(type);
         DataFile df = DataFileManager.instance.getDataFile(id);
         try {
             HierarchyBytesArray hba = df.readByIndex(index);
+            Object o = Encoder.decodeObject(hba);
+            return o;
+        } catch (IOException e) {
+            VLogger.error("Failed to read object",e);
+        }
+        return null;
+    }
+
+    public Object deleteByIndex(int index,Class<?> type){
+        MD5ID id = Encoder.getMD5ByClass(type);
+        VTable vTable = VSchema.instance.getVTable(type);
+        DataFile df = DataFileManager.instance.getDataFile(id);
+        try {
+            HierarchyBytesArray hba = df.deleteByIndex(index);
+            Object o = Encoder.decodeObject(hba);
+            return o;
+        } catch (IOException e) {
+            VLogger.error("Failed to read object",e);
+        }
+        return null;
+    }
+
+    public Object deleteByKey(Object key,Class<?> type){
+        MD5ID id = Encoder.getMD5ByClass(type);
+        VTable vTable = VSchema.instance.getVTable(type);
+        DataFile df = DataFileManager.instance.getDataFile(id);
+        try {
+            DataKey dataKey = getDataKeyFromKey(key);
+            HierarchyBytesArray hba = df.deleteByKey(dataKey);
             Object o = Encoder.decodeObject(hba);
             return o;
         } catch (IOException e) {

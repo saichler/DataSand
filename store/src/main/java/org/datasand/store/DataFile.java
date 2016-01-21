@@ -33,6 +33,7 @@ public class DataFile {
     private final VTable vTable;
     private final File file;
     private static final int BUFFER_SIZE = 1024*1024*10;
+    private static final byte[] DELETE_MARK = new byte[]{'-','D','D','-'};
 
     private final Map<Integer,DataLocation> mainIndex = new HashMap<>();
     private final Map<Integer,Integer> parentToChildrenIndex = new HashMap<>();
@@ -48,7 +49,11 @@ public class DataFile {
         }
         loadIndex();
         raf = new RandomAccessFile(this.file,"rw");
-
+        if(raf.length()==0){
+            byte data[] = new byte[BUFFER_SIZE];
+            raf.write(data);
+            raf.seek(0);
+        }
     }
 
     public void close(boolean commit) throws IOException{
@@ -168,15 +173,34 @@ public class DataFile {
         return null;
     }
 
+    public boolean isDeleted(byte data[]){
+        if(data.length<DELETE_MARK.length){
+            return false;
+        }
+        if(data[0] == DELETE_MARK[0] &&
+                data[1] == DELETE_MARK[1] &&
+                data[2] == DELETE_MARK[2] &&
+                data[3] == DELETE_MARK[3]) {
+            return true;
+        }
+        return false;
+    }
+
     public HierarchyBytesArray readByIndex(int index) throws IOException {
         DataLocation dl = this.mainIndex.get(index);
+        if(dl==null){
+            return null;
+        }
         byte data[] = new byte[dl.getLength()];
-        if(dl.getStartPosition()>=file.length()){
-            int bufferStartPosition = (int)(dl.getStartPosition()-file.length());
+        if(dl.getStartPosition()>=currentBufferLocation){
+            int bufferStartPosition = (int)(dl.getStartPosition()-currentBufferLocation);
             System.arraycopy(writeBuffer.getBytes(),bufferStartPosition,data,0,data.length);
         }else{
             raf.seek(dl.getStartPosition());
             raf.read(data);
+        }
+        if(isDeleted(data)){
+            return null;
         }
         HierarchyBytesArray ba = new HierarchyBytesArray();
         ba.setBytesData(data);
@@ -187,11 +211,58 @@ public class DataFile {
         return ba;
     }
 
+    public HierarchyBytesArray deleteByIndex(int index) throws IOException {
+        DataLocation dl = this.mainIndex.get(index);
+        byte data[] = new byte[dl.getLength()];
+        if(dl.getStartPosition()>=currentBufferLocation){
+            int bufferStartPosition = (int)(dl.getStartPosition()-currentBufferLocation);
+            System.arraycopy(writeBuffer.getBytes(),bufferStartPosition,data,0,data.length);
+            System.arraycopy(DELETE_MARK,0,writeBuffer.getBytes(),bufferStartPosition,DELETE_MARK.length);
+        }else{
+            raf.seek(dl.getStartPosition());
+            raf.read(data);
+            raf.seek(dl.getStartPosition());
+            raf.write(DELETE_MARK);
+        }
+        HierarchyBytesArray ba = new HierarchyBytesArray();
+        ba.setBytesData(data);
+        for(VTable child:this.vTable.getChildren()){
+            DataFile childDf = DataFileManager.instance.getDataFile(Encoder.getMD5ByClass(child.getJavaClassType()));
+            ba.getChildren().addAll(childDf.deleteChildren(index));
+        }
+        this.parentToChildrenIndex.remove(dl.getParentIndex());
+        this.mainIndex.remove(dl.getRecordIndex());
+        return ba;
+    }
+
+    public HierarchyBytesArray deleteByKey(DataKey key) throws IOException {
+        Integer index = dataKeyToIndex.get(key);
+        if(index!=null){
+            return deleteByIndex(index);
+        }
+        return null;
+    }
+
     public List<HierarchyBytesArray> readChildren(int parentIndex) throws IOException {
         Integer childrenIndex = this.parentToChildrenIndex.get(parentIndex);
         List<HierarchyBytesArray> result = new LinkedList<>();
         if(childrenIndex!=null){
-            result.add(readByIndex(childrenIndex));
+            HierarchyBytesArray ba = readByIndex(childrenIndex);
+            if(ba!=null) {
+                result.add(ba);
+            }
+        }
+        return result;
+    }
+
+    public List<HierarchyBytesArray> deleteChildren(int parentIndex) throws IOException {
+        Integer childrenIndex = this.parentToChildrenIndex.get(parentIndex);
+        List<HierarchyBytesArray> result = new LinkedList<>();
+        if(childrenIndex!=null){
+            HierarchyBytesArray ba = deleteByIndex(childrenIndex);
+            if(ba!=null) {
+                result.add(ba);
+            }
         }
         return result;
     }

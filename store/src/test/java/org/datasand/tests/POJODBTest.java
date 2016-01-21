@@ -23,7 +23,10 @@ public class POJODBTest {
     @Before
     public void setupFlagsAndCreateDB() {
         database = new DataStore();
+        //Not a must, but performance is better if you prepare the data file on disk.
+        database.prepareTable(PojoObject.class);
     }
+
     @After
     public void closeDBAndDeleteIT(){
         if(database!=null){
@@ -57,7 +60,7 @@ public class POJODBTest {
         PojoObject pojo = buildPojo(0);
         int index = database.put(null,pojo);
         database.commit();
-        PojoObject next = (PojoObject) database.get(PojoObject.class,index);
+        PojoObject next = (PojoObject) database.getByIndex(index,PojoObject.class);
         Assert.assertEquals(pojo,next);
     }
 
@@ -65,7 +68,7 @@ public class POJODBTest {
     public void testOneRecordNoCommit(){
         PojoObject pojo = buildPojo(0);
         int index = database.put(null,pojo);
-        PojoObject next = (PojoObject) database.get(PojoObject.class,index);
+        PojoObject next = (PojoObject) database.getByIndex(index,PojoObject.class);
         Assert.assertEquals(pojo,next);
     }
 
@@ -79,7 +82,7 @@ public class POJODBTest {
         }
         database.commit();
         for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
-            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            PojoObject next = (PojoObject) database.getByIndex(entry.getKey(),PojoObject.class);
             Assert.assertEquals(entry.getValue(), next);
         }
     }
@@ -93,7 +96,7 @@ public class POJODBTest {
             map.put(index,pojo);
         }
         for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
-            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            PojoObject next = (PojoObject) database.getByIndex(entry.getKey(),PojoObject.class);
             Assert.assertEquals(entry.getValue(), next);
         }
     }
@@ -109,7 +112,7 @@ public class POJODBTest {
         database.close();
         database = new DataStore();
         for(Map.Entry<Integer,PojoObject> entry:map.entrySet()){
-            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            PojoObject next = (PojoObject) database.getByIndex(entry.getKey(),PojoObject.class);
             Assert.assertEquals(entry.getValue(), next);
         }
     }
@@ -131,7 +134,7 @@ public class POJODBTest {
             if(i%10000==0) {
                 System.out.println(i);
             }
-            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            PojoObject next = (PojoObject) database.getByIndex(entry.getKey(),PojoObject.class);
             Assert.assertEquals(entry.getValue(), next);
             i++;
         }
@@ -153,7 +156,7 @@ public class POJODBTest {
             if(i%10000==0) {
                 System.out.println(i);
             }
-            PojoObject next = (PojoObject) database.get(PojoObject.class,entry.getKey());
+            PojoObject next = (PojoObject) database.getByIndex(entry.getKey(),PojoObject.class);
             Assert.assertEquals(entry.getValue(), next);
             i++;
         }
@@ -166,7 +169,7 @@ public class POJODBTest {
         database.commit();
         pojo = buildPojo(101);
         index = database.put(100,pojo);
-        PojoObject next = (PojoObject) database.get(100,PojoObject.class);
+        PojoObject next = (PojoObject) database.getByKey(100,PojoObject.class);
         Assert.assertEquals(pojo,next);
     }
 
@@ -176,7 +179,7 @@ public class POJODBTest {
         int index = database.put(100,pojo);
         pojo = buildPojo(101);
         index = database.put(100,pojo);
-        PojoObject next = (PojoObject) database.get(100,PojoObject.class);
+        PojoObject next = (PojoObject) database.getByKey(100,PojoObject.class);
         Assert.assertEquals(pojo,next);
     }
 
@@ -188,8 +191,47 @@ public class POJODBTest {
         pojo = buildPojo(1001);
         index = database.put(100,pojo);
         database.commit();
-        PojoObject next = (PojoObject) database.get(100,PojoObject.class);
+        PojoObject next = (PojoObject) database.getByKey(100,PojoObject.class);
         Assert.assertEquals(pojo,next);
+    }
+
+    @Test
+    public void testDeleteByIndexNoCommit(){
+        PojoObject pojo = buildPojo(0);
+        int index = database.put(null,pojo);
+        PojoObject next = (PojoObject) database.deleteByIndex(index,PojoObject.class);
+        Assert.assertEquals(pojo,next);
+        PojoObject deleted = (PojoObject) database.getByIndex(index,PojoObject.class);
+        Assert.assertNull(deleted);
+    }
+    @Test
+    public void testDeleteByIndexWithCommit(){
+        PojoObject pojo = buildPojo(0);
+        int index = database.put(null,pojo);
+        database.commit();
+        PojoObject next = (PojoObject) database.deleteByIndex(index,PojoObject.class);
+        Assert.assertEquals(pojo,next);
+        PojoObject deleted = (PojoObject) database.getByIndex(index,PojoObject.class);
+        Assert.assertNull(deleted);
+    }
+    @Test
+    public void testDeleteByKeyNoCommit(){
+        PojoObject pojo = buildPojo(0);
+        int index = database.put(100,pojo);
+        PojoObject next = (PojoObject) database.deleteByKey(100,PojoObject.class);
+        Assert.assertEquals(pojo,next);
+        PojoObject deleted = (PojoObject) database.getByKey(100,PojoObject.class);
+        Assert.assertNull(deleted);
+    }
+    @Test
+    public void testDeleteByKeyWithCommit(){
+        PojoObject pojo = buildPojo(0);
+        int index = database.put(100,pojo);
+        database.commit();
+        PojoObject next = (PojoObject) database.deleteByKey(100,PojoObject.class);
+        Assert.assertEquals(pojo,next);
+        PojoObject deleted = (PojoObject) database.getByKey(100,PojoObject.class);
+        Assert.assertNull(deleted);
     }
 
     /*

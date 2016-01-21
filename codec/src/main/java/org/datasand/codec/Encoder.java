@@ -82,6 +82,9 @@ public class Encoder {
     }
 
     public static final Object decodeObject(BytesArray ba){
+        if(ba==null){
+            return null;
+        }else
         if(ba instanceof HierarchyBytesArray && ba.getLocation()>0){
             HierarchyBytesArray hba = (HierarchyBytesArray)ba;
             ba = hba.nextChild();
