@@ -55,38 +55,38 @@ public class DataKey {
         if(dataKey.keyData.length==16 &&
                 dataKey.keyData[0]==this.keyData[0] &&
                 dataKey.keyData[1]==this.keyData[1] &&
-                dataKey.keyData[2]==this.keyData[1] &&
-                dataKey.keyData[3]==this.keyData[1] &&
-                dataKey.keyData[4]==this.keyData[1] &&
-                dataKey.keyData[5]==this.keyData[1] &&
-                dataKey.keyData[6]==this.keyData[1] &&
-                dataKey.keyData[7]==this.keyData[1] &&
-                dataKey.keyData[8]==this.keyData[1] &&
-                dataKey.keyData[9]==this.keyData[1] &&
-                dataKey.keyData[10]==this.keyData[1] &&
-                dataKey.keyData[11]==this.keyData[1] &&
-                dataKey.keyData[12]==this.keyData[1] &&
-                dataKey.keyData[13]==this.keyData[1] &&
-                dataKey.keyData[14]==this.keyData[1] &&
-                dataKey.keyData[15]==this.keyData[1]){
+                dataKey.keyData[2]==this.keyData[2] &&
+                dataKey.keyData[3]==this.keyData[3] &&
+                dataKey.keyData[4]==this.keyData[4] &&
+                dataKey.keyData[5]==this.keyData[5] &&
+                dataKey.keyData[6]==this.keyData[6] &&
+                dataKey.keyData[7]==this.keyData[7] &&
+                dataKey.keyData[8]==this.keyData[8] &&
+                dataKey.keyData[9]==this.keyData[9] &&
+                dataKey.keyData[10]==this.keyData[10] &&
+                dataKey.keyData[11]==this.keyData[11] &&
+                dataKey.keyData[12]==this.keyData[12] &&
+                dataKey.keyData[13]==this.keyData[13] &&
+                dataKey.keyData[14]==this.keyData[14] &&
+                dataKey.keyData[15]==this.keyData[15]){
             return true;
         }else
         if(dataKey.keyData.length==8 &&
                 dataKey.keyData[0]==this.keyData[0] &&
                 dataKey.keyData[1]==this.keyData[1] &&
-                dataKey.keyData[2]==this.keyData[1] &&
-                dataKey.keyData[3]==this.keyData[1] &&
-                dataKey.keyData[4]==this.keyData[1] &&
-                dataKey.keyData[5]==this.keyData[1] &&
-                dataKey.keyData[6]==this.keyData[1] &&
-                dataKey.keyData[7]==this.keyData[1] ) {
+                dataKey.keyData[2]==this.keyData[2] &&
+                dataKey.keyData[3]==this.keyData[3] &&
+                dataKey.keyData[4]==this.keyData[4] &&
+                dataKey.keyData[5]==this.keyData[5] &&
+                dataKey.keyData[6]==this.keyData[6] &&
+                dataKey.keyData[7]==this.keyData[7] ) {
             return true;
         }else
         if(dataKey.keyData.length==4 &&
                 dataKey.keyData[0]==this.keyData[0] &&
                 dataKey.keyData[1]==this.keyData[1] &&
-                dataKey.keyData[2]==this.keyData[1] &&
-                dataKey.keyData[3]==this.keyData[1] ) {
+                dataKey.keyData[2]==this.keyData[2] &&
+                dataKey.keyData[3]==this.keyData[3] ) {
             return true;
         }
         return false;

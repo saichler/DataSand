@@ -12,7 +12,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,8 +34,10 @@ public class DataFile {
     private final File file;
     private static final int BUFFER_SIZE = 1024*1024*10;
 
-    final Map<Integer,DataLocation> mainIndex = new HashMap<>();
-    final Map<Integer,List<Integer>> parentToChildrenIndex = new HashMap<>();
+    private final Map<Integer,DataLocation> mainIndex = new HashMap<>();
+    private final Map<Integer,Integer> parentToChildrenIndex = new HashMap<>();
+    private final Map<DataKey,Integer> dataKeyToIndex = new HashMap<>();
+
     private BytesArray writeBuffer = new BytesArray(BUFFER_SIZE);
 
     public DataFile(File file,VTable vTable) throws IOException {
@@ -78,12 +79,9 @@ public class DataFile {
             for (int i = 0; i < size; i++) {
                 DataLocation dl = DataLocation.decode(ba);
                 mainIndex.put(dl.getRecordIndex(), dl);
-                List<Integer> list = parentToChildrenIndex.get(dl.getParentIndex());
-                if (list == null) {
-                    list = new ArrayList<>();
-                    parentToChildrenIndex.put(dl.getParentIndex(), list);
+                if(dl.getParentIndex()!=-1) {
+                    parentToChildrenIndex.put(dl.getParentIndex(), dl.getRecordIndex());
                 }
-                list.add(dl.getRecordIndex());
                 if (isClean) {
                     if (currentIndex <= dl.getRecordIndex()) {
                         currentIndex = dl.getRecordIndex() + 1;
@@ -107,33 +105,70 @@ public class DataFile {
         out.close();
     }
 
-    public int write(BytesArray key, HierarchyBytesArray obj,int parentIndex) throws IOException {
+    public int write(DataKey dataKey, HierarchyBytesArray obj,int parentIndex) throws IOException {
         byte data[] = obj.getData();
-        DataLocation dl = new DataLocation(currentLocation,data.length,currentIndex,parentIndex);
-        writeBuffer.insert(data);
-        if(writeBuffer.getBytes().length>BUFFER_SIZE){
-            commit();
+        DataLocation dl = null;
+        if(dataKey!=null){
+            Integer index = dataKeyToIndex.get(dataKey);
+            if(index!=null) {
+                dl = mainIndex.get(index);
+            }
+        }else
+        if(parentIndex!=-1){
+            Integer childIndex = this.parentToChildrenIndex.get(parentIndex);
+            if(childIndex!=null){
+                dl = mainIndex.get(childIndex);
+            }
         }
-        return updateIndexes(dl,data.length,parentIndex);
+
+        //New Record
+        if(dl==null) {
+            dl = new DataLocation(currentLocation, data.length, currentIndex, parentIndex);
+            writeBuffer.insert(data);
+            if (writeBuffer.getBytes().length > BUFFER_SIZE) {
+                commit();
+            }
+            return updateIndexes(dl,data.length,parentIndex,dataKey);
+        }else{
+            if(dl.getLength()>=data.length){
+                if(dl.getStartPosition()>=currentBufferLocation){
+                    int loc = dl.getStartPosition()-currentBufferLocation;
+                    System.arraycopy(data,0,writeBuffer.getBytes(),loc,data.length);
+                }else{
+                    raf.seek(dl.getStartPosition());
+                    raf.write(data);
+                }
+                return dl.getRecordIndex();
+            } else {
+                dataKeyToIndex.remove(dataKey);
+                return write(dataKey,obj,parentIndex);
+            }
+        }
     }
 
-    private int updateIndexes(DataLocation dl,int dataLength,int parentIndex){
+    private int updateIndexes(DataLocation dl,int dataLength,int parentIndex,DataKey dataKey){
         mainIndex.put(currentIndex,dl);
         if(parentIndex!=-1) {
-            List<Integer> childList = this.parentToChildrenIndex.get(parentIndex);
-            if(childList==null){
-                childList = new LinkedList<>();
-                this.parentToChildrenIndex.put(parentIndex,childList);
-            }
-            childList.add(currentIndex);
+            this.parentToChildrenIndex.put(parentIndex,currentIndex);
         }
         int myIndex = currentIndex;
         currentIndex++;
         currentLocation+=dataLength;
+        if(dataKey!=null){
+            dataKeyToIndex.put(dataKey,myIndex);
+        }
         return myIndex;
     }
 
-    public HierarchyBytesArray read(int index) throws IOException {
+    public HierarchyBytesArray readByKey(DataKey key) throws IOException {
+        Integer index = dataKeyToIndex.get(key);
+        if(index!=null){
+            return readByIndex(index);
+        }
+        return null;
+    }
+
+    public HierarchyBytesArray readByIndex(int index) throws IOException {
         DataLocation dl = this.mainIndex.get(index);
         byte data[] = new byte[dl.getLength()];
         if(dl.getStartPosition()>=file.length()){
@@ -153,12 +188,10 @@ public class DataFile {
     }
 
     public List<HierarchyBytesArray> readChildren(int parentIndex) throws IOException {
-        List<Integer> children = this.parentToChildrenIndex.get(parentIndex);
+        Integer childrenIndex = this.parentToChildrenIndex.get(parentIndex);
         List<HierarchyBytesArray> result = new LinkedList<>();
-        if(children!=null){
-            for(Integer index:children) {
-                result.add(read(index));
-            }
+        if(childrenIndex!=null){
+            result.add(readByIndex(childrenIndex));
         }
         return result;
     }

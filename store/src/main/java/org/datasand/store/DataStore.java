@@ -19,19 +19,34 @@ public class DataStore {
     public int put(Object key,Object object){
         HierarchyBytesArray objectBytesArray = new HierarchyBytesArray();
         Encoder.encodeObject(object,objectBytesArray);
-        BytesArray keyBytesArray = null;
-        if(key!=null){
-            keyBytesArray = new BytesArray(0);
-            Encoder.encodeObject(key,keyBytesArray);
-        }
-        return put(keyBytesArray,objectBytesArray,-1);
+        DataKey dataKey = getDataKeyFromKey(key);
+        return put(dataKey,objectBytesArray,-1);
     }
 
-    private int put(BytesArray keyData,HierarchyBytesArray objectData,int parentIndex){
+    private DataKey getDataKeyFromKey(Object key){
+        DataKey dataKey = null;
+        if(key!=null){
+            if(key instanceof Integer){
+                dataKey = new DataKey((Integer)key);
+            }else
+            if(key instanceof Long){
+                dataKey = new DataKey((Long)key);
+            }else
+            if(key!=null){
+                BytesArray ba = new BytesArray(256);
+                Encoder.encodeObject(key,ba);
+                MD5ID id = MD5ID.create(ba.getData());
+                dataKey = new DataKey(id.getMd5Long1(),id.getMd5Long2());
+            }
+        }
+        return dataKey;
+    }
+
+    private int put(DataKey dataKey,HierarchyBytesArray objectData,int parentIndex){
         DataFile df = DataFileManager.instance.getDataFile(objectData.getJavaTypeMD5());
         int myIndex = -1;
         try {
-            myIndex = df.write(keyData,objectData,parentIndex);
+            myIndex = df.write(dataKey,objectData,parentIndex);
             if(objectData.getChildren()!=null){
                 for(HierarchyBytesArray child:objectData.getChildren()){
                     put(null,child,myIndex);
@@ -43,12 +58,27 @@ public class DataStore {
         return myIndex;
     }
 
+    public Object get(Object key,Class<?> type){
+        MD5ID id = Encoder.getMD5ByClass(type);
+        VTable vTable = VSchema.instance.getVTable(type);
+        DataFile df = DataFileManager.instance.getDataFile(id);
+        try {
+            DataKey dataKey = getDataKeyFromKey(key);
+            HierarchyBytesArray hba = df.readByKey(dataKey);
+            Object o = Encoder.decodeObject(hba);
+            return o;
+        } catch (IOException e) {
+            VLogger.error("Failed to read object",e);
+        }
+        return null;
+    }
+
     public Object get(Class<?> type,int index){
         MD5ID id = Encoder.getMD5ByClass(type);
         VTable vTable = VSchema.instance.getVTable(type);
         DataFile df = DataFileManager.instance.getDataFile(id);
         try {
-            HierarchyBytesArray hba = df.read(index);
+            HierarchyBytesArray hba = df.readByIndex(index);
             Object o = Encoder.decodeObject(hba);
             return o;
         } catch (IOException e) {

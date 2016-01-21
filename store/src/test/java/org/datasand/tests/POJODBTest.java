@@ -159,6 +159,39 @@ public class POJODBTest {
         }
     }
 
+    @Test
+    public void testOneRecordUpdateNoOverflowWithCommit(){
+        PojoObject pojo = buildPojo(100);
+        int index = database.put(100,pojo);
+        database.commit();
+        pojo = buildPojo(101);
+        index = database.put(100,pojo);
+        PojoObject next = (PojoObject) database.get(100,PojoObject.class);
+        Assert.assertEquals(pojo,next);
+    }
+
+    @Test
+    public void testOneRecordUpdateNoOverflowWithoutCommit(){
+        PojoObject pojo = buildPojo(100);
+        int index = database.put(100,pojo);
+        pojo = buildPojo(101);
+        index = database.put(100,pojo);
+        PojoObject next = (PojoObject) database.get(100,PojoObject.class);
+        Assert.assertEquals(pojo,next);
+    }
+
+    @Test
+    public void testOneRecordUpdateOverflowWithCommit(){
+        PojoObject pojo = buildPojo(100);
+        int index = database.put(100,pojo);
+        database.commit();
+        pojo = buildPojo(1001);
+        index = database.put(100,pojo);
+        database.commit();
+        PojoObject next = (PojoObject) database.get(100,PojoObject.class);
+        Assert.assertEquals(pojo,next);
+    }
+
     /*
     @Test
     public void testPojoPersistency(){

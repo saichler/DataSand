@@ -116,4 +116,8 @@ public class MD5ID {
     public static final MD5ID create(long a,long b){
         return new MD5ID(a,b);
     }
+
+    public static final MD5ID create(byte[] byteArray){
+        return new MD5ID(byteArray,false);
+    }
 }
