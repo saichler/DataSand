@@ -180,7 +180,7 @@ public class DataStore {
         public void run() {
             for (int i = rs.fromIndex; i < rs.toIndex; i++) {
                 HObject obj = db.getHierarchyByIndex(i,this.mainTable.getJavaClassType());
-                if(obj==null){
+                if(obj.getObject()==null){
                     break;
                 }
                 rs.addRecords(obj, true);

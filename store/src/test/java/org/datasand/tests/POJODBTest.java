@@ -284,6 +284,7 @@ public class POJODBTest {
             out.write(buff.toString().getBytes());
             out.close();
 */
+
             FileInputStream in = new FileInputStream(f);
             byte data[] = new byte[(int)f.length()];
             in.read(data);

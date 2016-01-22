@@ -160,7 +160,7 @@ public class VTable {
         Encoder.encodeInt16(table.getParents().size(), ba);
         for (Map.Entry<VColumn,VTable> entry : table.getParents().entrySet()) {
             VColumn.encode(entry.getKey(),ba);
-            VTable.encode(entry.getValue(),ba);
+            Encoder.encodeString(entry.getValue().getJavaClassTypeName(),ba);
         }
     }
 
@@ -182,8 +182,8 @@ public class VTable {
         size = Encoder.decodeInt16(ba);
         for(int i=0;i<size;i++) {
             VColumn vColumn = VColumn.decode(ba);
-            VTable vTable = VTable.decode(ba);
-            table.parents.put(vColumn,vTable);
+            String javaClassName = Encoder.decodeString(ba);
+            //table.parents.put(vColumn,vTable);
         }
         return table;
     }

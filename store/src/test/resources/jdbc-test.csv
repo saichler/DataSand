@@ -1,4 +1,4 @@
-"org.datasand.store.fortest.PojoObject.getTestString","org.datasand.store.fortest.PojoObject.isTestBoolean","org.datasand.store.fortest.PojoObject.getTestLong","org.datasand.store.fortest.PojoObject.getTestShort","org.datasand.store.fortest.PojoObject.getTestIndex"
+"org.datasand.tests.test.PojoObject.getTestString","org.datasand.tests.test.PojoObject.isTestBoolean","org.datasand.tests.test.PojoObject.getTestLong","org.datasand.tests.test.PojoObject.getTestShort","org.datasand.tests.test.PojoObject.getTestIndex"
 "Name-0","true","12345678","44","0"
 "Name-1","true","12345678","44","1"
 "Name-2","true","12345678","44","2"
