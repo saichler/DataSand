@@ -473,7 +473,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         List<JDBCRecord> result = new LinkedList<JDBCRecord>();
         JDBCRecord rec = new JDBCRecord();
         if(insertRecord(hobject, rec)){
-            if(addParentData(hobject,rec)){
+            if(addParentData(hobject.getParent(),rec)){
                 result.add(rec);
                 addRecord(rec.getData(),true);
             }
@@ -500,10 +500,12 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
                 case COLLECT_TYPE_RECORDS:
                     VTable table = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(hobject.getObject()));
                     List<VColumn> tableFields = fieldsByTableInQuery.get(table.getName());
-                    for(VColumn col:tableFields){
-                        Object value = col.get(hobject.getObject());
-                        if(value!=null){
-                            rec.addValue(col.toString(), formatValueToString(value));
+                    if(tableFields!=null) {
+                        for (VColumn col : tableFields) {
+                            Object value = col.get(hobject.getObject());
+                            if (value != null) {
+                                rec.addValue(col.toString(), formatValueToString(value));
+                            }
                         }
                     }
                     break;

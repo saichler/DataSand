@@ -309,7 +309,7 @@ public class POJODBTest {
     @Test
     public void testJDBCTopLevelObjectQueryWithCriteria() throws SQLException, IOException {
         if(disableTests) return;
-        for(int i=0;i<10000;i++){
+        for(int i=0;i<1000;i++){
             Object pojo = buildPojo(i);
             database.put(null,pojo);
         }
@@ -346,6 +346,100 @@ public class POJODBTest {
             }
         }
         checkJDBCQueryResult("./src/test/resources/jdbc-test2.csv",buff,true);
+        if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
+        if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
+        if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
+    }
+
+    @Test
+    public void testJDBCSecondLevelObjectQueryWithCriteria() throws SQLException, IOException {
+        if(disableTests) return;
+        for(int i=0;i<1000;i++){
+            Object pojo = buildPojo(i);
+            database.put(null,pojo);
+        }
+        database.commit();
+        database.startJDBC();
+
+        DataSandJDBCDriver driver = new DataSandJDBCDriver();
+        Connection conn = null;
+        Statement st = null;
+        ResultSet rs = null;
+        StringBuilder buff = new StringBuilder();
+
+        conn = driver.connect("127.0.0.1", null);
+        st = conn.createStatement();
+        String sql = "Select Name from SubPojoList where Name='Item #735:2';";
+        rs = st.executeQuery(sql);
+        int colCount = rs.getMetaData().getColumnCount();
+        buff.append("\"");
+        for(int i=1;i<=colCount;i++){
+            buff.append(rs.getMetaData().getColumnLabel(i));
+            if(i<colCount)
+                buff.append("\",\"");
+            else
+                buff.append("\"\n");
+        }
+        while(rs.next()){
+            buff.append("\"");
+            for(int i=1;i<=colCount;i++){
+                buff.append(rs.getObject(i));
+                if(i<colCount)
+                    buff.append("\",\"");
+                else
+                    buff.append("\"\n");
+            }
+        }
+
+        checkJDBCQueryResult("./src/test/resources/testJDBCSecondLevelObjectQueryWithCriteria.csv",buff,true);
+
+        if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
+        if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
+        if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
+    }
+
+    @Test
+    public void testJDBCSecondLevelObjectQueryWithCriteriaOnParent() throws SQLException, IOException {
+        if(disableTests) return;
+        for(int i=0;i<1000;i++){
+            Object pojo = buildPojo(i);
+            database.put(null,pojo);
+        }
+        database.commit();
+        database.startJDBC();
+
+        DataSandJDBCDriver driver = new DataSandJDBCDriver();
+        Connection conn = null;
+        Statement st = null;
+        ResultSet rs = null;
+        StringBuilder buff = new StringBuilder();
+
+        conn = driver.connect("127.0.0.1", null);
+        st = conn.createStatement();
+        String sql = "Select Name from SubPojoList,PojoObject where TestString='Name-657';";
+        rs = st.executeQuery(sql);
+        int colCount = rs.getMetaData().getColumnCount();
+        buff.append("\"");
+        for(int i=1;i<=colCount;i++){
+            buff.append(rs.getMetaData().getColumnLabel(i));
+            if(i<colCount)
+                buff.append("\",\"");
+            else
+                buff.append("\"\n");
+        }
+        while(rs.next()){
+            buff.append("\"");
+            for(int i=1;i<=colCount;i++){
+                buff.append(rs.getObject(i));
+                if(i<colCount)
+                    buff.append("\",\"");
+                else
+                    buff.append("\"\n");
+            }
+        }
+
+        checkJDBCQueryResult("./src/test/resources/testJDBCSecondLevelObjectQueryWithCriteriaOnParent.csv",buff,true);
+
         if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
         if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
         if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
@@ -391,7 +485,7 @@ public class POJODBTest {
             }
         }
 
-        checkJDBCQueryResult("./src/test/resources/jdbc-test1.csv",buff,true);
+        checkJDBCQueryResult("./src/test/resources/testJDBCSecondLevelObjectQuery.csv",buff,true);
 
         if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
         if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
