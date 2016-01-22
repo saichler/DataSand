@@ -266,4 +266,12 @@ public class DataFile {
         }
         return result;
     }
+
+    public int getParentIndex(int index){
+        DataLocation dl = this.mainIndex.get(index);
+        if(dl!=null){
+            return dl.getParentIndex();
+        }
+        return -1;
+    }
 }

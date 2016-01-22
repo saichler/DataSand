@@ -60,7 +60,7 @@ public class VSchema {
         }
 
         for (VTable t : classNameToVTable.values()) {
-            if (t.getJavaClassTypeName().endsWith(typeName)) {
+            if (t.getJavaClassTypeName().toUpperCase().endsWith("."+typeName.toUpperCase())) {
                 return t;
             }
         }

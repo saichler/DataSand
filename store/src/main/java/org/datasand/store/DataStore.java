@@ -13,9 +13,11 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.HierarchyBytesArray;
 import org.datasand.codec.MD5ID;
+import org.datasand.codec.ThreadPool;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
+import org.datasand.store.jdbc.JDBCServer;
 import org.datasand.store.jdbc.ResultSet;
 
 /**
@@ -23,6 +25,9 @@ import org.datasand.store.jdbc.ResultSet;
  * Created on 1/12/16.
  */
 public class DataStore {
+
+    private ThreadPool threadpool = new ThreadPool(5,"DataBase",2000);
+    private JDBCServer jdbcServer = null;
 
     public int put(Object key,Object object){
         HierarchyBytesArray objectBytesArray = new HierarchyBytesArray();
@@ -34,6 +39,10 @@ public class DataStore {
     public void prepareTable(Class<?> type){
         MD5ID id = Encoder.getMD5ByClass(type);
         DataFileManager.instance.getDataFile(id);
+    }
+
+    public void startJDBC(){
+        jdbcServer = new JDBCServer(this);
     }
 
     private DataKey getDataKeyFromKey(Object key){
@@ -150,6 +159,63 @@ public class DataStore {
     }
 
     public void execute(ResultSet rs){
+        VTable table = rs.getMainTable();
+        NETask task = new NETask(rs, table, this);
+        rs.numberOfTasks = 1;
+        threadpool.addTask(task);
+    }
 
+    public static class NETask implements Runnable {
+
+        private ResultSet rs = null;
+        private VTable mainTable = null;
+        private DataStore db = null;
+
+        public NETask(ResultSet _rs, VTable _main, DataStore _db) {
+            this.rs = _rs;
+            this.mainTable = _main;
+            this.db = _db;
+        }
+
+        public void run() {
+            for (int i = rs.fromIndex; i < rs.toIndex; i++) {
+                HObject obj = db.getHierarchyByIndex(i,this.mainTable.getJavaClassType());
+                if(obj==null){
+                    break;
+                }
+                rs.addRecords(obj, true);
+            }
+            synchronized (rs) {
+                rs.numberOfTasks--;
+                if (rs.numberOfTasks == 0) {
+                    rs.setFinished(true);
+                    rs.notifyAll();
+                }
+            }
+        }
+    }
+
+    public HObject getHierarchyByIndex(int index,Class<?> type){
+        MD5ID id = Encoder.getMD5ByClass(type);
+        VTable vTable = VSchema.instance.getVTable(type);
+        DataFile df = DataFileManager.instance.getDataFile(id);
+        try {
+            HierarchyBytesArray hba = df.readByIndex(index);
+            Object o = Encoder.decodeObject(hba);
+
+            HObject hobject = new HObject();
+            hobject.setObject(o);
+            int parentIndex = df.getParentIndex(index);
+            if(parentIndex!=-1){
+                VTable parentVTable = vTable.getParents().values().iterator().next();
+                if(parentVTable!=null){
+                    hobject.setParent(getHierarchyByIndex(parentIndex,parentVTable.getJavaClassType()));
+                }
+            }
+            return hobject;
+        } catch (IOException e) {
+            VLogger.error("Failed to read object",e);
+        }
+        return null;
     }
 }

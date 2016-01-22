@@ -44,6 +44,7 @@ import org.datasand.codec.VColumn;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
 import org.datasand.network.NetworkID;
+import org.datasand.store.HObject;
 //import org.datasand.store.ObjectDataStore.ObjectWithInfo;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -70,7 +71,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
     private static Integer nextID = new Integer(0);
     public int numberOfTasks = 0;
     private Exception err = null;
-    private List<Record> EMPTY_RESULT = new LinkedList<Record>();
+    private List<JDBCRecord> EMPTY_RESULT = new LinkedList<JDBCRecord>();
     private Map<String,ResultSet> subQueries = new HashMap<String,ResultSet>();
     public int fromIndex = 0;
     public int toIndex = Integer.MAX_VALUE;
@@ -117,6 +118,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         Encoder.encodeString(rs.sql, edc);
         Encoder.encodeBoolean(rs.finished, edc);
         Encoder.encodeInt16(rs.tablesInQuery.size(), edc);
+
         for(VTable t:rs.tablesInQuery){
             VTable.encode(t,edc);
         }
@@ -168,6 +170,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         rs.sql = Encoder.decodeString(edc);
         rs.finished = Encoder.decodeBoolean(edc);
         int size = Encoder.decodeInt16(edc);
+
         for(int i=0;i<size;i++){
             VTable ts = VTable.decode(edc);
             rs.tablesInQuery.add(ts);
@@ -445,15 +448,6 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         }
     }
 
-    public static class Record {
-        public Map data = new HashMap();
-        public Object element = null;
-
-        public Map getRecord() {
-            return this.data;
-        }
-    }
-
     private boolean beenHere(Set<String> beenHereElement, Object element) {
         if (beenHereElement == null) {
             beenHereElement = new HashSet<String>();
@@ -475,17 +469,15 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         return false;
     }
 
-    public List<Record> addRecords(Object object,boolean root) {
-        List<Record> result = new LinkedList<Record>();
-        /*
-        Record rec = new Record();
-        rec.element = object;
-        if(addInfoToRecord(object, rec)){
-            if(addParentData(info,rec)){
+    public List<JDBCRecord> addRecords(HObject hobject, boolean root) {
+        List<JDBCRecord> result = new LinkedList<JDBCRecord>();
+        JDBCRecord rec = new JDBCRecord();
+        if(insertRecord(hobject, rec)){
+            if(addParentData(hobject,rec)){
                 result.add(rec);
-                addRecord(rec.data,true);
+                addRecord(rec.getData(),true);
             }
-        }*/
+        }
         return result;
     }
 
@@ -502,22 +494,22 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         return value.toString();
     }
 
-    private boolean addInfoToRecord(Object object,Record rec){
-        if(checkCriteria(object)){
+    private boolean insertRecord(HObject hobject, JDBCRecord rec){
+        if(checkCriteria(hobject.getObject())){
             switch(collectedDataType){
                 case COLLECT_TYPE_RECORDS:
-                    VTable table = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(object));
+                    VTable table = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(hobject.getObject()));
                     List<VColumn> tableFields = fieldsByTableInQuery.get(table.getName());
                     for(VColumn col:tableFields){
-                        Object value = col.get(object);
+                        Object value = col.get(hobject.getObject());
                         if(value!=null){
-                            rec.data.put(col.toString(), formatValueToString(value));
+                            rec.addValue(col.toString(), formatValueToString(value));
                         }
                     }
                     break;
                 case COLLECT_TYPE_OBJECTS:
-                    Class objClass = Observers.instance.getClassExtractor().getObjectClass(rec.element);
-                    rec.data.put(objClass.getName(), rec.element);
+                    Class objClass = Observers.instance.getClassExtractor().getObjectClass(hobject.getObject());
+                    rec.addValue(objClass.getName(), hobject.getObject());
                     break;
             }
             return true;
@@ -525,12 +517,15 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         return false;
     }
 
-    public boolean addParentData(Object parentObject, Record rec){
+    public boolean addParentData(HObject parentHObject, JDBCRecord rec){
         if(this.tablesInQueryMap.size()>1){
-            VTable parent = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(parentObject));
+            VTable parent = VSchema.instance.getVTable(Observers.instance.getClassExtractor().getObjectClass(parentHObject.getObject()));
             if(parent!=null && this.tablesInQueryMap.containsKey(parent.getName())){
-                if(!addInfoToRecord(parentObject, rec)){
+                if(!insertRecord(parentHObject, rec)){
                     return false;
+                }
+                if(parentHObject.getParent()!=null){
+                    addParentData(parentHObject.getParent(),rec);
                 }
             }
         }

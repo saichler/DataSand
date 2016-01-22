@@ -40,6 +40,12 @@ public class VTable {
         VSchema.instance.registerVTable(this);
     }
 
+    public VTable(String javaClassName,String name){
+        this.javaClassTypeName = javaClassName;
+        this.name = name;
+        this.javaClassType = null;
+    }
+
     public Class<?> getJavaClassType() {
         return javaClassType;
     }
@@ -133,10 +139,52 @@ public class VTable {
     }
 
     public static final void encode(VTable table,BytesArray ba){
+        Encoder.encodeString(table.getJavaClassTypeName(), ba);
+        Encoder.encodeString(table.getName(),ba);
+        if(table.keyColumn!=null){
+            VColumn.encode(table.keyColumn,ba);
+        }else{
+            Encoder.encodeObject(null,ba);
+        }
 
+        Encoder.encodeInt16(table.getColumns().size(), ba);
+        for (VColumn p : table.getColumns()) {
+            VColumn.encode(p,ba);
+        }
+
+        Encoder.encodeInt16(table.getChildren().size(), ba);
+        for (VTable p : table.getChildren()) {
+            VTable.encode(p,ba);
+        }
+
+        Encoder.encodeInt16(table.getParents().size(), ba);
+        for (Map.Entry<VColumn,VTable> entry : table.getParents().entrySet()) {
+            VColumn.encode(entry.getKey(),ba);
+            VTable.encode(entry.getValue(),ba);
+        }
     }
 
     public static final VTable decode(BytesArray ba){
-        return null;
+        VTable table = new VTable(Encoder.decodeString(ba),Encoder.decodeString(ba));
+        table.keyColumn = (VColumn)Encoder.decodeObject(ba);
+        int size = Encoder.decodeInt16(ba);
+        for(int i=0;i<size;i++){
+            VColumn vColumn = VColumn.decode(ba);
+            table.columns.add(vColumn);
+            table.nameToColumn.put(vColumn.getvColumnName().toUpperCase(),vColumn);
+
+        }
+        size = Encoder.decodeInt16(ba);
+        for(int i=0;i<size;i++) {
+            VTable child = VTable.decode(ba);
+            table.children.add(child);
+        }
+        size = Encoder.decodeInt16(ba);
+        for(int i=0;i<size;i++) {
+            VColumn vColumn = VColumn.decode(ba);
+            VTable vTable = VTable.decode(ba);
+            table.parents.put(vColumn,vTable);
+        }
+        return table;
     }
 }
