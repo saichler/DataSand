@@ -117,8 +117,8 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
         Encoder.encodeInt32(rs.rsid.localID, edc);
         Encoder.encodeString(rs.sql, edc);
         Encoder.encodeBoolean(rs.finished, edc);
-        Encoder.encodeInt16(rs.tablesInQuery.size(), edc);
 
+        Encoder.encodeInt16(rs.tablesInQuery.size(), edc);
         for(VTable t:rs.tablesInQuery){
             VTable.encode(t,edc);
         }

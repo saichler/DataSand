@@ -52,7 +52,7 @@ public class VColumn {
         this.javaGetMethodName = this.javaGetMethod.getName();
         this.javaClassName = this.javaClass.getName();
         this.vColumnName = extractVColumnName();
-        this.vTableName = this.javaClassName.substring(this.javaClassName.lastIndexOf(".") + 1);
+        this.vTableName = this.javaClassName.substring(this.javaClassName.lastIndexOf(".") + 1).toUpperCase();
         initMethod();
     }
 
@@ -250,6 +250,16 @@ public class VColumn {
 
     public boolean ofVTable(VTable table){
         if(table.getJavaClassTypeName().equals(this.getJavaClassName())){
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isList(){
+        if(this.javaGetMethod==null){
+            return false;
+        }
+        if(List.class.isAssignableFrom(this.javaGetMethod.getReturnType())){
             return true;
         }
         return false;

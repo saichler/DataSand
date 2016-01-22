@@ -3,8 +3,11 @@ package org.datasand.tests;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +28,7 @@ public class POJODBTest {
     private long startTime = 0L;
     private long endTime = 0L;
     private static boolean createTestResources = false;
+    private static final boolean disableTests = false;
 
     @Before
     public void setupFlagsAndCreateDB() {
@@ -63,6 +67,7 @@ public class POJODBTest {
 
     @Test
     public void testOneRecord(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(0);
         int index = database.put(null,pojo);
         database.commit();
@@ -72,6 +77,7 @@ public class POJODBTest {
 
     @Test
     public void testOneRecordNoCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(0);
         int index = database.put(null,pojo);
         PojoObject next = (PojoObject) database.getByIndex(index,PojoObject.class);
@@ -80,6 +86,7 @@ public class POJODBTest {
 
     @Test
     public void test1000Record(){
+        if(disableTests) return;
         Map<Integer,PojoObject> map = new HashMap<>();
         for(int i=0;i<1000;i++) {
             PojoObject pojo = buildPojo(i);
@@ -95,6 +102,7 @@ public class POJODBTest {
 
     @Test
     public void test1000RecordNoCommit(){
+        if(disableTests) return;
         Map<Integer,PojoObject> map = new HashMap<>();
         for(int i=0;i<1000;i++) {
             PojoObject pojo = buildPojo(i);
@@ -109,6 +117,7 @@ public class POJODBTest {
 
     @Test
     public void test1000RecordLoad(){
+        if(disableTests) return;
         Map<Integer,PojoObject> map = new HashMap<>();
         for(int i=0;i<1000;i++) {
             PojoObject pojo = buildPojo(i);
@@ -125,6 +134,7 @@ public class POJODBTest {
 
     @Test
     public void test100000Record(){
+        if(disableTests) return;
         long start = System.currentTimeMillis();
         Map<Integer,PojoObject> map = new HashMap<>();
         for(int i=0;i<100000;i++) {
@@ -148,6 +158,7 @@ public class POJODBTest {
 
     @Test
     public void test100000RecordNoCommit(){
+        if(disableTests) return;
         long start = System.currentTimeMillis();
         Map<Integer,PojoObject> map = new HashMap<>();
         for(int i=0;i<100000;i++) {
@@ -170,6 +181,7 @@ public class POJODBTest {
 
     @Test
     public void testOneRecordUpdateNoOverflowWithCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(100);
         int index = database.put(100,pojo);
         database.commit();
@@ -181,6 +193,7 @@ public class POJODBTest {
 
     @Test
     public void testOneRecordUpdateNoOverflowWithoutCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(100);
         int index = database.put(100,pojo);
         pojo = buildPojo(101);
@@ -191,6 +204,7 @@ public class POJODBTest {
 
     @Test
     public void testOneRecordUpdateOverflowWithCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(100);
         int index = database.put(100,pojo);
         database.commit();
@@ -203,6 +217,7 @@ public class POJODBTest {
 
     @Test
     public void testDeleteByIndexNoCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(0);
         int index = database.put(null,pojo);
         PojoObject next = (PojoObject) database.deleteByIndex(index,PojoObject.class);
@@ -210,8 +225,10 @@ public class POJODBTest {
         PojoObject deleted = (PojoObject) database.getByIndex(index,PojoObject.class);
         Assert.assertNull(deleted);
     }
+
     @Test
     public void testDeleteByIndexWithCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(0);
         int index = database.put(null,pojo);
         database.commit();
@@ -220,8 +237,10 @@ public class POJODBTest {
         PojoObject deleted = (PojoObject) database.getByIndex(index,PojoObject.class);
         Assert.assertNull(deleted);
     }
+
     @Test
     public void testDeleteByKeyNoCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(0);
         int index = database.put(100,pojo);
         PojoObject next = (PojoObject) database.deleteByKey(100,PojoObject.class);
@@ -229,8 +248,10 @@ public class POJODBTest {
         PojoObject deleted = (PojoObject) database.getByKey(100,PojoObject.class);
         Assert.assertNull(deleted);
     }
+
     @Test
     public void testDeleteByKeyWithCommit(){
+        if(disableTests) return;
         PojoObject pojo = buildPojo(0);
         int index = database.put(100,pojo);
         database.commit();
@@ -241,7 +262,8 @@ public class POJODBTest {
     }
 
     @Test
-    public void testJDBC(){
+    public void testJDBCTopLevelObjectQuery() throws SQLException, IOException {
+        if(disableTests) return;
         for(int i=0;i<10000;i++){
             Object pojo = buildPojo(i);
             database.put(null,pojo);
@@ -253,52 +275,144 @@ public class POJODBTest {
         Connection conn = null;
         Statement st = null;
         ResultSet rs = null;
-        StringBuffer buff = new StringBuffer();
-        try{
-            conn = driver.connect("127.0.0.1", null);
-            st = conn.createStatement();
-            String sql = "Select TestString,TestBoolean,TestLong,TestShort,TestIndex from PojoObject;";
-            rs = st.executeQuery(sql);
-            int colCount = rs.getMetaData().getColumnCount();
+        StringBuilder buff = new StringBuilder();
+
+        conn = driver.connect("127.0.0.1", null);
+        st = conn.createStatement();
+        String sql = "Select TestString,TestBoolean,TestLong,TestShort,TestIndex from PojoObject;";
+        rs = st.executeQuery(sql);
+        int colCount = rs.getMetaData().getColumnCount();
+        buff.append("\"");
+        for(int i=1;i<=colCount;i++){
+            buff.append(rs.getMetaData().getColumnLabel(i));
+            if(i<colCount)
+                buff.append("\",\"");
+            else
+                buff.append("\"\n");
+        }
+        while(rs.next()){
             buff.append("\"");
             for(int i=1;i<=colCount;i++){
-                buff.append(rs.getMetaData().getColumnLabel(i));
+                buff.append(rs.getObject(i));
                 if(i<colCount)
                     buff.append("\",\"");
                 else
                     buff.append("\"\n");
             }
-            while(rs.next()){
-                buff.append("\"");
-                for(int i=1;i<=colCount;i++){
-                    buff.append(rs.getObject(i));
-                    if(i<colCount)
-                        buff.append("\",\"");
-                    else
-                        buff.append("\"\n");
-                }
-            }
-            File f = new File("./src/test/resources/jdbc-test.csv");
-/*
-            FileOutputStream out = new FileOutputStream(f);
-            out.write(buff.toString().getBytes());
-            out.close();
-*/
-
-            FileInputStream in = new FileInputStream(f);
-            byte data[] = new byte[(int)f.length()];
-            in.read(data);
-            in.close();
-            String before = new String(data);
-            Assert.assertEquals(before,buff.toString());
-        }catch(Exception err){
-            err.printStackTrace();
         }
+        checkJDBCQueryResult("./src/test/resources/jdbc-test.csv",buff,true);
         if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
         if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
         if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
     }
 
+    @Test
+    public void testJDBCTopLevelObjectQueryWithCriteria() throws SQLException, IOException {
+        if(disableTests) return;
+        for(int i=0;i<10000;i++){
+            Object pojo = buildPojo(i);
+            database.put(null,pojo);
+        }
+        database.commit();
+        database.startJDBC();
+
+        DataSandJDBCDriver driver = new DataSandJDBCDriver();
+        Connection conn = null;
+        Statement st = null;
+        ResultSet rs = null;
+        StringBuilder buff = new StringBuilder();
+
+        conn = driver.connect("127.0.0.1", null);
+        st = conn.createStatement();
+        String sql = "Select TestString,TestBoolean,TestLong,TestShort,TestIndex from PojoObject where TestString='Name-657';";
+        rs = st.executeQuery(sql);
+        int colCount = rs.getMetaData().getColumnCount();
+        buff.append("\"");
+        for(int i=1;i<=colCount;i++){
+            buff.append(rs.getMetaData().getColumnLabel(i));
+            if(i<colCount)
+                buff.append("\",\"");
+            else
+                buff.append("\"\n");
+        }
+        while(rs.next()){
+            buff.append("\"");
+            for(int i=1;i<=colCount;i++){
+                buff.append(rs.getObject(i));
+                if(i<colCount)
+                    buff.append("\",\"");
+                else
+                    buff.append("\"\n");
+            }
+        }
+        checkJDBCQueryResult("./src/test/resources/jdbc-test2.csv",buff,true);
+        if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
+        if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
+        if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
+    }
+
+    @Test
+    public void testJDBCSecondLevelObjectQuery() throws SQLException, IOException {
+        if(disableTests) return;
+        for(int i=0;i<10000;i++){
+            Object pojo = buildPojo(i);
+            database.put(null,pojo);
+        }
+        database.commit();
+        database.startJDBC();
+
+        DataSandJDBCDriver driver = new DataSandJDBCDriver();
+        Connection conn = null;
+        Statement st = null;
+        ResultSet rs = null;
+        StringBuilder buff = new StringBuilder();
+
+        conn = driver.connect("127.0.0.1", null);
+        st = conn.createStatement();
+        String sql = "Select Name from SubPojoList;";
+        rs = st.executeQuery(sql);
+        int colCount = rs.getMetaData().getColumnCount();
+        buff.append("\"");
+        for(int i=1;i<=colCount;i++){
+            buff.append(rs.getMetaData().getColumnLabel(i));
+            if(i<colCount)
+                buff.append("\",\"");
+            else
+                buff.append("\"\n");
+        }
+        while(rs.next()){
+            buff.append("\"");
+            for(int i=1;i<=colCount;i++){
+                buff.append(rs.getObject(i));
+                if(i<colCount)
+                    buff.append("\",\"");
+                else
+                    buff.append("\"\n");
+            }
+        }
+
+        checkJDBCQueryResult("./src/test/resources/jdbc-test1.csv",buff,true);
+
+        if(rs!=null) try{rs.close();}catch(Exception err){err.printStackTrace();}
+        if(st!=null) try{st.close();}catch(Exception err){err.printStackTrace();}
+        if(conn!=null) try{conn.close();}catch(Exception err){err.printStackTrace();}
+    }
+
+    public void checkJDBCQueryResult(String fileName,StringBuilder buff,boolean check) throws IOException {
+        File f = new File(fileName);
+        if(!check) {
+            FileOutputStream out = new FileOutputStream(f);
+            out.write(buff.toString().getBytes());
+            out.close();
+        }else {
+            FileInputStream in = new FileInputStream(f);
+            byte data[] = new byte[(int) f.length()];
+            in.read(data);
+            in.close();
+            String before = new String(data);
+            Assert.assertEquals(before, buff.toString());
+        }
+    }
 
     /*
     @Test

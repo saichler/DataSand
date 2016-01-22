@@ -9,11 +9,15 @@ package org.datasand.store;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.HierarchyBytesArray;
 import org.datasand.codec.MD5ID;
 import org.datasand.codec.ThreadPool;
+import org.datasand.codec.VColumn;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
@@ -143,6 +147,9 @@ public class DataStore {
     }
 
     public void close() {
+        if(this.jdbcServer!=null){
+            this.jdbcServer.close();
+        }
         DataFileManager.instance.close(true);
     }
 
@@ -178,12 +185,19 @@ public class DataStore {
         }
 
         public void run() {
-            for (int i = rs.fromIndex; i < rs.toIndex; i++) {
-                HObject obj = db.getHierarchyByIndex(i,this.mainTable.getJavaClassType());
-                if(obj.getObject()==null){
+            boolean end = false;
+            for (int i = rs.fromIndex; i < rs.toIndex && !end; i++) {
+                List<HObject> list = db.getHierarchyByIndex(i,this.mainTable.getJavaClassType());
+                if(list==null){
                     break;
                 }
-                rs.addRecords(obj, true);
+                for(HObject o:list) {
+                    if(o.getObject()==null){
+                        end = true;
+                        break;
+                    }
+                    rs.addRecords(o, true);
+                }
             }
             synchronized (rs) {
                 rs.numberOfTasks--;
@@ -195,24 +209,38 @@ public class DataStore {
         }
     }
 
-    public HObject getHierarchyByIndex(int index,Class<?> type){
+    public List<HObject> getHierarchyByIndex(int index, Class<?> type){
+        List<HObject> result = new LinkedList<>();
         MD5ID id = Encoder.getMD5ByClass(type);
         VTable vTable = VSchema.instance.getVTable(type);
         DataFile df = DataFileManager.instance.getDataFile(id);
         try {
             HierarchyBytesArray hba = df.readByIndex(index);
-            Object o = Encoder.decodeObject(hba);
-
-            HObject hobject = new HObject();
-            hobject.setObject(o);
+            VColumn parentColumn = null;
             int parentIndex = df.getParentIndex(index);
+            HObject parentHObject = null;
             if(parentIndex!=-1){
-                VTable parentVTable = vTable.getParents().values().iterator().next();
-                if(parentVTable!=null){
-                    hobject.setParent(getHierarchyByIndex(parentIndex,parentVTable.getJavaClassType()));
+                Map.Entry<VColumn,VTable> entry = vTable.getParents().entrySet().iterator().next();
+                parentColumn = entry.getKey();
+                parentHObject = getHierarchyByIndex(parentIndex,entry.getValue().getJavaClassType()).get(0);
+            }
+            if(parentColumn==null || !parentColumn.isList()) {
+                HObject hobject = new HObject();
+                Object o = Encoder.decodeObject(hba);
+                hobject.setObject(o);
+                hobject.setParent(parentHObject);
+                result.add(hobject);
+            }else
+            if(parentColumn!=null && parentColumn.isList()){
+                List list = Encoder.decodeList(hba);
+                for(Object o:list){
+                    HObject hobject = new HObject();
+                    hobject.setObject(o);
+                    hobject.setParent(parentHObject);
+                    result.add(hobject);
                 }
             }
-            return hobject;
+            return result;
         } catch (IOException e) {
             VLogger.error("Failed to read object",e);
         }
