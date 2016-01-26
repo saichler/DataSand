@@ -29,7 +29,6 @@ public class DataFile {
     private RandomAccessFile raf;
     private int currentIndex = 0;
     private int currentLocation = 0;
-    private int currentBufferLocation = 0;
     private final VTable vTable;
     private final File file;
     private static final int BUFFER_SIZE = 1024*1024*10;
@@ -40,6 +39,9 @@ public class DataFile {
     private final Map<DataKey,Integer> dataKeyToIndex = new HashMap<>();
 
     private BytesArray writeBuffer = new BytesArray(BUFFER_SIZE);
+    private int writeBufferLocation = 0;
+    private BytesArray readBuffer = null;
+    private int readBufferLocation = 0;
 
     public DataFile(File file,VTable vTable) throws IOException {
         this.vTable = vTable;
@@ -64,9 +66,9 @@ public class DataFile {
     }
 
     public void commit() throws IOException{
-        raf.seek(currentBufferLocation);
+        raf.seek(writeBufferLocation);
         raf.write(writeBuffer.getBytes(),0,writeBuffer.getLocation());
-        currentBufferLocation+=writeBuffer.getLocation();
+        writeBufferLocation +=writeBuffer.getLocation();
         saveIndex();
         writeBuffer = new BytesArray(BUFFER_SIZE);
     }
@@ -94,7 +96,7 @@ public class DataFile {
                 }
             }
             currentLocation = (int) file.length();
-            currentBufferLocation = currentLocation;
+            writeBufferLocation = currentLocation;
         }
     }
 
@@ -136,8 +138,8 @@ public class DataFile {
             return updateIndexes(dl,data.length,parentIndex,dataKey);
         }else{
             if(dl.getLength()>=data.length){
-                if(dl.getStartPosition()>=currentBufferLocation){
-                    int loc = dl.getStartPosition()-currentBufferLocation;
+                if(dl.getStartPosition()>= writeBufferLocation){
+                    int loc = dl.getStartPosition()- writeBufferLocation;
                     System.arraycopy(data,0,writeBuffer.getBytes(),loc,data.length);
                 }else{
                     raf.seek(dl.getStartPosition());
@@ -186,18 +188,47 @@ public class DataFile {
         return false;
     }
 
+    private void moveReadBuffer(int location,int size) throws IOException{
+        if(readBuffer==null) {
+            byte data[] = null;
+            if (file.length() < BUFFER_SIZE) {
+                data = new byte[(int) file.length()];
+            } else {
+                data = new byte[BUFFER_SIZE];
+            }
+            raf.seek(0);
+            raf.read(data);
+            readBuffer = new BytesArray(data);
+            readBufferLocation = 0;
+        }
+
+        if(location<readBufferLocation || location+size>readBufferLocation+readBuffer.getBytes().length){
+            if(location>file.length()-BUFFER_SIZE){
+                readBufferLocation = (int)(file.length()-BUFFER_SIZE);
+            }else{
+                readBufferLocation = location;
+            }
+            byte data[] = new byte[BUFFER_SIZE];
+            raf.seek(readBufferLocation);
+            raf.read(data);
+            readBuffer = new BytesArray(data);
+        }
+    }
+
     public HierarchyBytesArray readByIndex(int index) throws IOException {
         DataLocation dl = this.mainIndex.get(index);
         if(dl==null){
             return null;
         }
         byte data[] = new byte[dl.getLength()];
-        if(dl.getStartPosition()>=currentBufferLocation){
-            int bufferStartPosition = (int)(dl.getStartPosition()-currentBufferLocation);
+        if(dl.getStartPosition()>= writeBufferLocation){
+            int bufferStartPosition = (int)(dl.getStartPosition()- writeBufferLocation);
             System.arraycopy(writeBuffer.getBytes(),bufferStartPosition,data,0,data.length);
         }else{
-            raf.seek(dl.getStartPosition());
-            raf.read(data);
+            moveReadBuffer(dl.getStartPosition(),dl.getLength());
+            int pos = dl.getStartPosition()-readBufferLocation;
+            System.arraycopy(readBuffer.getBytes(),pos,data,0,data.length);
+
         }
         if(isDeleted(data)){
             return null;
@@ -214,8 +245,8 @@ public class DataFile {
     public HierarchyBytesArray deleteByIndex(int index) throws IOException {
         DataLocation dl = this.mainIndex.get(index);
         byte data[] = new byte[dl.getLength()];
-        if(dl.getStartPosition()>=currentBufferLocation){
-            int bufferStartPosition = (int)(dl.getStartPosition()-currentBufferLocation);
+        if(dl.getStartPosition()>= writeBufferLocation){
+            int bufferStartPosition = (int)(dl.getStartPosition()- writeBufferLocation);
             System.arraycopy(writeBuffer.getBytes(),bufferStartPosition,data,0,data.length);
             System.arraycopy(DELETE_MARK,0,writeBuffer.getBytes(),bufferStartPosition,DELETE_MARK.length);
         }else{

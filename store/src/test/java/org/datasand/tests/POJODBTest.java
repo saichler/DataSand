@@ -354,7 +354,7 @@ public class POJODBTest {
     @Test
     public void testJDBCSecondLevelObjectQueryWithCriteria() throws SQLException, IOException {
         if(disableTests) return;
-        for(int i=0;i<1000;i++){
+        for(int i=0;i<100000;i++){
             Object pojo = buildPojo(i);
             database.put(null,pojo);
         }
@@ -370,6 +370,7 @@ public class POJODBTest {
         conn = driver.connect("127.0.0.1", null);
         st = conn.createStatement();
         String sql = "Select Name from SubPojoList where Name='Item #735:2';";
+        long startTime = System.currentTimeMillis();
         rs = st.executeQuery(sql);
         int colCount = rs.getMetaData().getColumnCount();
         buff.append("\"");
@@ -390,6 +391,8 @@ public class POJODBTest {
                     buff.append("\"\n");
             }
         }
+        long endTime = System.currentTimeMillis();
+        System.out.println("Time to run query = "+(endTime-startTime));
 
         checkJDBCQueryResult("./src/test/resources/testJDBCSecondLevelObjectQueryWithCriteria.csv",buff,true);
 
