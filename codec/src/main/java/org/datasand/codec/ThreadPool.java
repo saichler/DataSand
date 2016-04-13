@@ -12,13 +12,14 @@ import java.util.LinkedList;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class ThreadPool {
-    private LinkedList<Runnable> tasks = new LinkedList<Runnable>();
+    private final LinkedList<Runnable> tasks = new LinkedList<Runnable>();
     private int threadCount = 0;
     private int maxThreadCount = 10;
     private String threadPoolName = "Simple Thread Pool";
     private int waitTimeForIdle = 10000;
     private int maxQueueSize = -1;
-    public Object waitForSlotSync = new Object();
+    public final Object waitForSlotSync = new Object();
+    private final Object waitForEmptySync = new Object();
 
     public ThreadPool(int _maxThreadCount, String name,int _waitTimeForIdle) {
         this.maxThreadCount = _maxThreadCount;
@@ -85,6 +86,11 @@ public class ThreadPool {
             synchronized (tasks) {
                 threadCount--;
             }
+            if(threadCount==0){
+                synchronized (waitForEmptySync){
+                    waitForEmptySync.notifyAll();
+                }
+            }
         }
     }
 
@@ -109,6 +115,18 @@ public class ThreadPool {
             return true;
         }
         return false;
+    }
+
+    public void waitForEmpty(){
+        synchronized(this.waitForEmptySync){
+            if(this.threadCount>0) {
+                try {
+                    this.waitForEmptySync.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public void setMaxQueueSize(int size) {
