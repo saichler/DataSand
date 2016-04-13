@@ -15,6 +15,7 @@
     <module>agents</module>
     <module>store</module>
     <module>filesystem</module>
+    <module>disk</module>
   </modules>
   <dependencies>
       <dependency>
