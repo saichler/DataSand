@@ -7,24 +7,39 @@
  */
 package org.datasand.disk.swing;
 
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.JTree;
+import javax.swing.event.TreeModelListener;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.tree.TreeModel;
+import javax.swing.tree.TreePath;
 import org.datasand.disk.DiskUtilitiesController;
 import org.datasand.disk.model.DirectoryNode;
 import org.datasand.disk.model.DirectoryObserver;
+import org.datasand.disk.model.FileTableModel;
 import org.datasand.disk.tasks.SumFilesInDirectoryTask;
-
-import javax.swing.*;
-import javax.swing.event.TreeModelListener;
-import javax.swing.tree.TreeModel;
-import javax.swing.tree.TreePath;
-import java.awt.*;
-import java.awt.event.*;
-import java.io.File;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyListener,ActionListener{
+public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyListener,ActionListener,TreeSelectionListener{
     private JTree tree = new JTree();
+    private JTable table = new JTable();
     private JTextField status = new JTextField();
     private JTextField seekPath = new JTextField("./");
     private JButton btnDeleteTargetDir = new JButton("Delete target dirs");
@@ -35,18 +50,20 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
     private DirectoryNode root = null;
 
     public DiskUtilitiesView(){
-        this.setTitle("Disk Utils");
+        this.setTitle("Disk Utils - For the Maven And Karaf developer");
         this.getContentPane().setLayout(new BorderLayout());
         this.tree.setShowsRootHandles(true);
-        this.setSize(800,600);
-        this.getContentPane().add(new JScrollPane(tree),BorderLayout.CENTER);
+        this.setSize(1024,768);
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        split.setLeftComponent(new JScrollPane(tree));
+        split.setRightComponent(new JScrollPane(table));
+        this.getContentPane().add(split,BorderLayout.CENTER);
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.add(this.status,BorderLayout.SOUTH);
         bottomPanel.add(this.btnDeleteTargetDir,BorderLayout.EAST);
         this.getContentPane().add(bottomPanel, BorderLayout.SOUTH);
         this.getContentPane().add(this.seekPath,BorderLayout.NORTH);
         this.seekPath.addKeyListener(this);
-        this.setVisible(true);
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -57,6 +74,10 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
         MyTreeModel model = new MyTreeModel();
         tree.setModel(model);
         this.btnDeleteTargetDir.addActionListener(this);
+        GUISettings.center(this);
+        split.setDividerLocation(300);
+        tree.addTreeSelectionListener(this);
+        this.setVisible(true);
     }
 
     public void go(String path){
@@ -200,7 +221,17 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
         }
     }
 
+    @Override
+    public void valueChanged(TreeSelectionEvent e) {
+        DirectoryNode dirNode = (DirectoryNode) e.getPath().getLastPathComponent();
+        if(dirNode!=null){
+            FileTableModel m = new FileTableModel(dirNode);
+            this.table.setModel(m);
+        }
+    }
+
     public static void main(String args[]){
+        GUISettings.setUI();
         new DiskUtilitiesView();
     }
 }

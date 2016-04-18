@@ -33,7 +33,17 @@ public final class DirectoryNode implements TreeNode {
         double k = s/ DiskUtilitiesController.K;
         double m = s/ DiskUtilitiesController.MEG;
         double g = s/ DiskUtilitiesController.GIG;
-        return this.directoryFile.getName()+" - "+ DiskUtilitiesController.kFormat.format(k)+"k / "+ DiskUtilitiesController.kFormat.format(m)+"m / "+ DiskUtilitiesController.kFormat.format(g)+"g";
+        StringBuilder sb = new StringBuilder(this.directoryFile.getName());
+        sb.append(" - ");
+        if(g>1){
+            sb.append(DiskUtilitiesController.kFormat.format(g)).append("g");
+        }else
+        if(m>1){
+            sb.append(DiskUtilitiesController.kFormat.format(m)).append("m");
+        } else {
+            sb.append(DiskUtilitiesController.kFormat.format(k)).append("k");
+        }
+        return sb.toString();
     }
 
     public DirectoryNode(DirectoryNode parent, File path, DirectoryObserver observer){
