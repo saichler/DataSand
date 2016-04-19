@@ -12,6 +12,10 @@ import java.io.File;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public interface DirectoryObserver {
-    public void observe(File dir,int taskID);
+public interface SyncDataListener {
+    public void notifyCurrentDirectory(File directory);
+    public void notifyCurrentFile(File file);
+    public void notifyCurrentFileProgress(File file,int part, int outOf);
+    public void notifyDone(File source,File dest);
+
 }

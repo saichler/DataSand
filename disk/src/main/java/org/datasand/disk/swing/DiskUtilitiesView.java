@@ -12,17 +12,25 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.SwingUtilities;
 import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -30,24 +38,35 @@ import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 import org.datasand.disk.DiskUtilitiesController;
 import org.datasand.disk.model.DirectoryNode;
-import org.datasand.disk.model.DirectoryObserver;
+import org.datasand.disk.model.DirectoryScanListener;
 import org.datasand.disk.model.FileTableModel;
+import org.datasand.disk.model.SyncDataListener;
 import org.datasand.disk.tasks.SumFilesInDirectoryTask;
+import org.datasand.disk.tasks.SyncFilesTask;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyListener,ActionListener,TreeSelectionListener{
+public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,KeyListener,ActionListener,TreeSelectionListener,MouseListener,SyncDataListener{
     private JTree tree = new JTree();
     private JTable table = new JTable();
     private JTextField status = new JTextField();
-    private JTextField seekPath = new JTextField("./");
+    private JTextField txtPath = new JTextField("./");
     private JButton btnDeleteTargetDir = new JButton("Delete target dirs");
+    private JButton btnGO = new JButton("GO!");
 
     private long lastUpdate = System.currentTimeMillis();
     private boolean updating = false;
 
     private DirectoryNode root = null;
+
+    private JPopupMenu treePopupMenu = new JPopupMenu();
+    private JPopupMenu tablePopupMenu = new JPopupMenu();
+
+    private int currentTreeSort = 1;
+    private int currentTableSort = 1;
+
+    private DirectoryNode currentTableDirNode = null;
 
     public DiskUtilitiesView(){
         this.setTitle("Disk Utils - For the Maven And Karaf developer");
@@ -62,8 +81,12 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
         bottomPanel.add(this.status,BorderLayout.SOUTH);
         bottomPanel.add(this.btnDeleteTargetDir,BorderLayout.EAST);
         this.getContentPane().add(bottomPanel, BorderLayout.SOUTH);
-        this.getContentPane().add(this.seekPath,BorderLayout.NORTH);
-        this.seekPath.addKeyListener(this);
+        JPanel north = new JPanel(new BorderLayout());
+        north.add(txtPath,BorderLayout.CENTER);
+        north.add(new JLabel("Directory Path:"),BorderLayout.WEST);
+        north.add(btnGO,BorderLayout.EAST);
+        this.getContentPane().add(north,BorderLayout.NORTH);
+        this.btnGO.addActionListener(this);
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -77,22 +100,61 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
         GUISettings.center(this);
         split.setDividerLocation(300);
         tree.addTreeSelectionListener(this);
+        setupTreePopupMenu();
+        setupTablePopupMenu();
         this.setVisible(true);
+        table.getTableHeader().addMouseListener(this);
     }
 
-    public void go(String path){
-        this.lastUpdate = System.currentTimeMillis();
-        status.setText("Working on:\""+path+"\"...");
-        long start = System.currentTimeMillis();
-        this.root = new DirectoryNode(null,new File(path),DiskUtilitiesView.this);
-        DiskUtilitiesController.collect(root);
-        DiskUtilitiesController.compute(root,true);
-        MyTreeModel model = new MyTreeModel();
-        long end = System.currentTimeMillis();
-        System.gc();
-        long memory = (Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/ DiskUtilitiesController.MEG;
-        status.setText("Done! Took "+(end-start) + " Memory="+memory+"m");
-        tree.setModel(model);
+    private void setupTreePopupMenu(){
+        JMenu sort = new JMenu("Sort");
+        JMenuItem bySize = new JMenuItem("By Size");
+        JMenuItem byName = new JMenuItem("By Name");
+        sort.add(bySize);
+        sort.add(byName);
+        bySize.addActionListener(this);
+        byName.addActionListener(this);
+        treePopupMenu.add(sort);
+        treePopupMenu.addSeparator();
+        JMenuItem sync = new JMenuItem("Sync With...");
+        treePopupMenu.add(sync);
+        sync.addActionListener(this);
+        treePopupMenu.addSeparator();
+        JMenuItem delete = new JMenuItem("Delete Directory");
+        delete.addActionListener(this);
+        treePopupMenu.add(delete);
+        tree.setComponentPopupMenu(treePopupMenu);
+    }
+
+    private void setupTablePopupMenu(){
+        JMenuItem delete = new JMenuItem("Delete File");
+        delete.addActionListener(this);
+        tablePopupMenu.add(delete);
+        table.setComponentPopupMenu(tablePopupMenu);
+    }
+
+    public void go(final String path){
+        Runnable runthis = new Runnable() {
+            @Override
+            public void run() {
+                DiskUtilitiesView.this.setEnabled(false);
+                lastUpdate = System.currentTimeMillis();
+                status.setText("Working on:\""+path+"\"...");
+                long start = System.currentTimeMillis();
+                root = new DirectoryNode(null,new File(path),DiskUtilitiesView.this);
+                DiskUtilitiesController.collect(root);
+                DiskUtilitiesController.compute(root,currentTreeSort);
+                MyTreeModel model = new MyTreeModel();
+                long end = System.currentTimeMillis();
+                System.gc();
+                long memory = (Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/ DiskUtilitiesController.MEG;
+                status.setText("Done! Took "+(end-start) + " Memory="+memory+"m");
+                tree.setModel(model);
+                tree.setSelectionPath(new TreePath(root));
+                DiskUtilitiesView.this.setEnabled(true);
+            }
+        };
+        DiskUtilitiesController.addGUITask(runthis);
     }
 
     private class MyTreeModel implements TreeModel {
@@ -155,7 +217,7 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
                             @Override
                             public void run() {
                                 int size = 0;
-                                while (size < DiskUtilitiesController.threadPool.getNumberOfThreads()) {
+                                while (size < DiskUtilitiesController.getCollectDirectoryThreadpoolSize()) {
                                     synchronized (SumFilesInDirectoryTask.pauseSync) {
                                         size = SumFilesInDirectoryTask.pauseCount;
                                     }
@@ -164,7 +226,7 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
                                     } catch (Exception err) {
                                     }
                                 }
-                                DiskUtilitiesController.compute(root, true);
+                                DiskUtilitiesController.compute(root, currentTreeSort);
                                 tree.setModel(new MyTreeModel());
                                 synchronized (SumFilesInDirectoryTask.pauseSync) {
                                     SumFilesInDirectoryTask.pause = false;
@@ -174,7 +236,7 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
                                 }
                             }
                         };
-                        new Thread(runthis).start();
+                        DiskUtilitiesController.addGUITask(runthis);
                     }
                 }
             }
@@ -194,30 +256,65 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
     @Override
     public void keyReleased(KeyEvent e) {
         if(e.getKeyCode()==KeyEvent.VK_ENTER){
-            Runnable runthis = new Runnable() {
-                @Override
-                public void run() {
-                    go(seekPath.getText());
-                }
-            };
-            new Thread(runthis).start();
+            go(txtPath.getText());
         }
     }
 
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
+        if(actionEvent.getSource() instanceof JMenuItem){
+            String action = ((JMenuItem)actionEvent.getSource()).getText();
+            if(action.equals("By Size")){
+                this.currentTreeSort = 1;
+                go(txtPath.getText());
+            }else if (action.equals("By Name")){
+                this.currentTreeSort = 2;
+                go(txtPath.getText());
+            }else if(action.equals("Delete File")){
+                int tableRow = table.getSelectedRow();
+                if(tableRow>=0){
+                    File file = ((FileTableModel)table.getModel()).getFileAt(tableRow);
+                    int yesno = JOptionPane.showConfirmDialog(this,"Are you sure you want to delete file:\n"+file.getName(),"Delete File",JOptionPane.YES_NO_OPTION);
+                    if(yesno==JOptionPane.YES_OPTION){
+                        file.delete();
+                        table.setModel(new FileTableModel(this.currentTableDirNode,this.currentTableSort));
+                    }
+                }
+            }else if(action.equals("Delete Directory")){
+                DirectoryNode node = (DirectoryNode)tree.getSelectionPath().getLastPathComponent();
+                if(node!=null){
+                    int yesno = JOptionPane.showConfirmDialog(this,"Are you sure you want to delete directory:\n"+node.getDirectoryFile(),"Delete Directory",JOptionPane.YES_NO_OPTION);
+                    if(yesno==JOptionPane.YES_OPTION){
+                        DiskUtilitiesController.deleteDirectory(node.getDirectoryFile());
+                        go(txtPath.getText());
+                    }
+                }
+            }else if(action.equals("Sync With...")){
+                DirectoryNode node = (DirectoryNode)tree.getSelectionPath().getLastPathComponent();
+                if(node!=null) {
+                    String dest = JOptionPane.showInputDialog(this,"Synchronize "+node.getDirectoryFile().getName()+" to destination:","Synchronize Directory");
+                    if(dest!=null){
+                        File destFile = new File(dest);
+                        SyncFilesTask task = new SyncFilesTask(this,node.getDirectoryFile(),destFile);
+                        DiskUtilitiesController.addGUITask(task);
+                    }
+                }
+            }
+        }else
         if(actionEvent.getSource()==btnDeleteTargetDir){
             btnDeleteTargetDir.setEnabled(false);
             status.setText("Seeking target directories...");
             Runnable runthis = new Runnable() {
                 @Override
                 public void run() {
-                    DiskUtilitiesController.scanAndDeleteTargetDirectory(root.getDirectoryFile(),DiskUtilitiesView.this);
-                    go(seekPath.getText());
+                    DiskUtilitiesController.scanAndDeleteTargetDirectory(root,DiskUtilitiesView.this);
+                    go(txtPath.getText());
                     btnDeleteTargetDir.setEnabled(true);
                 }
             };
-            new Thread(runthis).start();
+            DiskUtilitiesController.addGUITask(runthis);
+        }else if(actionEvent.getSource()==btnGO){
+            go(txtPath.getText());
         }
     }
 
@@ -225,9 +322,90 @@ public class DiskUtilitiesView extends JFrame implements DirectoryObserver,KeyLi
     public void valueChanged(TreeSelectionEvent e) {
         DirectoryNode dirNode = (DirectoryNode) e.getPath().getLastPathComponent();
         if(dirNode!=null){
-            FileTableModel m = new FileTableModel(dirNode);
+            this.currentTableDirNode = dirNode;
+            FileTableModel m = new FileTableModel(dirNode,this.currentTableSort);
             this.table.setModel(m);
         }
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        if(e.getSource()==this.table.getTableHeader() && e.getClickCount()==2){
+            int col = table.columnAtPoint(e.getPoint());
+            if(currentTableDirNode!=null){
+                if(col==0 && this.currentTableSort!=2){
+                    Runnable runthis = new Runnable() {
+                        @Override
+                        public void run() {
+                            currentTableSort = 2;
+                            table.setModel(new FileTableModel(currentTableDirNode,2));
+                        }
+                    };
+                    SwingUtilities.invokeLater(runthis);
+                }else
+                if(col==1 && this.currentTableSort!=1) {
+                    Runnable runthis = new Runnable() {
+                        @Override
+                        public void run() {
+                            currentTableSort = 1;
+                            table.setModel(new FileTableModel(currentTableDirNode,1));
+                        }
+                    };
+                    SwingUtilities.invokeLater(runthis);
+                }else
+                if(col==2 && this.currentTableSort!=3) {
+                    Runnable runthis = new Runnable() {
+                        @Override
+                        public void run() {
+                            currentTableSort = 3;
+                            table.setModel(new FileTableModel(currentTableDirNode,3));
+                        }
+                    };
+                    SwingUtilities.invokeLater(runthis);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+
+    }
+
+    @Override
+    public void notifyCurrentDirectory(File directory) {
+        this.status.setText(directory.getAbsolutePath());
+    }
+
+    @Override
+    public void notifyCurrentFile(File file) {
+        this.status.setText(file.getAbsolutePath());
+    }
+
+    @Override
+    public void notifyCurrentFileProgress(File file, int part,int outOf) {
+        double percent = part;
+        percent = percent / outOf;
+        percent = percent * 100;
+        this.status.setText(DiskUtilitiesController.kFormat.format(percent)+"% - "+file.getAbsolutePath());
+    }
+
+    @Override
+    public void notifyDone(File source, File dest) {
+        this.status.setText("Done synchronizing source "+source.getName()+" to "+dest.getName()+".");
     }
 
     public static void main(String args[]){

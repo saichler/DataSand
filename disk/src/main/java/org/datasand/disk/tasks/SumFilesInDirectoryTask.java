@@ -7,11 +7,10 @@
  */
 package org.datasand.disk.tasks;
 
-import org.datasand.disk.DiskUtilitiesController;
-import org.datasand.disk.model.DirectoryNode;
-
 import java.io.File;
 import java.io.IOException;
+import org.datasand.disk.DiskUtilitiesController;
+import org.datasand.disk.model.DirectoryNode;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -50,7 +49,7 @@ public final class SumFilesInDirectoryTask implements Runnable{
                         if (file.isDirectory()) {
                             DirectoryNode subDir = new DirectoryNode(this.directoryNode, file);
                             SumFilesInDirectoryTask newTask = new SumFilesInDirectoryTask(subDir);
-                            DiskUtilitiesController.threadPool.addTask(newTask);
+                            DiskUtilitiesController.addCollectDirectoryTask(newTask);
                         } else {
                             this.directoryNode.setLocalSize(this.directoryNode.getLocalSize() + file.length());
                         }

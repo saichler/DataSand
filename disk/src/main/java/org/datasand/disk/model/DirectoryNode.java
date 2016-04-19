@@ -26,7 +26,7 @@ public final class DirectoryNode implements TreeNode {
 
     private long size = 0;
     private long localSize = 0;
-    private final DirectoryObserver observer;
+    private final DirectoryScanListener observer;
 
     public String toString(){
         double s = this.size;
@@ -46,7 +46,7 @@ public final class DirectoryNode implements TreeNode {
         return sb.toString();
     }
 
-    public DirectoryNode(DirectoryNode parent, File path, DirectoryObserver observer){
+    public DirectoryNode(DirectoryNode parent, File path, DirectoryScanListener observer){
         this.directoryFile = path;
         this.observer = observer;
         this.parent = parent;

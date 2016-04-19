@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import org.datasand.codec.ThreadPool;
 import org.datasand.disk.model.DirectoryNode;
-import org.datasand.disk.model.DirectoryObserver;
+import org.datasand.disk.model.DirectoryScanListener;
 import org.datasand.disk.tasks.SumFilesInDirectoryTask;
 
 /**
@@ -21,27 +21,43 @@ import org.datasand.disk.tasks.SumFilesInDirectoryTask;
  */
 public class DiskUtilitiesController {
 
-    public static final ThreadPool threadPool = new ThreadPool(300,"Collect Directory Size",500);
-    public static final DirectoryComparatorSize comparator = new DirectoryComparatorSize();
+    private static final ThreadPool directoryCollectThreadPool = new ThreadPool(300,"Directory Collect",500);
+    private static final ThreadPool guiThreadPool = new ThreadPool(10,"GUI Thread Pool",500);
+    public static final DirectoryComparatorSize sizeComparator = new DirectoryComparatorSize();
+    public static final DirectoryComparatorName nameComparator = new DirectoryComparatorName();
     public static final long K = 1024;
     public static final long MEG = 1024*1024;
     public static final long GIG = 1024*1024*1024;
-    public static final DecimalFormat kFormat = new DecimalFormat("#.##");
+    public static final DecimalFormat kFormat = new DecimalFormat("##.##");
+
+    public static final void addCollectDirectoryTask(Runnable task){
+        directoryCollectThreadPool.addTask(task);
+    }
+
+    public static final int getCollectDirectoryThreadpoolSize(){
+        return directoryCollectThreadPool.getNumberOfThreads();
+    }
+
+    public static final void addGUITask(Runnable runthis){
+        guiThreadPool.addTask(runthis);
+    }
 
     public static void collect(DirectoryNode ds){
         SumFilesInDirectoryTask task = new SumFilesInDirectoryTask(ds);
-        threadPool.addTask(task);
-        threadPool.waitForEmpty();
+        directoryCollectThreadPool.addTask(task);
+        directoryCollectThreadPool.waitForEmpty();
     }
 
-    public static void compute(DirectoryNode ds,boolean sort){
+    public static void compute(DirectoryNode ds,int sortBy){
         ds.setSize(ds.getLocalSize());
         for(DirectoryNode d:ds.getChildren()){
-            compute(d,sort);
+            compute(d,sortBy);
             ds.setSize(ds.getSize()+ d.getSize());
         }
-        if(sort) {
-            Collections.sort(ds.getChildren(), comparator);
+        if(sortBy==1) {
+            Collections.sort(ds.getChildren(), sizeComparator);
+        }else if (sortBy==2){
+            Collections.sort(ds.getChildren(), nameComparator);
         }
     }
 
@@ -56,6 +72,13 @@ public class DiskUtilitiesController {
         }
     }
 
+    public static class DirectoryComparatorName implements Comparator<DirectoryNode>{
+        @Override
+        public int compare(DirectoryNode o1, DirectoryNode o2) {
+            return o1.getDirectoryFile().getName().toLowerCase().compareTo(o2.getDirectoryFile().getName().toLowerCase());
+        }
+    }
+
     public static class FileComparatorSize implements Comparator<File>{
         @Override
         public int compare(File o1, File o2) {
@@ -64,6 +87,24 @@ public class DiskUtilitiesController {
             if(o1.length()<o2.length())
                 return 1;
             return 0;
+        }
+    }
+
+    public static class FileComparatorDate implements Comparator<File>{
+        @Override
+        public int compare(File o1, File o2) {
+            if(o1.lastModified()>o2.lastModified())
+                return -1;
+            if(o1.lastModified()<o2.lastModified())
+                return 1;
+            return 0;
+        }
+    }
+
+    public static class FileComparatorName implements Comparator<File>{
+        @Override
+        public int compare(File o1, File o2) {
+            return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
         }
     }
 
@@ -85,22 +126,18 @@ public class DiskUtilitiesController {
 
     }
 
-    public static void scanAndDeleteTargetDirectory(File f, DirectoryObserver observer){
-        if(f.getName().equals("target")){
-            observer.observe(f,2);
-            deleteDirectory(f);
-        }else
-        if(f.isDirectory()){
-            File files[] = f.listFiles();
-            for(File file:files){
-                if(file.isDirectory()){
-                    scanAndDeleteTargetDirectory(file,observer);
-                }
+    public static void scanAndDeleteTargetDirectory(DirectoryNode directoryNode, DirectoryScanListener observer){
+        if(directoryNode.getDirectoryFile().getName().equals("target")){
+            observer.observe(directoryNode.getDirectoryFile(),2);
+            deleteDirectory(directoryNode.getDirectoryFile());
+        } else {
+            for(DirectoryNode dir:directoryNode.getChildren()){
+                scanAndDeleteTargetDirectory(dir,observer);
             }
         }
     }
 
-    private static void deleteDirectory(File dir){
+    public static void deleteDirectory(File dir){
         File files[] = dir.listFiles();
         if(files!=null){
             for(File file:files){
