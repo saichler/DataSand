@@ -4,9 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 
-import org.datasand.network.NetworkID;
-import org.datasand.network.NetworkNode;
-import org.datasand.network.NetworkNodeConnection;
+import org.datasand.network.ServiceID;
+import org.datasand.network.ServiceNode;
+import org.datasand.network.ServiceNodeConnection;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -45,9 +45,9 @@ public class NetworkTest {
 
     @Test
     public void testBroadcastToNodes() {
-        NetworkNode nodes[] = new NetworkNode[10];
+        ServiceNode nodes[] = new ServiceNode[10];
         for (int i = 0; i < 10; i++) {
-            nodes[i] = new NetworkNode(null);
+            nodes[i] = new ServiceNode(null);
         }
         try {
             Thread.sleep(2000);
@@ -55,8 +55,8 @@ public class NetworkTest {
         }
         System.out.println("Ready");
         nodes[3].send(new byte[5], nodes[3].getLocalHost(),
-                NetworkNodeConnection.PROTOCOL_ID_BROADCAST);
-        NetworkID unreach = new NetworkID(nodes[3].getLocalHost()
+                ServiceNodeConnection.PROTOCOL_ID_BROADCAST);
+        ServiceID unreach = new ServiceID(nodes[3].getLocalHost()
                 .getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
         try {
@@ -111,22 +111,22 @@ public class NetworkTest {
     }
 
     public static void main(String args[]){
-        NetworkNode nodes[] = new NetworkNode[11];
+        ServiceNode nodes[] = new ServiceNode[11];
         for (int i = 0; i < 10; i++) {
-            nodes[i] = new NetworkNode(null);
+            nodes[i] = new ServiceNode(null);
         }
-        nodes[10] = new NetworkNode(null, true);
+        nodes[10] = new ServiceNode(null, true);
         try {
             Thread.sleep(1000);
         } catch (Exception err) {
         }
         System.out.println("Ready");
-        nodes[3].send(new byte[5], nodes[3].getLocalHost(),NetworkNodeConnection.PROTOCOL_ID_BROADCAST);
-        NetworkID unreach = new NetworkID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
+        nodes[3].send(new byte[5], nodes[3].getLocalHost(), ServiceNodeConnection.PROTOCOL_ID_BROADCAST);
+        ServiceID unreach = new ServiceID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
-        NetworkID reachSingle = new NetworkID(nodes[3].getLocalHost().getIPv4Address(), 50010, 0);
+        ServiceID reachSingle = new ServiceID(nodes[3].getLocalHost().getIPv4Address(), 50010, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), reachSingle);
-        nodes[10].send(new byte[5], nodes[10].getLocalHost(),NetworkNodeConnection.PROTOCOL_ID_BROADCAST);
+        nodes[10].send(new byte[5], nodes[10].getLocalHost(), ServiceNodeConnection.PROTOCOL_ID_BROADCAST);
         try {
             Thread.sleep(1000);
         } catch (Exception err) {

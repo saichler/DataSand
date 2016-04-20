@@ -7,34 +7,26 @@
  */
 package org.datasand.network;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
+
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class NetworkNode extends Thread {
+public class ServiceNode extends Thread {
 
-    private ServerSocket socket = null;
-    private NetworkID localHost = null;
+    private final ServerSocket socket;
+    private final ServiceID localHost;
     private boolean running = false;
 
-    private NetworkNodeConnection connection = null;
-    private Map<Integer, Map<Integer, NetworkNodeConnection>> routingTable = new ConcurrentHashMap<Integer, Map<Integer, NetworkNodeConnection>>();
-    private Map<Integer, Map<Integer, NetworkNodeConnection>> unicastOnlyRoutingTable = new ConcurrentHashMap<Integer, Map<Integer, NetworkNodeConnection>>();
+    private ServiceNodeConnection connection = null;
+    private Map<Integer, Map<Integer, ServiceNodeConnection>> routingTable = new ConcurrentHashMap<Integer, Map<Integer, ServiceNodeConnection>>();
+    private Map<Integer, Map<Integer, ServiceNodeConnection>> unicastOnlyRoutingTable = new ConcurrentHashMap<Integer, Map<Integer, ServiceNodeConnection>>();
 
-    protected Set<NetworkID> incomingConnections = new HashSet<NetworkID>();
+    protected Set<ServiceID> incomingConnections = new HashSet<ServiceID>();
 
     private PacketProcessor packetProcessor = null;
     private IFrameListener frameListener = null;
@@ -42,20 +34,22 @@ public class NetworkNode extends Thread {
     private boolean unicast = false;
     private DiscoverNetworkAdjacentsListener discoveryListener = null;
 
-    public NetworkNode(IFrameListener _frameListener) {
+    public ServiceNode(IFrameListener _frameListener) {
         this(_frameListener,false);
     }
-    public NetworkNode(IFrameListener _frameListener,boolean unicastOnly) {
+    public ServiceNode(IFrameListener _frameListener, boolean unicastOnly) {
         this.frameListener = _frameListener;
         this.unicast = unicastOnly;
+        ServerSocket s = null;
+        ServiceID id = null;
         for (int i = 50000; i < 60000; i++) {
             try {
-                new NetworkID(0, 0, 0);
-                new Packet(localHost, localHost, (byte[]) null);
-                int localhost = NetworkID.valueOf(
+                new ServiceID(0, 0, 0);
+                new Packet(id, id, (byte[]) null);
+                int localhost = ServiceID.valueOf(
                         Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
-                socket = new ServerSocket(i);
-                localHost = new NetworkID(localhost, i, 0);
+                s = new ServerSocket(i);
+                id = new ServiceID(localhost, i, 0);
                 if (i > 50000){
                     new RequestConnection(unicastOnly);
                 }
@@ -63,11 +57,11 @@ public class NetworkNode extends Thread {
                 this.start();
             } catch (Exception err) {
             }
-            if (socket != null)
+            if (s != null)
                 break;
         }
-        //Sleep for 100 to allow the threads to start up
-        try{Thread.sleep(100);}catch(Exception err){}
+        this.socket = s;
+        this.localHost = id;
     }
 
     public void shutdown() {
@@ -83,17 +77,16 @@ public class NetworkNode extends Thread {
         if(this.discoveryListener!=null){
             try{this.discoveryListener.datagramSocket.close();}catch(Exception err){}
         }
-        this.socket = null;
-        for (Map<Integer, NetworkNodeConnection> map : routingTable.values()) {
-            for (NetworkNodeConnection con : map.values()) {
+        for (Map<Integer, ServiceNodeConnection> map : routingTable.values()) {
+            for (ServiceNodeConnection con : map.values()) {
                 try {
                     con.shutdown();
                 } catch (Exception err) {
                 }
             }
         }
-        for (Map<Integer, NetworkNodeConnection> map : unicastOnlyRoutingTable.values()) {
-            for (NetworkNodeConnection con : map.values()) {
+        for (Map<Integer, ServiceNodeConnection> map : unicastOnlyRoutingTable.values()) {
+            for (ServiceNodeConnection con : map.values()) {
                 try {
                     con.shutdown();
                 } catch (Exception err) {
@@ -112,7 +105,7 @@ public class NetworkNode extends Thread {
         try {
             while (running) {
                 Socket s = socket.accept();
-                new NetworkNodeConnection(this, s);
+                new ServiceNodeConnection(this, s);
             }
         } catch (Exception err) {
             // err.printStackTrace();
@@ -120,7 +113,7 @@ public class NetworkNode extends Thread {
         System.out.println(this.getName()+" was shutdown.");
     }
 
-    public void send(byte data[], NetworkID source, NetworkID dest) {
+    public void send(byte data[], ServiceID source, ServiceID dest) {
         if (data.length < Packet.MAX_DATA_IN_ONE_PACKET) {
             Packet p = new Packet(source, dest, data);
             send(p);
@@ -159,18 +152,18 @@ public class NetworkNode extends Thread {
         } else {
             //Multicast/Broadcast from the switch
             if(m.getDestination().getIPv4Address()==0){
-                NetworkNodeConnection sourceCon = getNodeConnection(m.getSource().getIPv4Address(), m.getSource().getPort(),false);
-                for(Map.Entry<Integer,Map<Integer, NetworkNodeConnection>> entry:this.routingTable.entrySet()){
+                ServiceNodeConnection sourceCon = getNodeConnection(m.getSource().getIPv4Address(), m.getSource().getPort(),false);
+                for(Map.Entry<Integer,Map<Integer, ServiceNodeConnection>> entry:this.routingTable.entrySet()){
                     int destAddress = entry.getKey();
-                    Map<Integer,NetworkNodeConnection> map = entry.getValue();
-                    for(Map.Entry<Integer, NetworkNodeConnection> pMap:map.entrySet()){
+                    Map<Integer,ServiceNodeConnection> map = entry.getValue();
+                    for(Map.Entry<Integer, ServiceNodeConnection> pMap:map.entrySet()){
                         int destPort = pMap.getKey();
-                        NetworkNodeConnection c = pMap.getValue();
+                        ServiceNodeConnection c = pMap.getValue();
                         try {
                             m.encode(m, ba);
                             BytesArray unreachable = c.sendPacket(ba);
                             if(unreachable!=null){
-                                unreachable = NetworkNodeConnection.addUnreachableAddressForMulticast(unreachable, destAddress, destPort);
+                                unreachable = ServiceNodeConnection.addUnreachableAddressForMulticast(unreachable, destAddress, destPort);
                                 if(sourceCon!=null){
                                     sourceCon.sendPacket(unreachable);
                                 }else{
@@ -185,7 +178,7 @@ public class NetworkNode extends Thread {
                 m.encode(m, ba);
                 this.receivedPacket(ba);
             }else{
-                NetworkNodeConnection c = this.getNodeConnection(m.getDestination().getIPv4Address(), m.getDestination().getPort(),true);
+                ServiceNodeConnection c = this.getNodeConnection(m.getDestination().getIPv4Address(), m.getDestination().getPort(),true);
                 if (c != null) {
                     try {
                         m.encode(m, ba);
@@ -199,7 +192,7 @@ public class NetworkNode extends Thread {
                     }
                 } else {
                     m.encode(m,ba);
-                    BytesArray unreachable = NetworkNodeConnection.markAsUnreachable(ba);
+                    BytesArray unreachable = ServiceNodeConnection.markAsUnreachable(ba);
                     this.receivedPacket(ba);
                 }
             }
@@ -246,7 +239,7 @@ public class NetworkNode extends Thread {
             if(unicast) return;
             while(running){
                 BytesArray ba = new BytesArray(new byte[8]);
-                Encoder.getSerializerByClass(NetworkID.class).encode(getLocalHost(), ba);
+                Encoder.getSerializerByClass(ServiceID.class).encode(getLocalHost(), ba);
                 byte data[] = ba.getData();
                 try{
                     DatagramPacket packet = new DatagramPacket(data,data.length,InetAddress.getByName("255.255.255.255"),49999);
@@ -291,9 +284,9 @@ public class NetworkNode extends Thread {
         }
         private void processIncomingPacket(DatagramPacket p){
             BytesArray ba = new BytesArray(p.getData());
-            NetworkID id = (NetworkID) Encoder.getSerializerByClass(NetworkID.class).decode(ba);
+            ServiceID id = (ServiceID) Encoder.getSerializerByClass(ServiceID.class).decode(ba);
             if(!id.equals(getLocalHost())){
-                NetworkNodeConnection node = getNodeConnection(id.getIPv4Address(), id.getPort(), true);
+                ServiceNodeConnection node = getNodeConnection(id.getIPv4Address(), id.getPort(), true);
                 if(node==null){
                     if(unicast){
                         joinNetworkAsSingle(id.getIPv4AddressAsString());
@@ -305,20 +298,20 @@ public class NetworkNode extends Thread {
         }
     }
 
-    public NetworkID getLocalHost() {
+    public ServiceID getLocalHost() {
         return this.localHost;
     }
 
-    public boolean registerNetworkNodeConnection(NetworkNodeConnection c,NetworkID source) {
+    public boolean registerNetworkNodeConnection(ServiceNodeConnection c, ServiceID source) {
         synchronized (this) {
             c.setName("Con " + getLocalHost() + "<->" + source);
             if (this.localHost.getPort() != 50000 && this.connection == null) {
                 this.connection = c;
                 return true;
             } else {
-                Map<Integer, NetworkNodeConnection> map = this.routingTable.get(source.getIPv4Address());
+                Map<Integer, ServiceNodeConnection> map = this.routingTable.get(source.getIPv4Address());
                 if (map == null) {
-                    map = new ConcurrentHashMap<Integer, NetworkNodeConnection>();
+                    map = new ConcurrentHashMap<Integer, ServiceNodeConnection>();
                     this.routingTable.put(source.getIPv4Address(), map);
                 }
                 if (map.containsKey(source.getPort())) {
@@ -330,7 +323,7 @@ public class NetworkNode extends Thread {
         }
     }
 
-    public boolean registerSingleNetworkNodeConnection(NetworkNodeConnection c,NetworkID source) {
+    public boolean registerSingleNetworkNodeConnection(ServiceNodeConnection c, ServiceID source) {
         synchronized (this) {
             c.setName("Con " + getLocalHost() + "<->" + source);
             System.out.println("Registering Unicast Agent-"+source);
@@ -338,9 +331,9 @@ public class NetworkNode extends Thread {
                 this.connection = c;
                 return true;
             } else {
-                Map<Integer, NetworkNodeConnection> map = this.unicastOnlyRoutingTable.get(source.getIPv4Address());
+                Map<Integer, ServiceNodeConnection> map = this.unicastOnlyRoutingTable.get(source.getIPv4Address());
                 if (map == null) {
-                    map = new ConcurrentHashMap<Integer, NetworkNodeConnection>();
+                    map = new ConcurrentHashMap<Integer, ServiceNodeConnection>();
                     this.unicastOnlyRoutingTable.put(source.getIPv4Address(), map);
                 }
                 if (map.containsKey(source.getPort())) {
@@ -352,10 +345,10 @@ public class NetworkNode extends Thread {
         }
     }
 
-    public void unregisterNetworkNodeConnection(NetworkID source){
+    public void unregisterNetworkNodeConnection(ServiceID source){
         synchronized (this) {
             System.out.println("Unregister "+source);
-            Map<Integer, NetworkNodeConnection> map = this.routingTable.get(source.getIPv4Address());
+            Map<Integer, ServiceNodeConnection> map = this.routingTable.get(source.getIPv4Address());
             if(map!=null){
                 map.remove(source.getPort());
             }
@@ -366,10 +359,10 @@ public class NetworkNode extends Thread {
     public void broadcast(BytesArray ba) {
         int sourceAddress = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION);
         int sourcePort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+4);
-        NetworkNodeConnection sourceCon = getNodeConnection(sourceAddress, sourcePort,false);
-        List<NetworkID> unreachableDest = new LinkedList<NetworkID>();
-        for (Map.Entry<Integer, Map<Integer, NetworkNodeConnection>> addrEntry : this.routingTable.entrySet()) {
-            for (Map.Entry<Integer, NetworkNodeConnection> portEntry : addrEntry.getValue().entrySet()) {
+        ServiceNodeConnection sourceCon = getNodeConnection(sourceAddress, sourcePort,false);
+        List<ServiceID> unreachableDest = new LinkedList<ServiceID>();
+        for (Map.Entry<Integer, Map<Integer, ServiceNodeConnection>> addrEntry : this.routingTable.entrySet()) {
+            for (Map.Entry<Integer, ServiceNodeConnection> portEntry : addrEntry.getValue().entrySet()) {
                 BytesArray unreachable = null;
                 if (sourceAddress != this.getLocalHost().getIPv4Address()) {
                     if (addrEntry.getKey() == this.getLocalHost().getIPv4Address()) {
@@ -387,9 +380,9 @@ public class NetworkNode extends Thread {
                     }
                 }
                 if(unreachable!=null){
-                    NetworkID nid = new NetworkID(addrEntry.getKey(),portEntry.getKey(), 0);
+                    ServiceID nid = new ServiceID(addrEntry.getKey(),portEntry.getKey(), 0);
                     unreachableDest.add(nid);
-                    unreachable = NetworkNodeConnection.addUnreachableAddressForMulticast(unreachable, addrEntry.getKey(), portEntry.getKey());
+                    unreachable = ServiceNodeConnection.addUnreachableAddressForMulticast(unreachable, addrEntry.getKey(), portEntry.getKey());
                     if(sourceCon!=null){
                         try{
                             sourceCon.sendPacket(unreachable);
@@ -403,7 +396,7 @@ public class NetworkNode extends Thread {
             }
         }
         if(!unreachableDest.isEmpty()){
-            for(NetworkID unreach:unreachableDest){
+            for(ServiceID unreach:unreachableDest){
                 unregisterNetworkNodeConnection(unreach);
             }
         }
@@ -414,8 +407,8 @@ public class NetworkNode extends Thread {
         packetProcessor.addPacket(ba);
     }
 
-    public NetworkNodeConnection getNodeConnection(int address, int port,boolean includeUnicastOnlyNodes) {
-        Map<Integer, NetworkNodeConnection> map = routingTable.get(address);
+    public ServiceNodeConnection getNodeConnection(int address, int port, boolean includeUnicastOnlyNodes) {
+        Map<Integer, ServiceNodeConnection> map = routingTable.get(address);
         if(!includeUnicastOnlyNodes){
             if (map == null){
                 return null;
@@ -425,7 +418,7 @@ public class NetworkNode extends Thread {
             else
                 return map.get(50000);
         }else{
-            NetworkNodeConnection connection = null;
+            ServiceNodeConnection connection = null;
             if(map != null){
                 if(address==this.getLocalHost().getIPv4Address())
                     connection = map.get(port);
@@ -450,7 +443,7 @@ public class NetworkNode extends Thread {
             return;
         }
         try {
-            new NetworkNodeConnection(this, InetAddress.getByName(host), 50000,true);
+            new ServiceNodeConnection(this, InetAddress.getByName(host), 50000,true);
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -462,7 +455,7 @@ public class NetworkNode extends Thread {
             return;
         }
         try {
-            new NetworkNodeConnection(this, InetAddress.getByName(host), 50000);
+            new ServiceNodeConnection(this, InetAddress.getByName(host), 50000);
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -548,10 +541,10 @@ public class NetworkNode extends Thread {
                         if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
                             frameListener.processDestinationUnreachable(f);
                         } else if (f.getDestination().getIPv4Address() == 0
-                                && f.getDestination().getSubSystemID() == NetworkNodeConnection.DESTINATION_BROADCAST) {
+                                && f.getDestination().getSubSystemID() == ServiceNodeConnection.DESTINATION_BROADCAST) {
                             frameListener.processBroadcast(f);
                         } else if (f.getDestination().getIPv4Address() == 0
-                                && f.getDestination().getSubSystemID() > NetworkNodeConnection.DESTINATION_BROADCAST) {
+                                && f.getDestination().getSubSystemID() > ServiceNodeConnection.DESTINATION_BROADCAST) {
                             frameListener.processMulticast(f);
                         } else
                             frameListener.process(f);
@@ -559,10 +552,10 @@ public class NetworkNode extends Thread {
                         if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
                             System.out.println("Unreachable:" + f);
                         } else if (f.getDestination().getIPv4Address() == 0
-                                && f.getDestination().getSubSystemID() == NetworkNodeConnection.DESTINATION_BROADCAST) {
+                                && f.getDestination().getSubSystemID() == ServiceNodeConnection.DESTINATION_BROADCAST) {
                             System.out.println("Broadcast:" + f);
                         } else if (f.getDestination().getIPv4Address() == 0
-                                && f.getDestination().getSubSystemID() > NetworkNodeConnection.DESTINATION_BROADCAST) {
+                                && f.getDestination().getSubSystemID() > ServiceNodeConnection.DESTINATION_BROADCAST) {
                             System.out.println("Multicast:" + f);
                         } else
                             System.out.println("Regular:" + f);

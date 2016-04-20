@@ -7,22 +7,22 @@
  */
 package org.datasand.agents;
 
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class PeerEntry {
-    private NetworkID networkID = null;
+    private ServiceID serviceID = null;
     private long lastReceivedPing = -1;
     private long lastID = 999;
     private boolean unreachable = false;
 
-    public PeerEntry(NetworkID _netNetworkID){
-        this.networkID = _netNetworkID;
+    public PeerEntry(ServiceID _netServiceID){
+        this.serviceID = _netServiceID;
         this.lastReceivedPing = System.currentTimeMillis();
     }
-    public NetworkID getNetworkID() {
-        return networkID;
+    public ServiceID getServiceID() {
+        return serviceID;
     }
     public long getLastReceivedPing() {
         return lastReceivedPing;

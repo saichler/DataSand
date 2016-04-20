@@ -11,19 +11,19 @@ import org.datasand.agents.Message;
 import org.datasand.agents.cnode.CNode;
 import org.datasand.agents.cnode.CPeerEntry;
 import org.datasand.agents.cnode.ICNodeCommandHandler;
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class NodeOriginalDataHandler<DataType, DataTypeElement> implements ICNodeCommandHandler<DataType, DataTypeElement>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, NetworkID source,NetworkID destination, CPeerEntry<DataType> peerEntry,CNode<DataType, DataTypeElement> node) {
+    public void handleMessage(Message cNodeCommand, ServiceID source, ServiceID destination, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         node.handleNodeOriginalData((DataTypeElement)cNodeCommand.getMessageData());
         node.sendAcknowledge(cNodeCommand, source);
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand,NetworkID unreachableSource, CPeerEntry<DataType> peerEntry,CNode<DataType, DataTypeElement> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, ServiceID unreachableSource, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
     }
 }

@@ -20,32 +20,32 @@ import org.datasand.codec.Encoder;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class NetworkNodeConnection extends Thread {
+public class ServiceNodeConnection extends Thread {
 
     public static final int DESTINATION_UNREACHABLE = 9999;
     public static final int DESTINATION_BROADCAST = 10;
 
-    public static final NetworkID PROTOCOL_ID_UNREACHABLE = new NetworkID(0, 0,DESTINATION_UNREACHABLE);
-    public static final NetworkID PROTOCOL_ID_BROADCAST = new NetworkID(0, 0,DESTINATION_BROADCAST);
+    public static final ServiceID PROTOCOL_ID_UNREACHABLE = new ServiceID(0, 0,DESTINATION_UNREACHABLE);
+    public static final ServiceID PROTOCOL_ID_BROADCAST = new ServiceID(0, 0,DESTINATION_BROADCAST);
 
     private Socket socket = null;
     private DataInputStream in = null;
     private DataOutputStream out = null;
     private PriorityLinkedList<byte[]> incoming = new PriorityLinkedList<byte[]>();
-    private NetworkNode networkNode = null;
+    private ServiceNode serviceNode = null;
     private boolean running = false;
     private boolean valideConnection = false;
     private String connectionString = null;
 
-    public NetworkNodeConnection(NetworkNode _nn, InetAddress addr, int port,boolean unicastOnly) {
+    public ServiceNodeConnection(ServiceNode _nn, InetAddress addr, int port, boolean unicastOnly) {
         try {
-            this.networkNode = _nn;
+            this.serviceNode = _nn;
             this.setName("Con of-" + _nn.getName());
             socket = new Socket(addr, port);
             try {
                 in = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
                 out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-                String conString = "S:" + networkNode.getLocalHost().getPort()+ "    ";
+                String conString = "S:" + serviceNode.getLocalHost().getPort()+ "    ";
                 out.write(conString.getBytes());
                 out.flush();
                 byte data[] = new byte[10];
@@ -61,15 +61,15 @@ public class NetworkNodeConnection extends Thread {
         }
     }
 
-    public NetworkNodeConnection(NetworkNode _nn, InetAddress addr, int port) {
+    public ServiceNodeConnection(ServiceNode _nn, InetAddress addr, int port) {
         try {
-            this.networkNode = _nn;
+            this.serviceNode = _nn;
             this.setName("Con of-" + _nn.getName());
             socket = new Socket(addr, port);
             try {
                 in = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
                 out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-                String conString = "C:" + networkNode.getLocalHost().getPort()+ "    ";
+                String conString = "C:" + serviceNode.getLocalHost().getPort()+ "    ";
                 out.write(conString.getBytes());
                 out.flush();
                 byte data[] = new byte[10];
@@ -85,9 +85,9 @@ public class NetworkNodeConnection extends Thread {
         }
     }
 
-    public NetworkNodeConnection(NetworkNode _nn, Socket _s) {
+    public ServiceNodeConnection(ServiceNode _nn, Socket _s) {
         this.socket = _s;
-        this.networkNode = _nn;
+        this.serviceNode = _nn;
         this.setName("Con of-" + _nn.getName());
         try {
             in = new DataInputStream(new BufferedInputStream(
@@ -100,7 +100,7 @@ public class NetworkNodeConnection extends Thread {
             String connType = "C";
             if(connectionString.startsWith("S"))
                 connType = "S";
-            String conString = connType+":" + networkNode.getLocalHost().getPort()+ "    ";
+            String conString = connType+":" + serviceNode.getLocalHost().getPort()+ "    ";
             out.write(conString.getBytes());
             out.flush();
             this.valideConnection = true;
@@ -139,8 +139,8 @@ public class NetworkNodeConnection extends Thread {
     }
 
     public void run() {
-        NetworkID id = null;
-        synchronized (networkNode.incomingConnections) {
+        ServiceID id = null;
+        synchronized (serviceNode.incomingConnections) {
             if (!valideConnection)
                 return;
             if (connectionString.startsWith("U")) {
@@ -148,12 +148,12 @@ public class NetworkNodeConnection extends Thread {
                 int port = Integer.parseInt(connectionString.substring(connectionString.indexOf(":") + 1).trim());
                 String sourceAddress = source.getHostAddress();
                 if (sourceAddress.equals("127.0.0.1")) {
-                    id = new NetworkID(networkNode.getLocalHost().getIPv4Address(), port, 0);
+                    id = new ServiceID(serviceNode.getLocalHost().getIPv4Address(), port, 0);
                 } else
-                    id = NetworkID.valueOf(source.getHostAddress() + ":" + port + ":0");
-                if (!networkNode.incomingConnections.contains(id)) {
-                    new NetworkNodeConnection(this.networkNode, source, port,true);
-                    networkNode.incomingConnections.add(id);
+                    id = ServiceID.valueOf(source.getHostAddress() + ":" + port + ":0");
+                if (!serviceNode.incomingConnections.contains(id)) {
+                    new ServiceNodeConnection(this.serviceNode, source, port,true);
+                    serviceNode.incomingConnections.add(id);
                 }
                 return;
             }else
@@ -162,12 +162,12 @@ public class NetworkNodeConnection extends Thread {
                 int port = Integer.parseInt(connectionString.substring(connectionString.indexOf(":") + 1).trim());
                 String sourceAddress = source.getHostAddress();
                 if (sourceAddress.equals("127.0.0.1")) {
-                    id = new NetworkID(networkNode.getLocalHost().getIPv4Address(), port, 0);
+                    id = new ServiceID(serviceNode.getLocalHost().getIPv4Address(), port, 0);
                 } else
-                    id = NetworkID.valueOf(source.getHostAddress() + ":" + port + ":0");
-                if (!networkNode.incomingConnections.contains(id)) {
-                    new NetworkNodeConnection(this.networkNode, source, port);
-                    networkNode.incomingConnections.add(id);
+                    id = ServiceID.valueOf(source.getHostAddress() + ":" + port + ":0");
+                if (!serviceNode.incomingConnections.contains(id)) {
+                    new ServiceNodeConnection(this.serviceNode, source, port);
+                    serviceNode.incomingConnections.add(id);
                 }
                 return;
             } else {
@@ -175,18 +175,18 @@ public class NetworkNodeConnection extends Thread {
                 int port = Integer.parseInt(connectionString.substring(connectionString.indexOf(":") + 1).trim());
                 String sourceAddress = source.getHostAddress();
                 if (sourceAddress.equals("127.0.0.1")) {
-                    id = new NetworkID(networkNode.getLocalHost().getIPv4Address(), port, 0);
+                    id = new ServiceID(serviceNode.getLocalHost().getIPv4Address(), port, 0);
                 } else
-                    id = NetworkID.valueOf(source.getHostAddress() + ":" + port + ":0");
+                    id = ServiceID.valueOf(source.getHostAddress() + ":" + port + ":0");
 
             }
         }
         if(connectionString.startsWith("C:")){
-            if (!networkNode.registerNetworkNodeConnection(this, id)) {
+            if (!serviceNode.registerNetworkNodeConnection(this, id)) {
                 return;
             }
         }else{
-            if (!networkNode.registerSingleNetworkNodeConnection(this, id)) {
+            if (!serviceNode.registerSingleNetworkNodeConnection(this, id)) {
                 return;
             }
         }
@@ -251,7 +251,7 @@ public class NetworkNodeConnection extends Thread {
     private class Switch extends Thread {
 
         public Switch() {
-            this.setName("Switch - " + NetworkNodeConnection.this.getName());
+            this.setName("Switch - " + ServiceNodeConnection.this.getName());
             this.start();
         }
 
@@ -275,15 +275,15 @@ public class NetworkNodeConnection extends Thread {
                     int destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
                     int destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
                     if (destAddr == 0) {
-                        if (networkNode.getLocalHost().getPort() != 50000) {
-                            networkNode.receivedPacket(ba);
+                        if (serviceNode.getLocalHost().getPort() != 50000) {
+                            serviceNode.receivedPacket(ba);
                         } else {
-                            networkNode.broadcast(ba);
+                            serviceNode.broadcast(ba);
                         }
-                    } else if (destAddr == networkNode.getLocalHost().getIPv4Address() && destPort == networkNode.getLocalHost().getPort()) {
-                        networkNode.receivedPacket(ba);
-                    } else if (destAddr == networkNode.getLocalHost().getIPv4Address() && networkNode.getLocalHost().getPort() == 50000 && destPort != 50000) {
-                        NetworkNodeConnection other = networkNode.getNodeConnection(destAddr, destPort,true);
+                    } else if (destAddr == serviceNode.getLocalHost().getIPv4Address() && destPort == serviceNode.getLocalHost().getPort()) {
+                        serviceNode.receivedPacket(ba);
+                    } else if (destAddr == serviceNode.getLocalHost().getIPv4Address() && serviceNode.getLocalHost().getPort() == 50000 && destPort != 50000) {
+                        ServiceNodeConnection other = serviceNode.getNodeConnection(destAddr, destPort,true);
                         if (other != null && other.running) {
                             try {
                                 other.sendPacket(ba);
@@ -294,7 +294,7 @@ public class NetworkNodeConnection extends Thread {
                             ba = markAsUnreachable(ba);
                             destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
                             destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                            NetworkNodeConnection source = networkNode.getNodeConnection(destAddr, destPort,true);
+                            ServiceNodeConnection source = serviceNode.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
                                     source.sendPacket(ba);
@@ -303,11 +303,11 @@ public class NetworkNodeConnection extends Thread {
                                 }
                             } else
                                 System.err.println("Source unreachable:"
-                                        + new NetworkID(destAddr, destPort,
+                                        + new ServiceID(destAddr, destPort,
                                                 Encoder.decodeInt16(ba.getBytes(), 16)));
                         }
-                    } else if (destAddr != networkNode.getLocalHost().getIPv4Address() && networkNode.getLocalHost().getPort() == 50000) {
-                        NetworkNodeConnection other = networkNode.getNodeConnection(destAddr, 50000,true);
+                    } else if (destAddr != serviceNode.getLocalHost().getIPv4Address() && serviceNode.getLocalHost().getPort() == 50000) {
+                        ServiceNodeConnection other = serviceNode.getNodeConnection(destAddr, 50000,true);
                         if (other != null) {
                             try {
                                 other.sendPacket(ba);
@@ -318,7 +318,7 @@ public class NetworkNodeConnection extends Thread {
                             ba = markAsUnreachable(ba);
                             destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
                             destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                            NetworkNodeConnection source = networkNode.getNodeConnection(destAddr, destPort,true);
+                            ServiceNodeConnection source = serviceNode.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
                                     source.sendPacket(ba);
@@ -327,7 +327,7 @@ public class NetworkNodeConnection extends Thread {
                                 }
                             } else
                                 System.err.println("Source unreachable:"
-                                        + new NetworkID(destAddr, destPort,
+                                        + new ServiceID(destAddr, destPort,
                                                 Encoder.decodeInt16(ba.getBytes(), 16)));
                         }
                     }

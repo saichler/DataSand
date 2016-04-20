@@ -32,9 +32,8 @@ import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.MessageEntry;
 import org.datasand.codec.BytesArray;
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 import org.datasand.store.DataStore;
-import org.datasand.store.ObjectDataStore;
 import org.datasand.store.jdbc.ResultSet.RSID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -42,7 +41,7 @@ import org.datasand.store.jdbc.ResultSet.RSID;
 public class Connection extends AutonomousAgent implements java.sql.Connection {
     private MetaData metaData = null;
     private DataStore dataDataStore;
-    private NetworkID destination = null;
+    private ServiceID destination = null;
     private Map<RSID,QueryContainer> queries = new HashMap<RSID,QueryContainer>();
     private Map<RSID,QueryUpdater> updaters = new HashMap<RSID,QueryUpdater>();
     private Message repetitve = new Message(-1,null);
@@ -63,11 +62,11 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     public Connection(AutonomousAgentManager manager, String addr) {
         super(107,manager);
         try{
-            if(manager.getNetworkNode().getLocalHost().getPort()==50000){
-                destination = NetworkID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:107");
-                manager.getNetworkNode().joinNetworkAsSingle(addr);
+            if(manager.getServiceNode().getLocalHost().getPort()==50000){
+                destination = ServiceID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:107");
+                manager.getServiceNode().joinNetworkAsSingle(addr);
             }else{
-                destination = NetworkID.valueOf(this.getAgentManager().getNetworkNode().getLocalHost().getIPv4AddressAsString()+":50000:107");
+                destination = ServiceID.valueOf(this.getAgentManager().getServiceNode().getLocalHost().getIPv4AddressAsString()+":50000:107");
             }
         }catch(Exception err){
             err.printStackTrace();
@@ -83,7 +82,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,NetworkID unreachableSource) {
+    public void processDestinationUnreachable(Message message,ServiceID unreachableSource) {
         System.out.println("Destination Unreachable:"+message.getMessageType()+":"+unreachableSource);
         try{
             throw new Exception("EX");
@@ -95,7 +94,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
         this.send(m, destination);
     }
     @Override
-    public void processMessage(Message message, NetworkID source,NetworkID destination) {
+    public void processMessage(Message message, ServiceID source, ServiceID destination) {
         if(message==repetitve){
             sendARP(JDBCMessage.TYPE_HELLO_GROUP);
             return;
@@ -217,10 +216,10 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     }
 
     private class QueryContainer {
-        private Map<NetworkID,Boolean> destToFinish = new HashMap<NetworkID,Boolean>();
-        private NetworkID source = null;
+        private Map<ServiceID,Boolean> destToFinish = new HashMap<ServiceID,Boolean>();
+        private ServiceID source = null;
         private Message msg = null;
-        public QueryContainer(NetworkID _source,ResultSet _rs){
+        public QueryContainer(ServiceID _source, ResultSet _rs){
             this.source = _source;
             msg = new JDBCMessage(_rs,0,0);
             sendARP(msg);
@@ -231,10 +230,10 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     private class QueryUpdater implements Runnable {
 
         private ResultSet rs = null;
-        private NetworkID source = null;
+        private ServiceID source = null;
         private Object waitingObject = new Object();
 
-        public QueryUpdater(ResultSet _rs, NetworkID _source) {
+        public QueryUpdater(ResultSet _rs, ServiceID _source) {
             this.rs = _rs;
             this.source = _source;
         }

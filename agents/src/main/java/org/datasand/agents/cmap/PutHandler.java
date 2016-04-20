@@ -13,14 +13,14 @@ import org.datasand.agents.Message;
 import org.datasand.agents.cnode.CNode;
 import org.datasand.agents.cnode.CPeerEntry;
 import org.datasand.agents.cnode.ICNodeCommandHandler;
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class PutHandler<K,V> implements ICNodeCommandHandler<Map<K,V>,CMapEntry<K,V>>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, NetworkID source,NetworkID destination, CPeerEntry<Map<K, V>> peerEntry,CNode<Map<K, V>, CMapEntry<K, V>> node) {
+    public void handleMessage(Message cNodeCommand, ServiceID source, ServiceID destination, CPeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
         CMap<K,V> cmap = (CMap<K,V>)node;
         node.log("Putting Key:"+((CMapEntry<K,V>)cNodeCommand.getMessageData()).getKey());
         if(!cmap.containsKey(((CMapEntry<K,V>)cNodeCommand.getMessageData()).getKey())){
@@ -36,6 +36,6 @@ public class PutHandler<K,V> implements ICNodeCommandHandler<Map<K,V>,CMapEntry<
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand,NetworkID unreachableSource, CPeerEntry<Map<K, V>> peerEntry,CNode<Map<K, V>, CMapEntry<K, V>> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, ServiceID unreachableSource, CPeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
     }
 }

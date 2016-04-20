@@ -22,17 +22,17 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import org.datasand.codec.ThreadPool;
 import org.datasand.network.IFrameListener;
-import org.datasand.network.NetworkID;
-import org.datasand.network.NetworkNode;
+import org.datasand.network.ServiceID;
+import org.datasand.network.ServiceNode;
 import org.datasand.network.Packet;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class AutonomousAgentManager extends Thread implements IFrameListener {
 
-    private NetworkNode networkNode = null;
-    private Map<NetworkID, AutonomousAgent> networkIdToAgent = new HashMap<NetworkID, AutonomousAgent>();
-    private Map<String, NetworkID> handlerNameToNetworkID = new HashMap<String, NetworkID>();
+    private ServiceNode serviceNode = null;
+    private Map<ServiceID, AutonomousAgent> networkIdToAgent = new HashMap<ServiceID, AutonomousAgent>();
+    private Map<String, ServiceID> handlerNameToNetworkID = new HashMap<String, ServiceID>();
     private ThreadPool threadPool = new ThreadPool(20, "Handlers Threads", 2000);
     private Object agentsSyncObject = new Object();
     private Map<Integer, Set<AutonomousAgent>> multicasts = new HashMap<Integer, Set<AutonomousAgent>>();
@@ -43,8 +43,8 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
     }
 
     public AutonomousAgentManager(boolean unicastOnly) {
-        this.networkNode = new NetworkNode(this,unicastOnly);
-        this.setName("Autonomous Agent Manager - " + networkNode.toString());
+        this.serviceNode = new ServiceNode(this,unicastOnly);
+        this.setName("Autonomous Agent Manager - " + serviceNode.toString());
         this.start();
         //Sleep for 100 to allow the threads to start up
         try{Thread.sleep(100);}catch(Exception err){}
@@ -55,7 +55,7 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
     }
 
     public void shutdown() {
-        networkNode.shutdown();
+        serviceNode.shutdown();
         this.running = false;
     }
 
@@ -88,8 +88,8 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
         }
     }
 
-    public NetworkNode getNetworkNode() {
-        return this.networkNode;
+    public ServiceNode getServiceNode() {
+        return this.serviceNode;
     }
 
     public AutonomousAgent createHanlder(String className, ClassLoader cl) {
@@ -105,12 +105,12 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
         handlerNameToNetworkID.put(h.getName(), h.getAgentID());
     }
 
-    public AutonomousAgent getHandlerByID(NetworkID id) {
+    public AutonomousAgent getHandlerByID(ServiceID id) {
         return this.networkIdToAgent.get(id);
     }
 
     public AutonomousAgent getHandlerByName(String name) {
-        NetworkID id = this.handlerNameToNetworkID.get(name);
+        ServiceID id = this.handlerNameToNetworkID.get(name);
         if (id != null) {
             return this.networkIdToAgent.get(id);
         }
@@ -175,9 +175,9 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
         return result.substring(0, index);
     }
 
-    public List<NetworkID> installJar(String jarFileName) {
+    public List<ServiceID> installJar(String jarFileName) {
 
-        List<NetworkID> result = new ArrayList<NetworkID>();
+        List<ServiceID> result = new ArrayList<ServiceID>();
 
         File f = new File(jarFileName);
         if (f.exists()) {
@@ -195,10 +195,10 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
                              */
                             // ModelClassLoaders.getInstance().addClassLoader(cl);
                             Class<?> handlerClass = cl.loadClass(className);
-                            AutonomousAgent newHandler = (AutonomousAgent) handlerClass.getConstructor(new Class[] {NetworkID.class,AutonomousAgentManager.class })
+                            AutonomousAgent newHandler = (AutonomousAgent) handlerClass.getConstructor(new Class[] {ServiceID.class,AutonomousAgentManager.class })
                                     .newInstance(
                                             new Object[] {
-                                                    this.networkNode
+                                                    this.serviceNode
                                                             .getLocalHost(),
                                                     this });
                             registerAgent(newHandler);

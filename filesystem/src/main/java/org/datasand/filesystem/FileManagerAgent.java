@@ -8,7 +8,7 @@ import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 
 public class FileManagerAgent extends AutonomousAgent{
 	
@@ -31,11 +31,11 @@ public class FileManagerAgent extends AutonomousAgent{
 	}
 
 	@Override
-	public void processDestinationUnreachable(Message message,NetworkID unreachableSource) {
+	public void processDestinationUnreachable(Message message,ServiceID unreachableSource) {
 	}
 
 	@Override
-	public void processMessage(Message message, NetworkID source,NetworkID destination) {
+	public void processMessage(Message message, ServiceID source, ServiceID destination) {
 		if(message==helloMSG){
 			publishRepositorys();
 			return;
@@ -48,7 +48,7 @@ public class FileManagerAgent extends AutonomousAgent{
 		}
 	}
 
-	public void processPeerRepository(NetworkID source,FileRepositoryManifest frm){
+	public void processPeerRepository(ServiceID source, FileRepositoryManifest frm){
 		String repoName = frm.getDirectory();
 		if(repoName.equals("./repo1"))
 			repoName = "./repo2";
@@ -74,7 +74,7 @@ public class FileManagerAgent extends AutonomousAgent{
 	
 	private File currentFile = null;
 	
-	public void sendFile(String fileName,NetworkID dest){
+	public void sendFile(String fileName,ServiceID dest){
 		File f = new File(fileName);
 		if(f.exists()){
 			FileData fileData = new FileData(f);

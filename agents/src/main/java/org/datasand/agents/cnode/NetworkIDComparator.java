@@ -9,13 +9,13 @@ package org.datasand.agents.cnode;
 
 import java.util.Comparator;
 
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class NetworkIDComparator implements Comparator<NetworkID>{
+public class NetworkIDComparator implements Comparator<ServiceID>{
     @Override
-    public int compare(NetworkID o1, NetworkID o2) {
+    public int compare(ServiceID o1, ServiceID o2) {
         if(o1==null && o2==null)
             return 0;
         if(o1==null && o2!=null)

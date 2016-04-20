@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -22,9 +22,9 @@ public class MessageEntry {
     private Message message = null;
     private long timeout = -1;
     private long timeStamp = -1;
-    private Set<NetworkID> peers = new HashSet<NetworkID>();
+    private Set<ServiceID> peers = new HashSet<ServiceID>();
 
-    public MessageEntry(Message _message,NetworkID peer,long _timeout){
+    public MessageEntry(Message _message, ServiceID peer, long _timeout){
         this.message = _message;
         if(peer!=null)
             this.peers.add(peer);
@@ -51,15 +51,15 @@ public class MessageEntry {
             return false;
     }
 
-    public void addAllPeers(Collection<NetworkID> _peers){
+    public void addAllPeers(Collection<ServiceID> _peers){
         this.peers.addAll(_peers);
     }
 
-    public void addPeer(NetworkID peer){
+    public void addPeer(ServiceID peer){
         this.peers.add(peer);
     }
 
-    public boolean removePeer(NetworkID peer){
+    public boolean removePeer(ServiceID peer){
         return this.peers.remove(peer);
     }
 
@@ -67,11 +67,11 @@ public class MessageEntry {
         return this.peers.isEmpty();
     }
 
-    public Set<NetworkID> getPeers(){
+    public Set<ServiceID> getPeers(){
         return this.peers;
     }
 
-    public boolean containPeer(NetworkID peer){
+    public boolean containPeer(ServiceID peer){
         return this.peers.contains(peer);
     }
 }

@@ -15,7 +15,7 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 import org.datasand.store.jdbc.ResultSet.RSID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -49,7 +49,7 @@ public class JDBCDataContainer implements ISerializer{
             Encoder.encodeInt32(dc.rsID.getLocalID(), ba);
         }else
             Encoder.encodeNULL(ba);
-        if(dc.data instanceof NetworkID){
+        if(dc.data instanceof ServiceID){
             Encoder.encodeInt16(5, ba);
             Encoder.encodeObject(dc.data, ba);
         }else

@@ -28,8 +28,8 @@ import org.datasand.agents.cnode.handlers.PeerSyncDataHandler;
 import org.datasand.agents.cnode.handlers.RequestJournalDataHandler;
 import org.datasand.agents.cnode.handlers.SetCurrentPeerIDHandler;
 import org.datasand.agents.cnode.handlers.SetCurrentPeerIDReplyHandler;
-import org.datasand.network.NetworkID;
-import org.datasand.network.NetworkNodeConnection;
+import org.datasand.network.ServiceID;
+import org.datasand.network.ServiceNodeConnection;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -45,21 +45,21 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
     public static final int SET_CURRENT_PEER_ID_REPLY   = 170;
     public static final int ACKNOWLEDGE                 = 180;
 
-    private NetworkID multicastGroupNetworkID = null;
+    private ServiceID multicastGroupServiceID = null;
     private int multicastGroupID = -1;
     private Message arpID = new Message();
     private long nextID = 1000;
     private DataType localData = createDataTypeInstance();
     private Map<Integer,ICNodeCommandHandler<DataType,DataTypeElement>> handlers = new HashMap<Integer,ICNodeCommandHandler<DataType,DataTypeElement>>();
     private boolean synchronizing = false;
-    private NetworkID sortedNetworkIDs[] = new NetworkID[0];
+    private ServiceID sortedServiceIDs[] = new ServiceID[0];
 
     public CNode(int subSystemId, AutonomousAgentManager m,int _multicastGroupID){
         super(subSystemId,m);
         this.addToSortedNetworkIDs(this.getAgentID());
         this.multicastGroupID = _multicastGroupID;
-        this.multicastGroupNetworkID = new NetworkID(
-                NetworkNodeConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
+        this.multicastGroupServiceID = new ServiceID(
+                ServiceNodeConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
                 multicastGroupID, multicastGroupID);
 
         this.registerHandler(NODE_JOIN, new NodeJoinHandler<DataType,DataTypeElement>());
@@ -82,16 +82,16 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
         return result;
     }
 
-    private void addToSortedNetworkIDs(NetworkID neid){
-        NetworkID temp[] = new NetworkID[this.sortedNetworkIDs.length+1];
-        System.arraycopy(this.sortedNetworkIDs,0, temp, 0, sortedNetworkIDs.length);
-        temp[this.sortedNetworkIDs.length] = neid;
+    private void addToSortedNetworkIDs(ServiceID neid){
+        ServiceID temp[] = new ServiceID[this.sortedServiceIDs.length+1];
+        System.arraycopy(this.sortedServiceIDs,0, temp, 0, sortedServiceIDs.length);
+        temp[this.sortedServiceIDs.length] = neid;
         Arrays.sort(temp,new NetworkIDComparator());
-        this.sortedNetworkIDs = temp;
+        this.sortedServiceIDs = temp;
     }
 
-    public NetworkID[] getSortedNetworkIDs(){
-        return this.sortedNetworkIDs;
+    public ServiceID[] getSortedServiceIDs(){
+        return this.sortedServiceIDs;
     }
 
     public void registerHandler(Integer pType,ICNodeCommandHandler<DataType, DataTypeElement> handler){
@@ -111,14 +111,14 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
     }
 
     public void multicast(Message message){
-        this.send(message, this.multicastGroupNetworkID);
+        this.send(message, this.multicastGroupServiceID);
     }
 
     public void sendARPBroadcast(){
         multicast(new Message(this.nextID-1,ARP_MULTICAST,null));
     }
 
-    public CPeerEntry<DataType> getPeerEntry(NetworkID source){
+    public CPeerEntry<DataType> getPeerEntry(ServiceID source){
         PeerEntry pEntry = super.getPeerEntry(source);
         if(pEntry!=null && !(pEntry instanceof CPeerEntry)){
             pEntry = new CPeerEntry<DataType>(source, createDataTypeInstance());
@@ -129,13 +129,13 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,NetworkID unreachableSource) {
+    public void processDestinationUnreachable(Message message,ServiceID unreachableSource) {
         CPeerEntry<DataType> peerEntry = getPeerEntry(unreachableSource);
         ICNodeCommandHandler<DataType,DataTypeElement> handle = this.handlers.get(message.getMessageType());
         handle.handleUnreachableMessage(message,unreachableSource,peerEntry,this);
     }
 
-    public void processMessage(Message cmd, NetworkID source,NetworkID destination){
+    public void processMessage(Message cmd, ServiceID source, ServiceID destination){
         if(cmd==arpID){
             sendARPBroadcast();
             return;
@@ -153,7 +153,7 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
         return this.localData;
     }
 
-    public void cleanJournalHistoryForSource(NetworkID source){
+    public void cleanJournalHistoryForSource(ServiceID source){
         //Remove any expected replys from this node as it is up.
         List<Message> finished = new LinkedList<Message>();
         for(Object meo:this.getJournalEntries()){
@@ -170,14 +170,14 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
         this.send(new Message(this.nextID-1,SET_CURRENT_PEER_ID,null), source);
     }
 
-    public void sendAcknowledge(Message Message,NetworkID source){
+    public void sendAcknowledge(Message Message,ServiceID source){
         send(new Message(Message.getMessageID(),ACKNOWLEDGE, null), source);
     }
 
     public abstract DataType createDataTypeInstance();
     public abstract Collection<DataTypeElement> getDataTypeElementCollection(DataType data);
     public abstract void handleNodeOriginalData(DataTypeElement dataTypeElement);
-    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement,NetworkID source);
+    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement,ServiceID source);
     public abstract boolean isLocalPeerCopyContainData(DataType data);
 
     @Override

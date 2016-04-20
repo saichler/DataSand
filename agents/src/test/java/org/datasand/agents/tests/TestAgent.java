@@ -10,7 +10,7 @@ package org.datasand.agents.tests;
 import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 import org.junit.Assert;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -19,17 +19,17 @@ public class TestAgent extends AutonomousAgent {
 
     private TestObject testObject = AgentsTest.createTestObject();
 
-    public TestAgent(NetworkID localHost, AutonomousAgentManager m) {
+    public TestAgent(ServiceID localHost, AutonomousAgentManager m) {
         super(19, m);
         TestObject o = new TestObject();
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,NetworkID unreachableSource) {
+    public void processDestinationUnreachable(Message message,ServiceID unreachableSource) {
     }
 
     @Override
-    public void processMessage(Message message, NetworkID source,NetworkID destination) {
+    public void processMessage(Message message, ServiceID source, ServiceID destination) {
         if (message == null) {
             System.out.println("Received a currapted frame");
         } else {

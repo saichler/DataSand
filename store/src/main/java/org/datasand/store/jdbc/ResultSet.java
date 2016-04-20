@@ -43,7 +43,7 @@ import org.datasand.codec.Observers;
 import org.datasand.codec.VColumn;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
-import org.datasand.network.NetworkID;
+import org.datasand.network.ServiceID;
 import org.datasand.store.HObject;
 //import org.datasand.store.ObjectDataStore.ObjectWithInfo;
 /**
@@ -78,7 +78,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
     private int collectedDataType = 0;
 
     public static class RSID{
-        private int address = NetworkID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
+        private int address = ServiceID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
         private long time = System.currentTimeMillis();
         private int localID = -1;
         public RSID(){
