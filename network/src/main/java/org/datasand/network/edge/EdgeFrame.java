@@ -20,20 +20,20 @@ import java.util.UUID;
  * Created by saichler on 4/20/16.
  */
 public class EdgeFrame {
-    private static final int B01_LOCATION_UUID                  =  0;
-    private static final int B01_SIZE_UUID                      = 16;
-    private static final int B02_LOCATION_MESSAGES_IDS          = B01_LOCATION_UUID+B01_SIZE_UUID;
-    private static final int B02_SIZE_MESSAGES_IDS              =  8;
-    private static final int B03_LOCATION_FRAME_ID              = B02_LOCATION_MESSAGES_IDS+B02_SIZE_MESSAGES_IDS;
-    private static final int B03_SIZE_FRAME_ID                  =  4;
-    private static final int B04_LOCATION_API_OPERATION         = B03_LOCATION_FRAME_ID+B03_SIZE_FRAME_ID;
-    private static final int B04_SIZE_API_OPERATION             = 1;
-    private static final int B05_LOCATION_PRIORITY              = B04_LOCATION_API_OPERATION+B04_SIZE_API_OPERATION;
-    private static final int B05_SIZE_PRIORITY                  = 1;
-    private static final int B06_LOCATION_GROUP_MD5             = B05_LOCATION_PRIORITY+B05_SIZE_PRIORITY;
-    private static final int B06_SIZE_GROUP_MD5                 = 16;
-    private static final int B07_LOCATION_DATA_SIZE             = B06_LOCATION_GROUP_MD5+B06_SIZE_GROUP_MD5;
-    private static final int B07_SIZE_DATA_SIZE                 = 4;
+    public static final int B01_LOCATION_UUID                  =  0;
+    public static final int B01_SIZE_UUID                      = 16;
+    public static final int B02_LOCATION_MESSAGES_IDS          = B01_LOCATION_UUID+B01_SIZE_UUID;
+    public static final int B02_SIZE_MESSAGES_IDS              =  8;
+    public static final int B03_LOCATION_FRAME_ID              = B02_LOCATION_MESSAGES_IDS+B02_SIZE_MESSAGES_IDS;
+    public static final int B03_SIZE_FRAME_ID                  =  4;
+    public static final int B04_LOCATION_API_OPERATION         = B03_LOCATION_FRAME_ID+B03_SIZE_FRAME_ID;
+    public static final int B04_SIZE_API_OPERATION             = 1;
+    public static final int B05_LOCATION_PRIORITY              = B04_LOCATION_API_OPERATION+B04_SIZE_API_OPERATION;
+    public static final int B05_SIZE_PRIORITY                  = 1;
+    public static final int B06_LOCATION_GROUP_MD5             = B05_LOCATION_PRIORITY+B05_SIZE_PRIORITY;
+    public static final int B06_SIZE_GROUP_MD5                 = 16;
+    public static final int B07_LOCATION_DATA_SIZE             = B06_LOCATION_GROUP_MD5+B06_SIZE_GROUP_MD5;
+    public static final int B07_SIZE_DATA_SIZE                 = 4;
     public static final int  HEADER_SIZE			            = B07_LOCATION_DATA_SIZE+B07_SIZE_DATA_SIZE;
     public static final int  MAX_DATA_SIZE		                = 512;
     public static final int  MAX_FRAME_SIZE                     = HEADER_SIZE+MAX_DATA_SIZE;

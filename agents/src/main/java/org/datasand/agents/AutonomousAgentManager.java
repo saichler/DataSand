@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
-import org.datasand.codec.ThreadPool;
+import org.datasand.codec.util.ThreadPool;
 import org.datasand.network.IFrameListener;
 import org.datasand.network.ServiceID;
 import org.datasand.network.ServiceNode;

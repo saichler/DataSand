@@ -16,7 +16,7 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.HierarchyBytesArray;
 import org.datasand.codec.MD5ID;
-import org.datasand.codec.ThreadPool;
+import org.datasand.codec.util.ThreadPool;
 import org.datasand.codec.VColumn;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.VSchema;

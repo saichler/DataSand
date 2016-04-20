@@ -13,7 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.datasand.codec.AttributeDescriptor;
-import org.datasand.codec.ThreadPool;
+import org.datasand.codec.util.ThreadPool;
 import org.datasand.codec.TypeDescriptor;
 import org.datasand.codec.BytesArray;
 import org.datasand.store.ObjectDataStore;

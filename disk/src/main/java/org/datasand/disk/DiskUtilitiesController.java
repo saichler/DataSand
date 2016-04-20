@@ -11,7 +11,7 @@ import java.io.File;
 import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.Comparator;
-import org.datasand.codec.ThreadPool;
+import org.datasand.codec.util.ThreadPool;
 import org.datasand.disk.model.DirectoryNode;
 import org.datasand.disk.model.DirectoryScanListener;
 import org.datasand.disk.tasks.SumFilesInDirectoryTask;
