@@ -11,12 +11,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import org.datasand.disk.model.Job;
+import org.datasand.disk.model.JobsTableModel;
 import org.datasand.disk.model.SyncDataListener;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class SyncFilesTask implements Runnable{
+public class SyncFilesTask extends Job{
 
     private static long FILE_PART_SIZE = 1024*1024*1;
 
@@ -26,7 +28,8 @@ public class SyncFilesTask implements Runnable{
 
     public static boolean isrunning = false;
 
-    public SyncFilesTask(SyncDataListener l,File source, File dest){
+    public SyncFilesTask(SyncDataListener l, File source, File dest, JobsTableModel model){
+        super(model);
         this.listener = l;
         this.source = source;
         this.destination = dest;
@@ -35,8 +38,10 @@ public class SyncFilesTask implements Runnable{
 
     public void run(){
         try {
+            setStatus(JobStatusEnum.JOB_STATUS_RUNNING);
             doSync(source, destination, listener);
             listener.notifyDone(source,destination);
+            setStatus(JobStatusEnum.JOB_STATUS_FINISHED_SUCCESSFULY);
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -100,4 +105,8 @@ public class SyncFilesTask implements Runnable{
         target.close();
     }
 
+    @Override
+    public String getJobName() {
+        return "Sync File from "+this.source.getName()+" to "+this.destination.getName();
+    }
 }

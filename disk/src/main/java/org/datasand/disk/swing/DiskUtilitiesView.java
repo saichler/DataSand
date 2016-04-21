@@ -8,6 +8,8 @@
 package org.datasand.disk.swing;
 
 import java.awt.BorderLayout;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -17,6 +19,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -30,26 +33,32 @@ import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
-import javax.swing.event.TreeModelListener;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
-import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 import org.datasand.disk.DiskUtilitiesController;
 import org.datasand.disk.model.DirectoryNode;
 import org.datasand.disk.model.DirectoryScanListener;
+import org.datasand.disk.model.DirectoryTreeModel;
 import org.datasand.disk.model.FileTableModel;
+import org.datasand.disk.model.JobsTableModel;
 import org.datasand.disk.model.SyncDataListener;
+import org.datasand.disk.tasks.DeleteTargetDirectoryJob;
 import org.datasand.disk.tasks.SumFilesInDirectoryTask;
 import org.datasand.disk.tasks.SyncFilesTask;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,KeyListener,ActionListener,TreeSelectionListener,MouseListener,SyncDataListener{
+public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,KeyListener,ActionListener,TreeSelectionListener,MouseListener,SyncDataListener, TableModelListener{
     private JTree tree = new JTree();
     private JTable table = new JTable();
+    private JTable jobs = new JTable();
+    private JobsTableModel jobsTableModel = new JobsTableModel();
     private JTextField status = new JTextField();
     private JTextField txtPath = new JTextField("./");
     private JButton btnDeleteTargetDir = new JButton("Delete target dirs");
@@ -76,7 +85,14 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         split.setLeftComponent(new JScrollPane(tree));
         split.setRightComponent(new JScrollPane(table));
-        this.getContentPane().add(split,BorderLayout.CENTER);
+        JSplitPane split2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        split2.setTopComponent(split);
+        JPanel jobPanel = new JPanel(new BorderLayout());
+        jobPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),"Jobs"));
+        jobPanel.add(new JScrollPane(jobs),BorderLayout.CENTER);
+        split2.setBottomComponent(jobPanel);
+        split2.setDividerLocation(500);
+        this.getContentPane().add(split2,BorderLayout.CENTER);
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.add(this.status,BorderLayout.SOUTH);
         bottomPanel.add(this.btnDeleteTargetDir,BorderLayout.EAST);
@@ -94,7 +110,7 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
             }
         });
         this.root = new DirectoryNode(null,new File("./"),DiskUtilitiesView.this);
-        MyTreeModel model = new MyTreeModel();
+        DirectoryTreeModel model = new DirectoryTreeModel(root);
         tree.setModel(model);
         this.btnDeleteTargetDir.addActionListener(this);
         GUISettings.center(this);
@@ -102,8 +118,10 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
         tree.addTreeSelectionListener(this);
         setupTreePopupMenu();
         setupTablePopupMenu();
-        this.setVisible(true);
         table.getTableHeader().addMouseListener(this);
+        jobs.setModel(jobsTableModel);
+        jobsTableModel.addTableModelListener(this);
+        this.setVisible(true);
     }
 
     private void setupTreePopupMenu(){
@@ -134,73 +152,28 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
     }
 
     public void go(final String path){
+        jobsTableModel.clear();
         Runnable runthis = new Runnable() {
             @Override
             public void run() {
-                DiskUtilitiesView.this.setEnabled(false);
+                //DiskUtilitiesView.this.setEnabled(false);
                 lastUpdate = System.currentTimeMillis();
                 status.setText("Working on:\""+path+"\"...");
                 long start = System.currentTimeMillis();
                 root = new DirectoryNode(null,new File(path),DiskUtilitiesView.this);
-                DiskUtilitiesController.collect(root);
+                SumFilesInDirectoryTask.start(root,jobsTableModel);
                 DiskUtilitiesController.compute(root,currentTreeSort);
-                MyTreeModel model = new MyTreeModel();
+                DirectoryTreeModel model = new DirectoryTreeModel(root);
                 long end = System.currentTimeMillis();
                 System.gc();
                 long memory = (Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/ DiskUtilitiesController.MEG;
                 status.setText("Done! Took "+(end-start) + " Memory="+memory+"m");
                 tree.setModel(model);
                 tree.setSelectionPath(new TreePath(root));
-                DiskUtilitiesView.this.setEnabled(true);
+                //DiskUtilitiesView.this.setEnabled(true);
             }
         };
         DiskUtilitiesController.addGUITask(runthis);
-    }
-
-    private class MyTreeModel implements TreeModel {
-
-        private MyTreeModel(){
-        }
-
-        @Override
-        public Object getRoot() {
-            return root;
-        }
-
-        @Override
-        public Object getChild(Object parent, int index) {
-            return ((DirectoryNode)parent).getChildAt(index);
-        }
-
-        @Override
-        public int getChildCount(Object parent) {
-            return ((DirectoryNode)parent).getChildCount();
-        }
-
-        @Override
-        public boolean isLeaf(Object node) {
-            return ((DirectoryNode)node).isLeaf();
-        }
-
-        @Override
-        public void valueForPathChanged(TreePath path, Object newValue) {
-
-        }
-
-        @Override
-        public int getIndexOfChild(Object parent, Object child) {
-            return ((DirectoryNode)parent).getIndex((DirectoryNode)child);
-        }
-
-        @Override
-        public void addTreeModelListener(TreeModelListener l) {
-
-        }
-
-        @Override
-        public void removeTreeModelListener(TreeModelListener l) {
-
-        }
     }
 
     @Override
@@ -217,7 +190,7 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
                             @Override
                             public void run() {
                                 int size = 0;
-                                while (size < DiskUtilitiesController.getCollectDirectoryThreadpoolSize()) {
+                                while (size < SumFilesInDirectoryTask.getThreadCount()) {
                                     synchronized (SumFilesInDirectoryTask.pauseSync) {
                                         size = SumFilesInDirectoryTask.pauseCount;
                                     }
@@ -227,7 +200,7 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
                                     }
                                 }
                                 DiskUtilitiesController.compute(root, currentTreeSort);
-                                tree.setModel(new MyTreeModel());
+                                tree.setModel(new DirectoryTreeModel(root));
                                 synchronized (SumFilesInDirectoryTask.pauseSync) {
                                     SumFilesInDirectoryTask.pause = false;
                                     lastUpdate = System.currentTimeMillis();
@@ -295,24 +268,20 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
                     String dest = JOptionPane.showInputDialog(this,"Synchronize "+node.getDirectoryFile().getName()+" to destination:","Synchronize Directory");
                     if(dest!=null){
                         File destFile = new File(dest);
-                        SyncFilesTask task = new SyncFilesTask(this,node.getDirectoryFile(),destFile);
+                        SyncFilesTask task = new SyncFilesTask(this,node.getDirectoryFile(),destFile,jobsTableModel);
+                        jobsTableModel.clear();
+                        jobsTableModel.addJob(task);
                         DiskUtilitiesController.addGUITask(task);
                     }
                 }
             }
         }else
         if(actionEvent.getSource()==btnDeleteTargetDir){
-            btnDeleteTargetDir.setEnabled(false);
             status.setText("Seeking target directories...");
-            Runnable runthis = new Runnable() {
-                @Override
-                public void run() {
-                    DiskUtilitiesController.scanAndDeleteTargetDirectory(root,DiskUtilitiesView.this);
-                    go(txtPath.getText());
-                    btnDeleteTargetDir.setEnabled(true);
-                }
-            };
-            DiskUtilitiesController.addGUITask(runthis);
+            DeleteTargetDirectoryJob job = new DeleteTargetDirectoryJob(jobsTableModel,root,this);
+            DiskUtilitiesController.addGUITask(job);
+            DiskUtilitiesController.waitForGUITask();
+            go(txtPath.getText());
         }else if(actionEvent.getSource()==btnGO){
             go(txtPath.getText());
         }
@@ -411,5 +380,19 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
     public static void main(String args[]){
         GUISettings.setUI();
         new DiskUtilitiesView();
+    }
+
+    @Override
+    public void tableChanged(TableModelEvent e) {
+        if(e.getType()==TableModelEvent.INSERT){
+            int row = e.getFirstRow();
+            JViewport vp = (JViewport)jobs.getParent();
+            Rectangle r = jobs.getCellRect(row, 1, true);
+            Point p = vp.getViewPosition();
+            r.setLocation(r.x-p.x, r.y-p.y);
+            try {
+                jobs.scrollRectToVisible(r);
+            }catch(Exception err){}
+        }
     }
 }
