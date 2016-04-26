@@ -181,9 +181,9 @@ public class DiskUtilitiesView extends JFrame implements DirectoryScanListener,K
         if(taskID==2){
             status.setText("Deleting :"+file.getAbsolutePath());
         } else if (taskID==1) {
-            if (!updating && System.currentTimeMillis() - lastUpdate > 5000) {
+            if (!updating && System.currentTimeMillis() - lastUpdate > 15000) {
                 synchronized (SumFilesInDirectoryTask.pauseSync) {
-                    if (!updating && System.currentTimeMillis() - lastUpdate > 5000) {
+                    if (!updating && System.currentTimeMillis() - lastUpdate > 15000) {
                         SumFilesInDirectoryTask.pause = true;
                         this.updating = true;
                         Runnable runthis = new Runnable() {

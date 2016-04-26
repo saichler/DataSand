@@ -70,7 +70,7 @@ public final class SumFilesInDirectoryTask extends Job {
                         if (file.isDirectory()) {
                             DirectoryNode subDir = new DirectoryNode(this.directoryNode, file);
                             SumFilesInDirectoryTask newTask = new SumFilesInDirectoryTask(subDir,model);
-                            addJob(newTask);
+                            //addJob(newTask);
                         } else {
                             this.directoryNode.setLocalSize(this.directoryNode.getLocalSize() + file.length());
                         }
