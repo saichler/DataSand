@@ -10,6 +10,7 @@ package org.datasand.network;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.serialize.ISerializer;
+import org.datasand.network.service.ServiceNodeConnection;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)

@@ -29,7 +29,7 @@ import org.datasand.agents.cnode.handlers.RequestJournalDataHandler;
 import org.datasand.agents.cnode.handlers.SetCurrentPeerIDHandler;
 import org.datasand.agents.cnode.handlers.SetCurrentPeerIDReplyHandler;
 import org.datasand.network.ServiceID;
-import org.datasand.network.ServiceNodeConnection;
+import org.datasand.network.service.ServiceNodeConnection;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */

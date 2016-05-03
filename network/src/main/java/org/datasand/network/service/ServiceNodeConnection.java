@@ -5,7 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.network;
+package org.datasand.network.service;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -15,8 +15,14 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
+import org.datasand.codec.VLogger;
+import org.datasand.network.Packet;
+import org.datasand.network.PriorityLinkedList;
+import org.datasand.network.ServiceID;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -28,87 +34,97 @@ public class ServiceNodeConnection extends Thread {
     public static final ServiceID PROTOCOL_ID_UNREACHABLE = new ServiceID(0, 0,DESTINATION_UNREACHABLE);
     public static final ServiceID PROTOCOL_ID_BROADCAST = new ServiceID(0, 0,DESTINATION_BROADCAST);
 
-    private Socket socket = null;
-    private DataInputStream in = null;
-    private DataOutputStream out = null;
-    private PriorityLinkedList<byte[]> incoming = new PriorityLinkedList<byte[]>();
-    private ServiceNode serviceNode = null;
-    private boolean running = false;
-    private boolean valideConnection = false;
-    private String connectionString = null;
+    private final Socket socket;
+    private final DataInputStream in;
+    private final DataOutputStream out;
+    private final ServiceNode serviceNode;
+    private final PriorityLinkedList<byte[]> incoming = new PriorityLinkedList<byte[]>();
+    private boolean running = true;
+    private boolean aSide = false;
+    private final boolean unicast;
 
-    public ServiceNodeConnection(ServiceNode _nn, InetAddress addr, int port, boolean unicastOnly) {
+    private final int intAddress;
+    private final int intPort;
+
+    public ServiceNodeConnection(ServiceNode serviceNode, InetAddress addr, int port, boolean unicastOnly) {
+        this.serviceNode = serviceNode;
+        this.setName(serviceNode.getName()+" Connection");
+        Socket tmpSocket = null;
+        DataInputStream tmpIn=null;
+        DataOutputStream tmpOut = null;
+
         try {
-            this.serviceNode = _nn;
-            this.setName("Con of-" + _nn.getName());
-            socket = new Socket(addr, port);
-            try {
-                in = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
-                out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-                String conString = "S:" + serviceNode.getLocalHost().getPort()+ "    ";
-                out.write(conString.getBytes());
-                out.flush();
-                byte data[] = new byte[10];
-                in.readFully(data);
-                connectionString = new String(data).trim();
-                this.valideConnection = true;
-                this.start();
-            } catch (Exception err) {
-                err.printStackTrace();
-            }
-        } catch (Exception err) {
-            err.printStackTrace();
+            tmpSocket = new Socket(addr, port);
+            tmpIn = new DataInputStream(new BufferedInputStream(tmpSocket.getInputStream()));
+            tmpOut = new DataOutputStream(new BufferedOutputStream(tmpSocket.getOutputStream()));
+            tmpOut.write(this.serviceNode.getLocalHost().getPort());
+        } catch(IOException e){
+            VLogger.error("Failed to open socket",e);
+        }
+        this.intAddress = Encoder.decodeInt32(addr.getAddress(),0);
+        this.intPort = port;
+        this.socket = tmpSocket;
+        this.in = tmpIn;
+        this.out = tmpOut;
+        this.unicast = unicastOnly;
+        this.start();
+    }
+
+    public ServiceNodeConnection(ServiceNode serviceNode, InetAddress addr, int port) {
+        this(serviceNode,addr,port,false);
+    }
+
+    public ServiceNodeConnection(ServiceNode serviceNode, Socket socket) {
+        this.socket = socket;
+        this.serviceNode = serviceNode;
+        this.unicast = false;
+        this.setName(serviceNode.getName()+" Connection");
+        DataInputStream tmpIn=null;
+        DataOutputStream tmpOut = null;
+
+        int port = -1;
+        try {
+            tmpIn = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
+            tmpOut = new DataOutputStream(new BufferedOutputStream(this.socket.getOutputStream()));
+            port = tmpIn.readInt();
+        } catch (Exception e) {
+            VLogger.error("Failed to use input/output of socket",e);
+        }
+        this.intAddress = Encoder.decodeInt32(socket.getLocalAddress().getAddress(),0);
+        this.intPort = port;
+        this.in = tmpIn;
+        this.out = tmpOut;
+    }
+
+    public int getIntAddress(){
+        return this.intAddress;
+    }
+
+    public int getIntPort(){
+        return this.intPort;
+    }
+
+    public String getConnectionKey() throws UnknownHostException {
+        String myAddr = InetAddress.getLocalHost().getHostAddress();
+        String otherAddr = socket.getInetAddress().getHostAddress();
+        if(myAddr.hashCode()<otherAddr.hashCode()){
+            this.aSide = true;
+        }
+        return getConnectionKey(myAddr,otherAddr);
+    }
+
+    public static final String getConnectionKey(String aSide,String zSide){
+        if(aSide.hashCode()<zSide.hashCode()){
+            return aSide+"<->"+zSide;
+        }else{
+            return zSide+"<->"+aSide;
         }
     }
 
-    public ServiceNodeConnection(ServiceNode _nn, InetAddress addr, int port) {
-        try {
-            this.serviceNode = _nn;
-            this.setName("Con of-" + _nn.getName());
-            socket = new Socket(addr, port);
-            try {
-                in = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
-                out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
-                String conString = "C:" + serviceNode.getLocalHost().getPort()+ "    ";
-                out.write(conString.getBytes());
-                out.flush();
-                byte data[] = new byte[10];
-                in.readFully(data);
-                connectionString = new String(data).trim();
-                this.valideConnection = true;
-                this.start();
-            } catch (Exception err) {
-                err.printStackTrace();
-            }
-        } catch (Exception err) {
-            err.printStackTrace();
-        }
+    public boolean isASide(){
+        return this.aSide;
     }
 
-    public ServiceNodeConnection(ServiceNode _nn, Socket _s) {
-        this.socket = _s;
-        this.serviceNode = _nn;
-        this.setName("Con of-" + _nn.getName());
-        try {
-            in = new DataInputStream(new BufferedInputStream(
-                    this.socket.getInputStream()));
-            out = new DataOutputStream(new BufferedOutputStream(
-                    this.socket.getOutputStream()));
-            byte data[] = new byte[10];
-            in.readFully(data);
-            connectionString = new String(data);
-            String connType = "C";
-            if(connectionString.startsWith("S"))
-                connType = "S";
-            String conString = connType+":" + serviceNode.getLocalHost().getPort()+ "    ";
-            out.write(conString.getBytes());
-            out.flush();
-            this.valideConnection = true;
-            this.start();
-        } catch (Exception err) {
-            err.printStackTrace();
-        }
-    }
 
     public BytesArray sendPacket(BytesArray ba) throws IOException {
         byte data[] = ba.getBytes();
@@ -140,69 +156,8 @@ public class ServiceNodeConnection extends Thread {
 
     public void run() {
         ServiceID id = null;
-        synchronized (serviceNode.incomingConnections) {
-            if (!valideConnection)
-                return;
-            if (connectionString.startsWith("U")) {
-                InetAddress source = this.socket.getInetAddress();
-                int port = Integer.parseInt(connectionString.substring(connectionString.indexOf(":") + 1).trim());
-                String sourceAddress = source.getHostAddress();
-                if (sourceAddress.equals("127.0.0.1")) {
-                    id = new ServiceID(serviceNode.getLocalHost().getIPv4Address(), port, 0);
-                } else
-                    id = ServiceID.valueOf(source.getHostAddress() + ":" + port + ":0");
-                if (!serviceNode.incomingConnections.contains(id)) {
-                    new ServiceNodeConnection(this.serviceNode, source, port,true);
-                    serviceNode.incomingConnections.add(id);
-                }
-                return;
-            }else
-            if (connectionString.startsWith("R")) {
-                InetAddress source = this.socket.getInetAddress();
-                int port = Integer.parseInt(connectionString.substring(connectionString.indexOf(":") + 1).trim());
-                String sourceAddress = source.getHostAddress();
-                if (sourceAddress.equals("127.0.0.1")) {
-                    id = new ServiceID(serviceNode.getLocalHost().getIPv4Address(), port, 0);
-                } else
-                    id = ServiceID.valueOf(source.getHostAddress() + ":" + port + ":0");
-                if (!serviceNode.incomingConnections.contains(id)) {
-                    new ServiceNodeConnection(this.serviceNode, source, port);
-                    serviceNode.incomingConnections.add(id);
-                }
-                return;
-            } else {
-                InetAddress source = this.socket.getInetAddress();
-                int port = Integer.parseInt(connectionString.substring(connectionString.indexOf(":") + 1).trim());
-                String sourceAddress = source.getHostAddress();
-                if (sourceAddress.equals("127.0.0.1")) {
-                    id = new ServiceID(serviceNode.getLocalHost().getIPv4Address(), port, 0);
-                } else
-                    id = ServiceID.valueOf(source.getHostAddress() + ":" + port + ":0");
-
-            }
-        }
-        if(connectionString.startsWith("C:")){
-            if (!serviceNode.registerNetworkNodeConnection(this, id)) {
-                return;
-            }
-        }else{
-            if (!serviceNode.registerSingleNetworkNodeConnection(this, id)) {
-                return;
-            }
-        }
-
-        running = true;
 
         new Switch();
-
-        try {
-            if (in.available() > 0) {
-                byte data[] = new byte[in.available()];
-                in.readFully(data);
-            }
-        } catch (Exception err) {
-            err.printStackTrace();
-        }
 
         try {
             while (socket != null && !socket.isClosed() && running) {
@@ -210,16 +165,14 @@ public class ServiceNodeConnection extends Thread {
                 byte data[] = new byte[size];
                 in.readFully(data);
                 synchronized (incoming) {
-                    incoming.add(
-                            data,
-                            data[Packet.PACKET_MULTIPART_AND_PRIORITY_LOCATION] / 2);
+                    incoming.add(data, data[Packet.PACKET_MULTIPART_AND_PRIORITY_LOCATION] / 2);
                     incoming.notifyAll();
                 }
             }
         } catch (Exception err) {
-            // err.printStackTrace();
+            VLogger.error("Failed to reaf from socket",err);
         }
-        System.out.println(this.getName()+" was closed.");
+        VLogger.info(this.getName()+" was closed.");
     }
 
     public static final BytesArray markAsUnreachable(BytesArray ba) {

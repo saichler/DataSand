@@ -17,7 +17,7 @@ import org.datasand.agents.Message;
 import org.datasand.agents.cmap.CMap;
 import org.datasand.network.ServiceID;
 import org.datasand.network.ServiceNode;
-import org.datasand.network.ServiceNodeConnection;
+import org.datasand.network.service.ServiceNodeConnection;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;

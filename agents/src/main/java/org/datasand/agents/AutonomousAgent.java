@@ -17,7 +17,7 @@ import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.network.ServiceID;
-import org.datasand.network.ServiceNodeConnection;
+import org.datasand.network.service.ServiceNodeConnection;
 import org.datasand.network.Packet;
 import org.datasand.network.PriorityLinkedList;
 /**
