@@ -7,21 +7,18 @@
  */
 package org.datasand.network.service;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 import org.datasand.network.Packet;
 import org.datasand.network.PriorityLinkedList;
 import org.datasand.network.ServiceID;
+
+import java.io.*;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -48,6 +45,7 @@ public class ServiceNodeConnection extends Thread {
 
     public ServiceNodeConnection(ServiceNode serviceNode, InetAddress addr, int port, boolean unicastOnly) {
         this.serviceNode = serviceNode;
+        this.setDaemon(true);
         this.setName(serviceNode.getName()+" Connection");
         Socket tmpSocket = null;
         DataInputStream tmpIn=null;
@@ -58,6 +56,11 @@ public class ServiceNodeConnection extends Thread {
             tmpIn = new DataInputStream(new BufferedInputStream(tmpSocket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(tmpSocket.getOutputStream()));
             tmpOut.write(this.serviceNode.getLocalHost().getPort());
+            if(unicastOnly){
+                tmpOut.write(1);
+            }else{
+                tmpOut.write(0);
+            }
         } catch(IOException e){
             VLogger.error("Failed to open socket",e);
         }
@@ -77,16 +80,17 @@ public class ServiceNodeConnection extends Thread {
     public ServiceNodeConnection(ServiceNode serviceNode, Socket socket) {
         this.socket = socket;
         this.serviceNode = serviceNode;
-        this.unicast = false;
         this.setName(serviceNode.getName()+" Connection");
+        this.setDaemon(true);
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
-
+        int unicastOnly = 0;
         int port = -1;
         try {
             tmpIn = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(this.socket.getOutputStream()));
             port = tmpIn.readInt();
+            unicastOnly = tmpIn.readInt();
         } catch (Exception e) {
             VLogger.error("Failed to use input/output of socket",e);
         }
@@ -94,6 +98,15 @@ public class ServiceNodeConnection extends Thread {
         this.intPort = port;
         this.in = tmpIn;
         this.out = tmpOut;
+        if(unicastOnly==1){
+            unicast = true;
+        }else{
+            unicast = false;
+        }
+    }
+
+    public boolean isUnicast(){
+        return this.unicast;
     }
 
     public int getIntAddress(){
@@ -205,6 +218,7 @@ public class ServiceNodeConnection extends Thread {
 
         public Switch() {
             this.setName("Switch - " + ServiceNodeConnection.this.getName());
+            this.setDaemon(true);
             this.start();
         }
 
