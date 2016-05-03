@@ -5,48 +5,47 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.network.service;
+package org.datasand.network.habitat;
 
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
+import org.datasand.network.ConnectionID;
+import org.datasand.network.HabitatID;
 import org.datasand.network.Packet;
 import org.datasand.network.PriorityLinkedList;
-import org.datasand.network.ServiceID;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ServiceNodeConnection extends Thread {
+public class HabitatsConnection extends Thread {
 
     public static final int DESTINATION_UNREACHABLE = 9999;
     public static final int DESTINATION_BROADCAST = 10;
 
-    public static final ServiceID PROTOCOL_ID_UNREACHABLE = new ServiceID(0, 0,DESTINATION_UNREACHABLE);
-    public static final ServiceID PROTOCOL_ID_BROADCAST = new ServiceID(0, 0,DESTINATION_BROADCAST);
+    public static final HabitatID PROTOCOL_ID_UNREACHABLE = new HabitatID(0, 0,DESTINATION_UNREACHABLE);
+    public static final HabitatID PROTOCOL_ID_BROADCAST = new HabitatID(0, 0,DESTINATION_BROADCAST);
 
     private final Socket socket;
     private final DataInputStream in;
     private final DataOutputStream out;
-    private final ServiceNode serviceNode;
+    private final ServicesHabitat servicesHabitat;
     private final PriorityLinkedList<byte[]> incoming = new PriorityLinkedList<byte[]>();
     private boolean running = true;
-    private boolean aSide = false;
     private final boolean unicast;
 
     private final int intAddress;
     private final int intPort;
 
-    public ServiceNodeConnection(ServiceNode serviceNode, InetAddress addr, int port, boolean unicastOnly) {
-        this.serviceNode = serviceNode;
+    public HabitatsConnection(ServicesHabitat servicesHabitat, InetAddress addr, int port, boolean unicastOnly) {
+        this.servicesHabitat = servicesHabitat;
         this.setDaemon(true);
-        this.setName(serviceNode.getName()+" Connection");
+        this.setName(servicesHabitat.getName()+" Connection");
         Socket tmpSocket = null;
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
@@ -55,16 +54,19 @@ public class ServiceNodeConnection extends Thread {
             tmpSocket = new Socket(addr, port);
             tmpIn = new DataInputStream(new BufferedInputStream(tmpSocket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(tmpSocket.getOutputStream()));
-            tmpOut.write(this.serviceNode.getLocalHost().getPort());
+            tmpOut.writeInt(this.servicesHabitat.getLocalHost().getIPv4Address());
+            tmpOut.writeInt(this.servicesHabitat.getLocalHost().getPort());
             if(unicastOnly){
-                tmpOut.write(1);
+                tmpOut.writeInt(1);
             }else{
-                tmpOut.write(0);
+                tmpOut.writeInt(0);
             }
+            tmpOut.flush();
         } catch(IOException e){
             VLogger.error("Failed to open socket",e);
         }
-        this.intAddress = Encoder.decodeInt32(addr.getAddress(),0);
+        HabitatID destID = HabitatID.valueOf(addr.getHostAddress()+":"+port+":0");
+        this.intAddress = destID.getIPv4Address();
         this.intPort = port;
         this.socket = tmpSocket;
         this.in = tmpIn;
@@ -73,28 +75,30 @@ public class ServiceNodeConnection extends Thread {
         this.start();
     }
 
-    public ServiceNodeConnection(ServiceNode serviceNode, InetAddress addr, int port) {
-        this(serviceNode,addr,port,false);
+    public HabitatsConnection(ServicesHabitat servicesHabitat, InetAddress addr, int port) {
+        this(servicesHabitat,addr,port,false);
     }
 
-    public ServiceNodeConnection(ServiceNode serviceNode, Socket socket) {
+    public HabitatsConnection(ServicesHabitat servicesHabitat, Socket socket) {
         this.socket = socket;
-        this.serviceNode = serviceNode;
-        this.setName(serviceNode.getName()+" Connection");
+        this.servicesHabitat = servicesHabitat;
+        this.setName(servicesHabitat.getName()+" Connection");
         this.setDaemon(true);
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
         int unicastOnly = 0;
         int port = -1;
+        int addr = -1;
         try {
             tmpIn = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(this.socket.getOutputStream()));
+            addr = tmpIn.readInt();
             port = tmpIn.readInt();
             unicastOnly = tmpIn.readInt();
         } catch (Exception e) {
             VLogger.error("Failed to use input/output of socket",e);
         }
-        this.intAddress = Encoder.decodeInt32(socket.getLocalAddress().getAddress(),0);
+        this.intAddress = addr;
         this.intPort = port;
         this.in = tmpIn;
         this.out = tmpOut;
@@ -103,6 +107,7 @@ public class ServiceNodeConnection extends Thread {
         }else{
             unicast = false;
         }
+        this.start();
     }
 
     public boolean isUnicast(){
@@ -117,25 +122,16 @@ public class ServiceNodeConnection extends Thread {
         return this.intPort;
     }
 
-    public String getConnectionKey() throws UnknownHostException {
-        String myAddr = InetAddress.getLocalHost().getHostAddress();
-        String otherAddr = socket.getInetAddress().getHostAddress();
-        if(myAddr.hashCode()<otherAddr.hashCode()){
-            this.aSide = true;
-        }
-        return getConnectionKey(myAddr,otherAddr);
-    }
-
-    public static final String getConnectionKey(String aSide,String zSide){
-        if(aSide.hashCode()<zSide.hashCode()){
-            return aSide+"<->"+zSide;
-        }else{
-            return zSide+"<->"+aSide;
-        }
+    public ConnectionID getConnectionKey() {
+        return new ConnectionID(this.intAddress,this.intPort,0,this.servicesHabitat.getLocalHost().getIPv4Address(),this.servicesHabitat.getLocalHost().getPort(),0);
     }
 
     public boolean isASide(){
-        return this.aSide;
+        ConnectionID cID = getConnectionKey();
+        if(cID.getaSide().equals(new HabitatID(this.intAddress,this.intPort,0))){
+            return true;
+        }
+        return false;
     }
 
 
@@ -149,7 +145,7 @@ public class ServiceNodeConnection extends Thread {
                     out.flush();
                     return null;
                 }catch(SocketException serr){
-                    System.out.println("Connection was probably terminated for "+socket.getInetAddress().getHostName()+":"+socket.getPort());
+                    VLogger.info("Connection was probably terminated for "+socket.getInetAddress().getHostName()+":"+socket.getPort());
                     this.shutdown();
                     return markAsUnreachable(ba);
                 }
@@ -168,7 +164,7 @@ public class ServiceNodeConnection extends Thread {
     }
 
     public void run() {
-        ServiceID id = null;
+        HabitatID id = null;
 
         new Switch();
 
@@ -183,7 +179,9 @@ public class ServiceNodeConnection extends Thread {
                 }
             }
         } catch (Exception err) {
-            VLogger.error("Failed to reaf from socket",err);
+            if(this.running) {
+                VLogger.error("Failed to read from socket", err);
+            }
         }
         VLogger.info(this.getName()+" was closed.");
     }
@@ -217,7 +215,7 @@ public class ServiceNodeConnection extends Thread {
     private class Switch extends Thread {
 
         public Switch() {
-            this.setName("Switch - " + ServiceNodeConnection.this.getName());
+            this.setName("Switch - " + HabitatsConnection.this.getName());
             this.setDaemon(true);
             this.start();
         }
@@ -242,15 +240,15 @@ public class ServiceNodeConnection extends Thread {
                     int destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
                     int destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
                     if (destAddr == 0) {
-                        if (serviceNode.getLocalHost().getPort() != 50000) {
-                            serviceNode.receivedPacket(ba);
+                        if (servicesHabitat.getLocalHost().getPort() != 50000) {
+                            servicesHabitat.receivedPacket(ba);
                         } else {
-                            serviceNode.broadcast(ba);
+                            servicesHabitat.broadcast(ba);
                         }
-                    } else if (destAddr == serviceNode.getLocalHost().getIPv4Address() && destPort == serviceNode.getLocalHost().getPort()) {
-                        serviceNode.receivedPacket(ba);
-                    } else if (destAddr == serviceNode.getLocalHost().getIPv4Address() && serviceNode.getLocalHost().getPort() == 50000 && destPort != 50000) {
-                        ServiceNodeConnection other = serviceNode.getNodeConnection(destAddr, destPort,true);
+                    } else if (destAddr == servicesHabitat.getLocalHost().getIPv4Address() && destPort == servicesHabitat.getLocalHost().getPort()) {
+                        servicesHabitat.receivedPacket(ba);
+                    } else if (destAddr == servicesHabitat.getLocalHost().getIPv4Address() && servicesHabitat.getLocalHost().getPort() == 50000 && destPort != 50000) {
+                        HabitatsConnection other = servicesHabitat.getNodeConnection(destAddr, destPort,true);
                         if (other != null && other.running) {
                             try {
                                 other.sendPacket(ba);
@@ -261,7 +259,7 @@ public class ServiceNodeConnection extends Thread {
                             ba = markAsUnreachable(ba);
                             destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
                             destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                            ServiceNodeConnection source = serviceNode.getNodeConnection(destAddr, destPort,true);
+                            HabitatsConnection source = servicesHabitat.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
                                     source.sendPacket(ba);
@@ -270,11 +268,11 @@ public class ServiceNodeConnection extends Thread {
                                 }
                             } else
                                 System.err.println("Source unreachable:"
-                                        + new ServiceID(destAddr, destPort,
+                                        + new HabitatID(destAddr, destPort,
                                                 Encoder.decodeInt16(ba.getBytes(), 16)));
                         }
-                    } else if (destAddr != serviceNode.getLocalHost().getIPv4Address() && serviceNode.getLocalHost().getPort() == 50000) {
-                        ServiceNodeConnection other = serviceNode.getNodeConnection(destAddr, 50000,true);
+                    } else if (destAddr != servicesHabitat.getLocalHost().getIPv4Address() && servicesHabitat.getLocalHost().getPort() == 50000) {
+                        HabitatsConnection other = servicesHabitat.getNodeConnection(destAddr, 50000,true);
                         if (other != null) {
                             try {
                                 other.sendPacket(ba);
@@ -285,7 +283,7 @@ public class ServiceNodeConnection extends Thread {
                             ba = markAsUnreachable(ba);
                             destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
                             destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                            ServiceNodeConnection source = serviceNode.getNodeConnection(destAddr, destPort,true);
+                            HabitatsConnection source = servicesHabitat.getNodeConnection(destAddr, destPort,true);
                             if (source != null) {
                                 try {
                                     source.sendPacket(ba);
@@ -294,7 +292,7 @@ public class ServiceNodeConnection extends Thread {
                                 }
                             } else
                                 System.err.println("Source unreachable:"
-                                        + new ServiceID(destAddr, destPort,
+                                        + new HabitatID(destAddr, destPort,
                                                 Encoder.decodeInt16(ba.getBytes(), 16)));
                         }
                     }

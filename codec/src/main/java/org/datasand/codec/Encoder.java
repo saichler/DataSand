@@ -846,6 +846,9 @@ public class Encoder {
     }*/
 
     public static String getLocalIPAddress() {
+        if(true){
+            return "127.0.0.1";
+        }
         try {
             for (NetworkInterface in : Collections.list(NetworkInterface
                     .getNetworkInterfaces())) {

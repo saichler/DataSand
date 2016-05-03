@@ -7,22 +7,22 @@
  */
 package org.datasand.agents;
 
-import org.datasand.network.ServiceID;
+import org.datasand.network.HabitatID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class PeerEntry {
-    private ServiceID serviceID = null;
+    private HabitatID habitatID = null;
     private long lastReceivedPing = -1;
     private long lastID = 999;
     private boolean unreachable = false;
 
-    public PeerEntry(ServiceID _netServiceID){
-        this.serviceID = _netServiceID;
+    public PeerEntry(HabitatID _netHabitatID){
+        this.habitatID = _netHabitatID;
         this.lastReceivedPing = System.currentTimeMillis();
     }
-    public ServiceID getServiceID() {
-        return serviceID;
+    public HabitatID getHabitatID() {
+        return habitatID;
     }
     public long getLastReceivedPing() {
         return lastReceivedPing;

@@ -5,12 +5,12 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.network.service;
+package org.datasand.network.habitat;
 
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
-import org.datasand.network.ServiceID;
+import org.datasand.network.HabitatID;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -23,15 +23,15 @@ import java.net.SocketException;
  */
 public class AdjacentMachineDiscovery extends Thread{
     private final DatagramSocket datagramSocket;
-    private final ServiceID localHost;
+    private final HabitatID localHost;
     private final AdjacentMachineListener listener;
     private boolean running=true;
 
     public static interface AdjacentMachineListener {
-        public void notifyAdjacentDiscovered(ServiceID adjacentID);
+        public void notifyAdjacentDiscovered(HabitatID adjacentID);
     }
 
-    public AdjacentMachineDiscovery(ServiceID localHost,AdjacentMachineListener listener){
+    public AdjacentMachineDiscovery(HabitatID localHost, AdjacentMachineListener listener){
         this.setName("Adjacent Machine Discovery Listener");
         this.localHost = localHost;
         this.listener = listener;
@@ -68,7 +68,7 @@ public class AdjacentMachineDiscovery extends Thread{
 
     private void processIncomingPacket(DatagramPacket p){
         BytesArray ba = new BytesArray(p.getData());
-        ServiceID id = (ServiceID) Encoder.getSerializerByClass(ServiceID.class).decode(ba);
+        HabitatID id = (HabitatID) Encoder.getSerializerByClass(HabitatID.class).decode(ba);
         if(!id.equals(localHost)){
             listener.notifyAdjacentDiscovered(id);
         }
@@ -86,7 +86,7 @@ public class AdjacentMachineDiscovery extends Thread{
             try {
                 while (running) {
                     BytesArray ba = new BytesArray(new byte[8]);
-                    Encoder.getSerializerByClass(ServiceID.class).encode(localHost, ba);
+                    Encoder.getSerializerByClass(HabitatID.class).encode(localHost, ba);
                     byte data[] = ba.getData();
                     DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName("255.255.255.255"), 49999);
                     DatagramSocket s = new DatagramSocket();

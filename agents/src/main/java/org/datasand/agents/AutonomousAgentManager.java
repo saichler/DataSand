@@ -7,32 +7,28 @@
  */
 package org.datasand.agents;
 
+import org.datasand.codec.util.ThreadPool;
+import org.datasand.network.HabitatID;
+import org.datasand.network.IFrameListener;
+import org.datasand.network.Packet;
+import org.datasand.network.habitat.ServicesHabitat;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
-import org.datasand.codec.util.ThreadPool;
-import org.datasand.network.IFrameListener;
-import org.datasand.network.ServiceID;
-import org.datasand.network.ServiceNode;
-import org.datasand.network.Packet;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class AutonomousAgentManager extends Thread implements IFrameListener {
 
-    private ServiceNode serviceNode = null;
-    private Map<ServiceID, AutonomousAgent> networkIdToAgent = new HashMap<ServiceID, AutonomousAgent>();
-    private Map<String, ServiceID> handlerNameToNetworkID = new HashMap<String, ServiceID>();
+    private final ServicesHabitat habitat;
+    private Map<HabitatID, AutonomousAgent> networkIdToAgent = new HashMap<HabitatID, AutonomousAgent>();
+    private Map<String, HabitatID> handlerNameToNetworkID = new HashMap<String, HabitatID>();
     private ThreadPool threadPool = new ThreadPool(20, "Handlers Threads", 2000);
     private Object agentsSyncObject = new Object();
     private Map<Integer, Set<AutonomousAgent>> multicasts = new HashMap<Integer, Set<AutonomousAgent>>();
@@ -43,8 +39,8 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
     }
 
     public AutonomousAgentManager(boolean unicastOnly) {
-        this.serviceNode = new ServiceNode(this,unicastOnly);
-        this.setName("Autonomous Agent Manager - " + serviceNode.toString());
+        this.habitat = new ServicesHabitat(this,unicastOnly);
+        this.setName("Autonomous Agent Manager - " + habitat.toString());
         this.start();
         //Sleep for 100 to allow the threads to start up
         try{Thread.sleep(100);}catch(Exception err){}
@@ -55,7 +51,7 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
     }
 
     public void shutdown() {
-        serviceNode.shutdown();
+        habitat.shutdown();
         this.running = false;
     }
 
@@ -88,8 +84,8 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
         }
     }
 
-    public ServiceNode getServiceNode() {
-        return this.serviceNode;
+    public ServicesHabitat getHabitat() {
+        return this.habitat;
     }
 
     public AutonomousAgent createHanlder(String className, ClassLoader cl) {
@@ -105,12 +101,12 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
         handlerNameToNetworkID.put(h.getName(), h.getAgentID());
     }
 
-    public AutonomousAgent getHandlerByID(ServiceID id) {
+    public AutonomousAgent getHandlerByID(HabitatID id) {
         return this.networkIdToAgent.get(id);
     }
 
     public AutonomousAgent getHandlerByName(String name) {
-        ServiceID id = this.handlerNameToNetworkID.get(name);
+        HabitatID id = this.handlerNameToNetworkID.get(name);
         if (id != null) {
             return this.networkIdToAgent.get(id);
         }
@@ -175,9 +171,9 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
         return result.substring(0, index);
     }
 
-    public List<ServiceID> installJar(String jarFileName) {
+    public List<HabitatID> installJar(String jarFileName) {
 
-        List<ServiceID> result = new ArrayList<ServiceID>();
+        List<HabitatID> result = new ArrayList<HabitatID>();
 
         File f = new File(jarFileName);
         if (f.exists()) {
@@ -195,10 +191,10 @@ public class AutonomousAgentManager extends Thread implements IFrameListener {
                              */
                             // ModelClassLoaders.getInstance().addClassLoader(cl);
                             Class<?> handlerClass = cl.loadClass(className);
-                            AutonomousAgent newHandler = (AutonomousAgent) handlerClass.getConstructor(new Class[] {ServiceID.class,AutonomousAgentManager.class })
+                            AutonomousAgent newHandler = (AutonomousAgent) handlerClass.getConstructor(new Class[] {HabitatID.class,AutonomousAgentManager.class })
                                     .newInstance(
                                             new Object[] {
-                                                    this.serviceNode
+                                                    this.habitat
                                                             .getLocalHost(),
                                                     this });
                             registerAgent(newHandler);

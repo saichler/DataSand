@@ -7,29 +7,12 @@
  */
 package org.datasand.agents.cnode;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import org.datasand.agents.*;
+import org.datasand.agents.cnode.handlers.*;
+import org.datasand.network.HabitatID;
+import org.datasand.network.habitat.HabitatsConnection;
 
-import org.datasand.agents.AutonomousAgent;
-import org.datasand.agents.AutonomousAgentManager;
-import org.datasand.agents.Message;
-import org.datasand.agents.MessageEntry;
-import org.datasand.agents.PeerEntry;
-import org.datasand.agents.cnode.handlers.ARPMulticastHandler;
-import org.datasand.agents.cnode.handlers.AcknowledgeHandler;
-import org.datasand.agents.cnode.handlers.EnterSyncModeHandler;
-import org.datasand.agents.cnode.handlers.NodeJoinHandler;
-import org.datasand.agents.cnode.handlers.NodeOriginalDataHandler;
-import org.datasand.agents.cnode.handlers.PeerSyncDataHandler;
-import org.datasand.agents.cnode.handlers.RequestJournalDataHandler;
-import org.datasand.agents.cnode.handlers.SetCurrentPeerIDHandler;
-import org.datasand.agents.cnode.handlers.SetCurrentPeerIDReplyHandler;
-import org.datasand.network.ServiceID;
-import org.datasand.network.service.ServiceNodeConnection;
+import java.util.*;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -45,21 +28,21 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
     public static final int SET_CURRENT_PEER_ID_REPLY   = 170;
     public static final int ACKNOWLEDGE                 = 180;
 
-    private ServiceID multicastGroupServiceID = null;
+    private HabitatID multicastGroupHabitatID = null;
     private int multicastGroupID = -1;
     private Message arpID = new Message();
     private long nextID = 1000;
     private DataType localData = createDataTypeInstance();
     private Map<Integer,ICNodeCommandHandler<DataType,DataTypeElement>> handlers = new HashMap<Integer,ICNodeCommandHandler<DataType,DataTypeElement>>();
     private boolean synchronizing = false;
-    private ServiceID sortedServiceIDs[] = new ServiceID[0];
+    private HabitatID sortedHabitatIDs[] = new HabitatID[0];
 
     public CNode(int subSystemId, AutonomousAgentManager m,int _multicastGroupID){
         super(subSystemId,m);
         this.addToSortedNetworkIDs(this.getAgentID());
         this.multicastGroupID = _multicastGroupID;
-        this.multicastGroupServiceID = new ServiceID(
-                ServiceNodeConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
+        this.multicastGroupHabitatID = new HabitatID(
+                HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
                 multicastGroupID, multicastGroupID);
 
         this.registerHandler(NODE_JOIN, new NodeJoinHandler<DataType,DataTypeElement>());
@@ -82,16 +65,16 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
         return result;
     }
 
-    private void addToSortedNetworkIDs(ServiceID neid){
-        ServiceID temp[] = new ServiceID[this.sortedServiceIDs.length+1];
-        System.arraycopy(this.sortedServiceIDs,0, temp, 0, sortedServiceIDs.length);
-        temp[this.sortedServiceIDs.length] = neid;
+    private void addToSortedNetworkIDs(HabitatID neid){
+        HabitatID temp[] = new HabitatID[this.sortedHabitatIDs.length+1];
+        System.arraycopy(this.sortedHabitatIDs,0, temp, 0, sortedHabitatIDs.length);
+        temp[this.sortedHabitatIDs.length] = neid;
         Arrays.sort(temp,new NetworkIDComparator());
-        this.sortedServiceIDs = temp;
+        this.sortedHabitatIDs = temp;
     }
 
-    public ServiceID[] getSortedServiceIDs(){
-        return this.sortedServiceIDs;
+    public HabitatID[] getSortedHabitatIDs(){
+        return this.sortedHabitatIDs;
     }
 
     public void registerHandler(Integer pType,ICNodeCommandHandler<DataType, DataTypeElement> handler){
@@ -111,14 +94,14 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
     }
 
     public void multicast(Message message){
-        this.send(message, this.multicastGroupServiceID);
+        this.send(message, this.multicastGroupHabitatID);
     }
 
     public void sendARPBroadcast(){
         multicast(new Message(this.nextID-1,ARP_MULTICAST,null));
     }
 
-    public CPeerEntry<DataType> getPeerEntry(ServiceID source){
+    public CPeerEntry<DataType> getPeerEntry(HabitatID source){
         PeerEntry pEntry = super.getPeerEntry(source);
         if(pEntry!=null && !(pEntry instanceof CPeerEntry)){
             pEntry = new CPeerEntry<DataType>(source, createDataTypeInstance());
@@ -129,13 +112,13 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,ServiceID unreachableSource) {
+    public void processDestinationUnreachable(Message message,HabitatID unreachableSource) {
         CPeerEntry<DataType> peerEntry = getPeerEntry(unreachableSource);
         ICNodeCommandHandler<DataType,DataTypeElement> handle = this.handlers.get(message.getMessageType());
         handle.handleUnreachableMessage(message,unreachableSource,peerEntry,this);
     }
 
-    public void processMessage(Message cmd, ServiceID source, ServiceID destination){
+    public void processMessage(Message cmd, HabitatID source, HabitatID destination){
         if(cmd==arpID){
             sendARPBroadcast();
             return;
@@ -153,7 +136,7 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
         return this.localData;
     }
 
-    public void cleanJournalHistoryForSource(ServiceID source){
+    public void cleanJournalHistoryForSource(HabitatID source){
         //Remove any expected replys from this node as it is up.
         List<Message> finished = new LinkedList<Message>();
         for(Object meo:this.getJournalEntries()){
@@ -170,14 +153,14 @@ public abstract class CNode<DataType,DataTypeElement> extends AutonomousAgent{
         this.send(new Message(this.nextID-1,SET_CURRENT_PEER_ID,null), source);
     }
 
-    public void sendAcknowledge(Message Message,ServiceID source){
+    public void sendAcknowledge(Message Message,HabitatID source){
         send(new Message(Message.getMessageID(),ACKNOWLEDGE, null), source);
     }
 
     public abstract DataType createDataTypeInstance();
     public abstract Collection<DataTypeElement> getDataTypeElementCollection(DataType data);
     public abstract void handleNodeOriginalData(DataTypeElement dataTypeElement);
-    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement,ServiceID source);
+    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement,HabitatID source);
     public abstract boolean isLocalPeerCopyContainData(DataType data);
 
     @Override

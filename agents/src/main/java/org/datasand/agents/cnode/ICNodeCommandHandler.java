@@ -8,11 +8,12 @@
 package org.datasand.agents.cnode;
 
 import org.datasand.agents.Message;
-import org.datasand.network.ServiceID;
+import org.datasand.network.HabitatID;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public interface ICNodeCommandHandler<DataType,DataTypeElement> {
-    public void handleMessage(Message cNodeCommand, ServiceID source, ServiceID destination, CPeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
-    public void handleUnreachableMessage(Message cNodeCommand, ServiceID unreachableSource, CPeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
+    public void handleMessage(Message cNodeCommand, HabitatID source, HabitatID destination, CPeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
+    public void handleUnreachableMessage(Message cNodeCommand, HabitatID unreachableSource, CPeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
 }

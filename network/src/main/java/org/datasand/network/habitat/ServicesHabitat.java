@@ -5,14 +5,15 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.network.service;
+package org.datasand.network.habitat;
 
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
+import org.datasand.network.ConnectionID;
+import org.datasand.network.HabitatID;
 import org.datasand.network.IFrameListener;
 import org.datasand.network.Packet;
-import org.datasand.network.ServiceID;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -26,43 +27,43 @@ import java.util.Map;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ServiceNode extends Thread implements AdjacentMachineDiscovery.AdjacentMachineListener{
+public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.AdjacentMachineListener{
 
     private static final int SERVICE_NODE_SWITCH_PORT = 50000;
     private final ServerSocket socket;
-    private final ServiceID localHost;
+    private final HabitatID localHost;
     private boolean running = true;
 
-    private ServiceNodeConnection[] connections = new ServiceNodeConnection[0];
-    private ServiceNodeConnection[] clientConnections = new ServiceNodeConnection[0];
-    private final Map<String,Integer> connIndex = new HashMap<>();
+    private HabitatsConnection[] connections = new HabitatsConnection[0];
+    private HabitatsConnection[] clientConnections = new HabitatsConnection[0];
+    private final Map<ConnectionID,Integer> connIndex = new HashMap<>();
     private final Map<Integer,Map<Integer,Integer>> routingTable = new HashMap<>();
 
-    private ServicePacketProcessor packetProcessor = null;
+    private PacketProcessor packetProcessor = null;
     private IFrameListener frameListener = null;
     private boolean unicast = false;
-    private final ServiceNodeMetrics serviceNodeMetrics = new ServiceNodeMetrics();
+    private final ServicesHabitatMetrics servicesHabitatMetrics = new ServicesHabitatMetrics();
     private final AdjacentMachineDiscovery discovery;
 
-    public ServiceNode(IFrameListener _frameListener) {
+    public ServicesHabitat(IFrameListener _frameListener) {
         this(_frameListener,false);
     }
 
-    public ServiceNode(IFrameListener _frameListener, boolean unicastOnly) {
+    public ServicesHabitat(IFrameListener _frameListener, boolean unicastOnly) {
         this.frameListener = _frameListener;
         this.unicast = unicastOnly;
-        synchronized(ServiceNode.class) {
+        synchronized(ServicesHabitat.class) {
             ServerSocket s = null;
-            ServiceID id = null;
+            HabitatID id = null;
             for (int i = SERVICE_NODE_SWITCH_PORT; i < SERVICE_NODE_SWITCH_PORT + 10000; i++) {
                 try {
-                    new ServiceID(0, 0, 0);
+                    new HabitatID(0, 0, 0);
                     new Packet(id, id, (byte[]) null);
-                    int localhost = ServiceID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
-                    this.packetProcessor = new ServicePacketProcessor(this);
+                    int localhost = HabitatID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
+                    this.packetProcessor = new PacketProcessor(this);
                     s = new ServerSocket(i);
-                    id = new ServiceID(localhost, i, 0);
-                    this.setName("Service Node-" + this.getLocalHost());
+                    id = new HabitatID(localhost, i, 0);
+                    this.setName("Service Node-" + id);
                 } catch (Exception err) {
                     //err.printStackTrace();
                 }
@@ -71,19 +72,26 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
             }
             this.socket = s;
             this.localHost = id;
-            VLogger.info("Started Node on port" + this.localHost.getPort());
             this.start();
             if(!this.unicast && this.localHost.getPort()==SERVICE_NODE_SWITCH_PORT){
                 this.discovery = new AdjacentMachineDiscovery(this.localHost,this);
             }else{
                 this.discovery = null;
             }
-
         }
     }
 
-    public ServiceNodeMetrics getServiceNodeMetrics(){
-        return this.serviceNodeMetrics;
+    private void connectToSwitch(){
+        try {
+            HabitatsConnection conn = new HabitatsConnection(this, InetAddress.getByName(Encoder.getLocalIPAddress()), SERVICE_NODE_SWITCH_PORT);
+            addConnection(conn);
+        }catch(UnknownHostException e){
+            VLogger.error("Error opening connection to switch",e);
+        }
+    }
+
+    public ServicesHabitatMetrics getServicesHabitatMetrics(){
+        return this.servicesHabitatMetrics;
     }
 
     protected IFrameListener getFrameListener(){
@@ -103,14 +111,14 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
             discovery.shutdown();
         }
 
-        for(ServiceNodeConnection con:connections){
+        for(HabitatsConnection con:connections){
             try {
                 con.shutdown();
             } catch (Exception err) {
             }
         }
 
-        for (ServiceNodeConnection con: clientConnections) {
+        for (HabitatsConnection con: clientConnections) {
             try {
                 con.shutdown();
             } catch (Exception err) {
@@ -118,7 +126,7 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
         }
     }
 
-    private void addConnection(ServiceNodeConnection c) throws UnknownHostException {
+    private void addConnection(HabitatsConnection c) throws UnknownHostException {
         synchronized (this.connections){
 
             if(c.isUnicast()){
@@ -130,7 +138,7 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
                     }
                 }
                 if(!foundSpace){
-                    ServiceNodeConnection tmp[] = new ServiceNodeConnection[this.clientConnections.length+1];
+                    HabitatsConnection tmp[] = new HabitatsConnection[this.clientConnections.length+1];
                     System.arraycopy(this.clientConnections,0,tmp,0,this.clientConnections.length);
                     tmp[this.clientConnections.length]=c;
                     this.clientConnections=tmp;
@@ -173,13 +181,14 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
                 connections[nullPosition] = c;
                 ports.put(c.getIntPort(),nullPosition);
             }else{
-                ServiceNodeConnection temp[] = new ServiceNodeConnection[connections.length+1];
+                HabitatsConnection temp[] = new HabitatsConnection[connections.length+1];
                 System.arraycopy(connections,0,temp,0,connections.length);
                 connIndex.put(c.getConnectionKey(),connections.length);
                 temp[connections.length] = c;
                 ports.put(c.getIntPort(),connections.length);
                 connections = temp;
             }
+            VLogger.info(this.localHost+" added Connection for "+c.getIntPort());
         }
     }
 
@@ -187,17 +196,23 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
     public void run() {
 
         try {
+            VLogger.info("Started Node on port " + this.localHost.getPort());
+            if(!this.unicast && this.localHost.getPort()>SERVICE_NODE_SWITCH_PORT){
+                connectToSwitch();
+            }
             while (running) {
                 Socket s = socket.accept();
-                addConnection(new ServiceNodeConnection(this, s));
+                addConnection(new HabitatsConnection(this, s));
             }
         } catch (IOException e) {
-            VLogger.error(this.getName()+" Socket was Closed",null);
+            if(running) {
+                VLogger.error(this.getName() + " Socket was Closed", null);
+            }
         }
         VLogger.info(this.getName()+" was shutdown.");
     }
 
-    public void send(byte data[], ServiceID source, ServiceID dest) {
+    public void send(byte data[], HabitatID source, HabitatID dest) {
         if (data.length < Packet.MAX_DATA_IN_ONE_PACKET) {
             Packet p = new Packet(source, dest, data);
             send(p);
@@ -241,13 +256,13 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
         }else{
             //This is the switch and it is a Multicast/Broadcast packet
             if(m.getDestination().getIPv4Address()==0){
-                ServiceNodeConnection sourceCon = getNodeConnection(m.getSource().getIPv4Address(), m.getSource().getPort(),false);
-                for(ServiceNodeConnection con:this.connections){
+                HabitatsConnection sourceCon = getNodeConnection(m.getSource().getIPv4Address(), m.getSource().getPort(),false);
+                for(HabitatsConnection con:this.connections){
                     m.encode(m, ba);
                     try {
                         BytesArray unreachable = con.sendPacket(ba);
                         if(unreachable!=null){
-                            unreachable = ServiceNodeConnection.addUnreachableAddressForMulticast(unreachable, con.getIntAddress(), con.getIntPort());
+                            unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable, con.getIntAddress(), con.getIntPort());
                             if(sourceCon!=null){
                                 sourceCon.sendPacket(unreachable);
                             }else{
@@ -261,7 +276,7 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
                 m.encode(m, ba);
                 this.receivedPacket(ba);
             }else{
-                ServiceNodeConnection c = this.getNodeConnection(m.getDestination().getIPv4Address(), m.getDestination().getPort(),true);
+                HabitatsConnection c = this.getNodeConnection(m.getDestination().getIPv4Address(), m.getDestination().getPort(),true);
                 if (c != null) {
                     try {
                         m.encode(m, ba);
@@ -275,18 +290,18 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
                     }
                 } else {
                     m.encode(m,ba);
-                    BytesArray unreachable = ServiceNodeConnection.markAsUnreachable(ba);
+                    BytesArray unreachable = HabitatsConnection.markAsUnreachable(ba);
                     this.receivedPacket(ba);
                 }
             }
         }
     }
 
-    public ServiceID getLocalHost() {
+    public HabitatID getLocalHost() {
         return this.localHost;
     }
 
-    public void unregisterNetworkNodeConnection(ServiceID source){
+    public void unregisterNetworkNodeConnection(HabitatID source){
         synchronized (this.connections) {
             System.out.println("Unregister "+source);
             for(int i=0;i<this.connections.length;i++){
@@ -301,9 +316,9 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
     public void broadcast(BytesArray ba) {
         int sourceAddress = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION);
         int sourcePort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+4);
-        ServiceNodeConnection sourceCon = getNodeConnection(sourceAddress, sourcePort,false);
-        List<ServiceID> unreachableDest = new LinkedList<ServiceID>();
-        for(ServiceNodeConnection connection:this.connections){
+        HabitatsConnection sourceCon = getNodeConnection(sourceAddress, sourcePort,false);
+        List<HabitatID> unreachableDest = new LinkedList<HabitatID>();
+        for(HabitatsConnection connection:this.connections){
             BytesArray unreachable = null;
             if (sourceAddress != this.getLocalHost().getIPv4Address()) {
                 if (connection.getIntAddress() == this.getLocalHost().getIPv4Address()) {
@@ -321,9 +336,9 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
                 }
             }
             if(unreachable!=null){
-                ServiceID nid = new ServiceID(connection.getIntAddress(),connection.getIntPort(), 0);
+                HabitatID nid = new HabitatID(connection.getIntAddress(),connection.getIntPort(), 0);
                 unreachableDest.add(nid);
-                unreachable = ServiceNodeConnection.addUnreachableAddressForMulticast(unreachable, connection.getIntAddress(), connection.getIntPort());
+                unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable, connection.getIntAddress(), connection.getIntPort());
                 if(sourceCon!=null){
                     try{
                         sourceCon.sendPacket(unreachable);
@@ -336,7 +351,7 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
             }
         }
         if(!unreachableDest.isEmpty()){
-            for(ServiceID unreach:unreachableDest){
+            for(HabitatID unreach:unreachableDest){
                 unregisterNetworkNodeConnection(unreach);
             }
         }
@@ -347,7 +362,7 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
         packetProcessor.addPacket(ba);
     }
 
-    public ServiceNodeConnection getNodeConnection(int address, int port, boolean includeUnicastOnlyNodes) {
+    public HabitatsConnection getNodeConnection(int address, int port, boolean includeUnicastOnlyNodes) {
         Map<Integer, Integer> map = routingTable.get(address);
         if(!includeUnicastOnlyNodes){
             if (map == null){
@@ -361,10 +376,14 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
                 return connections[index];
             }
         }else{
-            ServiceNodeConnection connection = null;
+            HabitatsConnection connection = null;
             if(map != null){
                 if(address==this.getLocalHost().getIPv4Address()) {
                     Integer index = map.get(port);
+                    if(index==null){
+                        VLogger.error(this.getLocalHost()+" No Connectionn for port "+port,null);
+                        return null;
+                    }
                     connection = connections[index];
                 }else {
                     Integer index = map.get(SERVICE_NODE_SWITCH_PORT);
@@ -376,7 +395,7 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
                 return connection;
             }
 
-            for(ServiceNodeConnection c:this.clientConnections){
+            for(HabitatsConnection c:this.clientConnections){
                 if(c.getIntAddress()==address && c.getIntPort()==port){
                     connection = c;
                     break;
@@ -393,7 +412,7 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
             return;
         }
         try {
-            new ServiceNodeConnection(this, InetAddress.getByName(host), 50000,true);
+            new HabitatsConnection(this, InetAddress.getByName(host), 50000,true);
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -405,15 +424,15 @@ public class ServiceNode extends Thread implements AdjacentMachineDiscovery.Adja
             return;
         }
         try {
-            new ServiceNodeConnection(this, InetAddress.getByName(host), 50000);
+            new HabitatsConnection(this, InetAddress.getByName(host), 50000);
         } catch (Exception err) {
             err.printStackTrace();
         }
     }
 
     @Override
-    public void notifyAdjacentDiscovered(ServiceID adjacentID) {
-        ServiceNodeConnection existingConnection = getNodeConnection(adjacentID.getIPv4Address(),adjacentID.getPort(),true);
+    public void notifyAdjacentDiscovered(HabitatID adjacentID) {
+        HabitatsConnection existingConnection = getNodeConnection(adjacentID.getIPv4Address(),adjacentID.getPort(),true);
         if(existingConnection==null || !existingConnection.isAlive()){
             joinNetwork(adjacentID.getIPv4AddressAsString());
         }

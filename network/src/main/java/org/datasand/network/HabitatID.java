@@ -14,25 +14,25 @@ import org.datasand.codec.serialize.ISerializer;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ServiceID implements ISerializer {
+public class HabitatID implements ISerializer {
     private int[] address = null;
-    public static final ServiceID serializer = new ServiceID();
+    public static final HabitatID serializer = new HabitatID();
     static {
-        Encoder.registerSerializer(ServiceID.class,new ServiceID());
+        Encoder.registerSerializer(HabitatID.class,new HabitatID());
     }
 
-    private ServiceID() {
+    private HabitatID() {
 
     }
 
-    public ServiceID(int _address, int _port, int _subSystemID) {
+    public HabitatID(int _address, int _port, int _subSystemID) {
         this.address = new int[3];
         this.address[0] = _address;
         this.address[1] = _port;
         this.address[2] = _subSystemID;
     }
 
-    public static ServiceID valueOf(String str) {
+    public static HabitatID valueOf(String str) {
         String sdata[] = new String[4];
         String port = null;
         String subSystemID = null;
@@ -52,7 +52,7 @@ public class ServiceID implements ISerializer {
                 + (Integer.parseInt(sdata[1]) * 65536)
                 + (Integer.parseInt(sdata[2]) * 256)
                 + (Integer.parseInt(sdata[3]));
-        return new ServiceID(addr, Integer.parseInt(port),
+        return new HabitatID(addr, Integer.parseInt(port),
                 Integer.parseInt(subSystemID));
     }
 
@@ -143,7 +143,7 @@ public class ServiceID implements ISerializer {
 
     @Override
     public boolean equals(Object obj) {
-        ServiceID other = (ServiceID) obj;
+        HabitatID other = (HabitatID) obj;
         if (other.address.length == this.address.length) {
             for (int i = 0; i < this.address.length; i++) {
                 if (this.address[i] != other.address[i])
@@ -154,7 +154,7 @@ public class ServiceID implements ISerializer {
         return false;
     }
 
-    public void encode(ServiceID netID, byte[] data, int location) {
+    public void encode(HabitatID netID, byte[] data, int location) {
         byte ip[] = new byte[4];
         Encoder.encodeInt32(netID.getIPv4Address(),ip,0);
         System.arraycopy(ip,0,data,location,ip.length);
@@ -170,7 +170,7 @@ public class ServiceID implements ISerializer {
 
     @Override
     public void encode(Object value, BytesArray ba) {
-        ServiceID id = (ServiceID)value;
+        HabitatID id = (HabitatID)value;
         Encoder.encodeInt32(id.getIPv4Address(), ba);
         Encoder.encodeInt16(id.getPort(), ba);
         Encoder.encodeInt16(id.getSubSystemID(), ba);
@@ -182,6 +182,6 @@ public class ServiceID implements ISerializer {
         int a = Encoder.decodeInt32(ba);
         int b = Encoder.decodeInt16(ba);
         int c = Encoder.decodeInt16(ba);
-        return new ServiceID(a, b, c);
+        return new HabitatID(a, b, c);
     }
 }

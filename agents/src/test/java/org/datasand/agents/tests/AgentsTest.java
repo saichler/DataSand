@@ -7,22 +7,18 @@
  */
 package org.datasand.agents.tests;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.PrintStream;
-
 import org.datasand.agents.AutonomousAgent;
 import org.datasand.agents.AutonomousAgentManager;
 import org.datasand.agents.Message;
 import org.datasand.agents.cmap.CMap;
-import org.datasand.network.ServiceID;
-import org.datasand.network.ServiceNode;
-import org.datasand.network.service.ServiceNodeConnection;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.datasand.network.HabitatID;
+import org.datasand.network.habitat.HabitatsConnection;
+import org.datasand.network.habitat.ServicesHabitat;
+import org.junit.*;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -58,17 +54,17 @@ public class AgentsTest {
 
     @Test
     public void testBroadcastToNodes() {
-        ServiceNode nodes[] = new ServiceNode[10];
+        ServicesHabitat nodes[] = new ServicesHabitat[10];
         for (int i = 0; i < 10; i++) {
-            nodes[i] = new ServiceNode(null);
+            nodes[i] = new ServicesHabitat(null);
         }
         try {
             Thread.sleep(2000);
         } catch (Exception err) {
         }
         System.out.println("Ready");
-        nodes[3].send(new byte[5], nodes[3].getLocalHost(), ServiceNodeConnection.PROTOCOL_ID_BROADCAST);
-        ServiceID unreach = new ServiceID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
+        nodes[3].send(new byte[5], nodes[3].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
+        HabitatID unreach = new HabitatID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
         try {
             Thread.sleep(1000);
@@ -95,7 +91,7 @@ public class AgentsTest {
         AutonomousAgent agent[] = new AutonomousAgent[nodes.length];
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new AutonomousAgentManager();
-            agent[i] = new TestAgent(nodes[i].getServiceNode().getLocalHost(),nodes[i]);
+            agent[i] = new TestAgent(nodes[i].getHabitat().getLocalHost(),nodes[i]);
         }
 
         try {
@@ -104,7 +100,7 @@ public class AgentsTest {
         }
 
         System.out.println("Ready!");
-        agent[4].send(new Message(0,createTestObject()), ServiceNodeConnection.PROTOCOL_ID_BROADCAST);
+        agent[4].send(new Message(0,createTestObject()), HabitatsConnection.PROTOCOL_ID_BROADCAST);
 
         try {
             Thread.sleep(1000);
@@ -134,12 +130,12 @@ public class AgentsTest {
         // Arbitrary number greater than 10 and not equal to 9999 (which is the
         // destination unreachable code)
         int MULTICAST_GROUP = 27;
-        ServiceID multiCast = new ServiceID(
-                ServiceNodeConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
+        HabitatID multiCast = new HabitatID(
+                HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
                 MULTICAST_GROUP, MULTICAST_GROUP);
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new AutonomousAgentManager();
-            agent[i] = new TestAgent(nodes[i].getServiceNode().getLocalHost(),
+            agent[i] = new TestAgent(nodes[i].getHabitat().getLocalHost(),
                     nodes[i]);
             // only 5 agents are registered for this multicast
             if (i % 2 == 0) {
@@ -174,10 +170,10 @@ public class AgentsTest {
     public void testUnicast() {
         AutonomousAgentManager nodes[] = new AutonomousAgentManager[10];
         AutonomousAgent agent[] = new AutonomousAgent[nodes.length];
-        ServiceID destination = null;
+        HabitatID destination = null;
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new AutonomousAgentManager();
-            agent[i] = new TestAgent(nodes[i].getServiceNode().getLocalHost(),
+            agent[i] = new TestAgent(nodes[i].getHabitat().getLocalHost(),
                     nodes[i]);
             if (i == 7)
                 destination = agent[i].getAgentID();

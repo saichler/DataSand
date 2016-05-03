@@ -7,26 +7,21 @@
  */
 package org.datasand.agents;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.network.ServiceID;
-import org.datasand.network.service.ServiceNodeConnection;
+import org.datasand.network.HabitatID;
 import org.datasand.network.Packet;
 import org.datasand.network.PriorityLinkedList;
+import org.datasand.network.habitat.HabitatsConnection;
+
+import java.util.*;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public abstract class AutonomousAgent implements Runnable {
 
-    private ServiceID agentID = null;
-    private ServiceID arpGroup = null;
+    private HabitatID agentID = null;
+    private HabitatID arpGroup = null;
     private AutonomousAgentManager manager = null;
     protected PriorityLinkedList<Packet> incoming = new PriorityLinkedList<Packet>();
     protected boolean working = false;
@@ -34,7 +29,7 @@ public abstract class AutonomousAgent implements Runnable {
     private List<RepetitiveFrameEntry> repetitiveTasks = new ArrayList<RepetitiveFrameEntry>();
     private long lastRepetitiveCheck = 0;
     private Map<Long,MessageEntry> journal = new LinkedHashMap<Long, MessageEntry>();
-    private Map<ServiceID,PeerEntry> peers = new HashMap<ServiceID,PeerEntry>();
+    private Map<HabitatID,PeerEntry> peers = new HashMap<HabitatID,PeerEntry>();
     private static final Message timeoutID = new Message();
 
     public boolean _ForTestOnly_pseudoSendEnabled = false;
@@ -44,18 +39,18 @@ public abstract class AutonomousAgent implements Runnable {
     }
 
     public AutonomousAgent(int subSystemID,AutonomousAgentManager _manager) {
-        this.agentID = new ServiceID(_manager.getServiceNode().getLocalHost().getIPv4Address(),_manager.getServiceNode().getLocalHost().getPort(), subSystemID);
+        this.agentID = new HabitatID(_manager.getHabitat().getLocalHost().getIPv4Address(),_manager.getHabitat().getLocalHost().getPort(), subSystemID);
         this.manager = _manager;
         this.manager.registerAgent(this);
         registerRepetitiveMessage(10000, 10000, 0, timeoutID);
     }
 
     public void setARPGroup(int group){
-        this.arpGroup = new ServiceID(ServiceNodeConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),group,group);
+        this.arpGroup = new HabitatID(HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),group,group);
         this.getAgentManager().registerForMulticast(group, this);
     }
 
-    public ServiceID getARPGroup(){
+    public HabitatID getARPGroup(){
         return this.arpGroup;
     }
 
@@ -67,7 +62,7 @@ public abstract class AutonomousAgent implements Runnable {
         this.send(msg, arpGroup);
     }
 
-    public ServiceID getAgentID() {
+    public HabitatID getAgentID() {
         return this.agentID;
     }
 
@@ -96,7 +91,7 @@ public abstract class AutonomousAgent implements Runnable {
         if(currentFrame.getMessage()==timeoutID){
             this.checkForTimeoutMessages();
         }else
-        if(currentFrame.getSource().getSubSystemID()== ServiceNodeConnection.DESTINATION_UNREACHABLE){
+        if(currentFrame.getSource().getSubSystemID()== HabitatsConnection.DESTINATION_UNREACHABLE){
             processDestinationUnreachable((Message)currentFrame.getMessage(),currentFrame.getUnreachableOrigAddress());
         }else
         if (currentFrame.getMessage() instanceof ISideTask) {
@@ -111,12 +106,12 @@ public abstract class AutonomousAgent implements Runnable {
         }
     }
 
-    public abstract void processDestinationUnreachable(Message message,ServiceID unreachableSource);
-    public abstract void processMessage(Message message, ServiceID source, ServiceID destination);
+    public abstract void processDestinationUnreachable(Message message,HabitatID unreachableSource);
+    public abstract void processMessage(Message message, HabitatID source, HabitatID destination);
     public abstract void start();
     public abstract String getName();
 
-    public void send(Message obj, ServiceID destination) {
+    public void send(Message obj, HabitatID destination) {
         if(_ForTestOnly_pseudoSendEnabled) return;
         if(this.getAgentID().equals(destination)){
             processMessage(obj, destination, destination);
@@ -124,11 +119,11 @@ public abstract class AutonomousAgent implements Runnable {
         }
         BytesArray ba = new BytesArray(1024);
         Encoder.encodeObject(obj, ba);
-        manager.getServiceNode().send(ba.getData(), this.agentID, destination);
+        manager.getHabitat().send(ba.getData(), this.agentID, destination);
     }
 
-    public void send(byte data[], ServiceID destination) {
-        manager.getServiceNode().send(data, this.agentID, destination);
+    public void send(byte data[], HabitatID destination) {
+        manager.getHabitat().send(data, this.agentID, destination);
     }
 
     public void registerRepetitiveMessage(long interval,long intervalStart,int priority,Message message){
@@ -179,14 +174,14 @@ public abstract class AutonomousAgent implements Runnable {
         for(Iterator<MessageEntry> iter=journal.values().iterator();iter.hasNext();){
             MessageEntry e = iter.next();
             if(e.hasTimedOut()){
-                for(ServiceID peer:e.getPeers()){
+                for(HabitatID peer:e.getPeers()){
                     handleTimedOutMessage(e.getMessage(),peer);
                 }
             }
         }
     }
 
-    public void handleTimedOutMessage(Message message,ServiceID peer){
+    public void handleTimedOutMessage(Message message,HabitatID peer){
 
     }
 
@@ -194,7 +189,7 @@ public abstract class AutonomousAgent implements Runnable {
         this.journal.put(entry.getMessage().getMessageID(), entry);
     }
 
-    public MessageEntry addUnicastJournal(Message m,ServiceID peer){
+    public MessageEntry addUnicastJournal(Message m,HabitatID peer){
         MessageEntry entry = new MessageEntry(m, peer, MessageEntry.DEFAULT_TIMEOUT);
         this.journal.put(m.getMessageID(), entry);
         return entry;
@@ -207,7 +202,7 @@ public abstract class AutonomousAgent implements Runnable {
             for(PeerEntry e:this.peers.values()){
                 if(!e.isUnreachable()){
                     hasOnePeer=true;
-                    entry.addPeer(e.getServiceID());
+                    entry.addPeer(e.getHabitatID());
                 }
             }
             if(includeSelf){
@@ -221,7 +216,7 @@ public abstract class AutonomousAgent implements Runnable {
         return null;
     }
 
-    public PeerEntry getPeerEntry(ServiceID source){
+    public PeerEntry getPeerEntry(HabitatID source){
         if(source.equals(this.getAgentID())) return null;
         PeerEntry peerEntry = peers.get(source);
         if(peerEntry==null){
@@ -232,11 +227,11 @@ public abstract class AutonomousAgent implements Runnable {
         return peerEntry;
     }
 
-    public void replacePeerEntry(ServiceID source, PeerEntry entry){
+    public void replacePeerEntry(HabitatID source, PeerEntry entry){
         this.peers.put(source, entry);
     }
 
-    public void addPeerToARPJournal(Message m,ServiceID peer){
+    public void addPeerToARPJournal(Message m,HabitatID peer){
         MessageEntry entry = journal.get(m.getMessageID());
         entry.addPeer(peer);
     }

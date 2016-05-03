@@ -10,7 +10,7 @@ package org.datasand.network;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.network.service.ServiceNodeConnection;
+import org.datasand.network.habitat.HabitatsConnection;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -28,9 +28,9 @@ public class Packet implements ISerializer {
     public static final int PACKET_DATA_LOCATION = PACKET_MULTIPART_AND_PRIORITY_LOCATION + PACKET_MULTIPART_AND_PRIORITY_LENGTH;
     public static final int MAX_DATA_IN_ONE_PACKET = 1024 * 512;
 
-    private ServiceID source = null;
-    private ServiceID destination = null;
-    private ServiceID originalAddress = null;
+    private HabitatID source = null;
+    private HabitatID destination = null;
+    private HabitatID originalAddress = null;
 
     private int packetID = -1;
     private boolean multiPart = false;
@@ -46,15 +46,15 @@ public class Packet implements ISerializer {
     private Packet() {
     }
 
-    public Packet(ServiceID _source, ServiceID _dest) {
+    public Packet(HabitatID _source, HabitatID _dest) {
         this(_source, _dest, (byte[]) null);
     }
 
-    public Packet(ServiceID _source, ServiceID _destination, byte[] _data) {
+    public Packet(HabitatID _source, HabitatID _destination, byte[] _data) {
         this(_source, _destination, _data, -1, false);
     }
 
-    public Packet(ServiceID _source, ServiceID _destination, byte[] _data,
+    public Packet(HabitatID _source, HabitatID _destination, byte[] _data,
                   int _id, boolean _multiPart) {
         if (_id == -1) {
             synchronized (Packet.class) {
@@ -73,17 +73,17 @@ public class Packet implements ISerializer {
         }
     }
 
-    public Packet(Object message,ServiceID source){
+    public Packet(Object message,HabitatID source){
         this.source = source;
         this.destination = source;
         this.message = message;
     }
 
-    public ServiceID getSource() {
+    public HabitatID getSource() {
         return source;
     }
 
-    public ServiceID getDestination() {
+    public HabitatID getDestination() {
         return destination;
     }
 
@@ -135,17 +135,17 @@ public class Packet implements ISerializer {
     public Object decode(BytesArray ba) {
         Packet m = new Packet();
         ba.resetLocation();
-        m.source = (ServiceID) ServiceID.serializer.decode(ba);
-        m.destination = (ServiceID) ServiceID.serializer.decode(ba);
+        m.source = (HabitatID) HabitatID.serializer.decode(ba);
+        m.destination = (HabitatID) HabitatID.serializer.decode(ba);
         m.packetID = Encoder.decodeInt16(ba);
         m.priority = ((int) ba.getBytes()[ba.getLocation()]) / 2;
         m.multiPart = ba.getBytes()[ba.getLocation()] % 2 == 1;
         ba.advance(1);
         if(ba.getBytes().length>Packet.PACKET_DATA_LOCATION) {
-            if(m.source.getIPv4Address()== ServiceNodeConnection.PROTOCOL_ID_UNREACHABLE.getIPv4Address()
-                    && m.source.getPort()== ServiceNodeConnection.PROTOCOL_ID_UNREACHABLE.getPort() &&
-                       m.source.getSubSystemID()== ServiceNodeConnection.PROTOCOL_ID_UNREACHABLE.getSubSystemID()){
-                this.originalAddress = (ServiceID) ServiceID.serializer.decode(ba);
+            if(m.source.getIPv4Address()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getIPv4Address()
+                    && m.source.getPort()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getPort() &&
+                       m.source.getSubSystemID()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getSubSystemID()){
+                this.originalAddress = (HabitatID) HabitatID.serializer.decode(ba);
                 m.data = Encoder.decodeByteArray(ba);
             }else {
                 int location = ba.getLocation();
@@ -183,14 +183,14 @@ public class Packet implements ISerializer {
         return buff.toString();
     }
 
-    public ServiceID getUnreachableOrigAddress(){
+    public HabitatID getUnreachableOrigAddress(){
         int destAddress = Encoder.decodeInt32(this.getData(),PACKET_DEST_LOCATION);
         int destPort = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION+4);
         if(destAddress==0){
             destAddress = Encoder.decodeInt32(this.getData(), this.getData().length-6);
             destPort = Encoder.decodeInt16(this.getData(), this.getData().length-2);
         }
-        return new ServiceID(destAddress, destPort, 0);
+        return new HabitatID(destAddress, destPort, 0);
     }
 
     public Object getMessage(){

@@ -5,12 +5,12 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.network.service;
+package org.datasand.network.habitat;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ServiceNodeMetrics {
+public class ServicesHabitatMetrics {
     private long incomingPacketCount=0;
     private long outgoingPacketCount=0;
     private long incomingPacketQueue=0;

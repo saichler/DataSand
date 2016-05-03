@@ -8,15 +8,15 @@
 package org.datasand.agents.cnode;
 
 import org.datasand.agents.PeerEntry;
-import org.datasand.network.ServiceID;
+import org.datasand.network.HabitatID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class CPeerEntry<DataType> extends PeerEntry{
     private DataType peerData;
 
-    public CPeerEntry(ServiceID _netServiceID, DataType _peerData){
-        super(_netServiceID);
+    public CPeerEntry(HabitatID _netHabitatID, DataType _peerData){
+        super(_netHabitatID);
         this.peerData = _peerData;
     }
 

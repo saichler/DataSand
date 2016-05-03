@@ -11,14 +11,15 @@ import org.datasand.agents.Message;
 import org.datasand.agents.cnode.CNode;
 import org.datasand.agents.cnode.CPeerEntry;
 import org.datasand.agents.cnode.ICNodeCommandHandler;
-import org.datasand.network.ServiceID;
+import org.datasand.network.HabitatID;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class SetCurrentPeerIDHandler <DataType, DataTypeElement> implements ICNodeCommandHandler<DataType, DataTypeElement>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, ServiceID source, ServiceID destination, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleMessage(Message cNodeCommand, HabitatID source, HabitatID destination, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         peerEntry.setLastID(cNodeCommand.getMessageID());
         if(node.getNextID()==1000)
             node.incrementID();
@@ -31,6 +32,6 @@ public class SetCurrentPeerIDHandler <DataType, DataTypeElement> implements ICNo
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand, ServiceID unreachableSource, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, HabitatID unreachableSource, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
     }
 }

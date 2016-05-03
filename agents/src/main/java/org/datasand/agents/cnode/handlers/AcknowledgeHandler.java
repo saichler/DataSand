@@ -12,13 +12,14 @@ import org.datasand.agents.MessageEntry;
 import org.datasand.agents.cnode.CNode;
 import org.datasand.agents.cnode.CPeerEntry;
 import org.datasand.agents.cnode.ICNodeCommandHandler;
-import org.datasand.network.ServiceID;
+import org.datasand.network.HabitatID;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class AcknowledgeHandler<DataType, DataTypeElement> implements ICNodeCommandHandler<DataType, DataTypeElement>{
     @Override
-    public void handleMessage(Message cNodeCommand, ServiceID source, ServiceID destination, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleMessage(Message cNodeCommand, HabitatID source, HabitatID destination, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         MessageEntry entry = node.getJournalEntry(cNodeCommand);
         if(entry!=null){
             entry.removePeer(source);
@@ -29,6 +30,6 @@ public class AcknowledgeHandler<DataType, DataTypeElement> implements ICNodeComm
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand, ServiceID unreachableSource, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, HabitatID unreachableSource, CPeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
     }
 }
