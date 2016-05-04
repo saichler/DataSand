@@ -9,7 +9,7 @@ package org.datasand.store.jdbc;
 
 import java.util.List;
 import java.util.Map;
-import org.datasand.agents.Message;
+import org.datasand.microservice.Message;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.network.ServiceID;

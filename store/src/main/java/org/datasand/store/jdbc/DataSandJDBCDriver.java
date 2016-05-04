@@ -14,7 +14,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
-import org.datasand.agents.AutonomousAgentManager;
+import org.datasand.microservice.AutonomousAgentManager;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 

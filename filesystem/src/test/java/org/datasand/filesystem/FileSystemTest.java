@@ -1,6 +1,6 @@
 package org.datasand.filesystem;
 
-import org.datasand.agents.AutonomousAgentManager;
+import org.datasand.microservice.AutonomousAgentManager;
 
 public class FileSystemTest {
 	public static void main(String args[]){

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
-import org.datasand.agents.AutonomousAgentManager;
+import org.datasand.microservice.AutonomousAgentManager;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VColumn;
 import org.datasand.codec.VSchema;

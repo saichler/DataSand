@@ -148,6 +148,7 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
 
             int connectionIndex = -1;
             if(this.connIndex.containsKey(c.getConnectionKey())){
+                VLogger.info("Found an old connection");
                 if(c.isASide()){
                     connectionIndex = this.connIndex.get(c.getConnectionKey());
                     this.connections[connectionIndex].shutdown();
@@ -258,6 +259,9 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
             if(m.getDestination().getIPv4Address()==0){
                 HabitatsConnection sourceCon = getNodeConnection(m.getSource().getIPv4Address(), m.getSource().getPort(),false);
                 for(HabitatsConnection con:this.connections){
+                    if(con==null){
+                        continue;
+                    }
                     m.encode(m, ba);
                     try {
                         BytesArray unreachable = con.sendPacket(ba);
@@ -306,8 +310,14 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
             System.out.println("Unregister "+source);
             for(int i=0;i<this.connections.length;i++){
                 if(this.connections[i].getIntAddress()==source.getIPv4Address() && this.connections[i].getIntPort()==source.getPort()){
+                    this.connIndex.remove(this.connections[i].getConnectionKey());
                     this.connections[i].shutdown();
                     this.connections[i] = null;
+                    HabitatsConnection temp[] = new HabitatsConnection[this.connections.length-1];
+                    System.arraycopy(this.connections,0,temp,0,i);
+                    System.arraycopy(this.connections,i+1,temp,i,this.connections.length-i-1);
+                    this.connections = temp;
+                    break;
                 }
             }
         }
@@ -370,9 +380,17 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
             }
             if(address==this.getLocalHost().getIPv4Address()) {
                 Integer index = map.get(port);
+                if(index==null){
+                    VLogger.info(this.getLocalHost()+" No Connectionn for port "+port);
+                    return null;
+                }
                 return connections[index];
             }else {
                 Integer index = map.get(SERVICE_NODE_SWITCH_PORT);
+                if(index==null){
+                    VLogger.info(this.getLocalHost()+" No Connectionn for port "+SERVICE_NODE_SWITCH_PORT);
+                    return null;
+                }
                 return connections[index];
             }
         }else{
@@ -381,12 +399,16 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
                 if(address==this.getLocalHost().getIPv4Address()) {
                     Integer index = map.get(port);
                     if(index==null){
-                        VLogger.error(this.getLocalHost()+" No Connectionn for port "+port,null);
+                        VLogger.info(this.getLocalHost()+" No Connectionn for port "+port);
                         return null;
                     }
                     connection = connections[index];
                 }else {
                     Integer index = map.get(SERVICE_NODE_SWITCH_PORT);
+                    if(index==null){
+                        VLogger.info(this.getLocalHost()+" No Connectionn for port "+SERVICE_NODE_SWITCH_PORT);
+                        return null;
+                    }
                     connection = connections[index];
                 }
             }
