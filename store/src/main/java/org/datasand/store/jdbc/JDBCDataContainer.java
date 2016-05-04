@@ -7,16 +7,17 @@
  */
 package org.datasand.store.jdbc;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.network.ServiceID;
+import org.datasand.network.HabitatID;
 import org.datasand.store.jdbc.ResultSet.RSID;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -49,7 +50,7 @@ public class JDBCDataContainer implements ISerializer{
             Encoder.encodeInt32(dc.rsID.getLocalID(), ba);
         }else
             Encoder.encodeNULL(ba);
-        if(dc.data instanceof ServiceID){
+        if(dc.data instanceof HabitatID){
             Encoder.encodeInt16(5, ba);
             Encoder.encodeObject(dc.data, ba);
         }else

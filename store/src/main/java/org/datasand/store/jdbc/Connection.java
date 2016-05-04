@@ -7,41 +7,26 @@
  */
 package org.datasand.store.jdbc;
 
-import java.net.InetAddress;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.CallableStatement;
-import java.sql.Clob;
-import java.sql.DatabaseMetaData;
-import java.sql.NClob;
-import java.sql.PreparedStatement;
-import java.sql.SQLClientInfoException;
-import java.sql.SQLException;
-import java.sql.SQLWarning;
-import java.sql.SQLXML;
-import java.sql.Savepoint;
-import java.sql.Struct;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Executor;
-import org.datasand.microservice.AutonomousAgent;
-import org.datasand.microservice.AutonomousAgentManager;
+import org.datasand.codec.BytesArray;
 import org.datasand.microservice.Message;
 import org.datasand.microservice.MessageEntry;
-import org.datasand.codec.BytesArray;
-import org.datasand.network.ServiceID;
+import org.datasand.microservice.MicroService;
+import org.datasand.microservice.MicroServicesManager;
+import org.datasand.network.HabitatID;
 import org.datasand.store.DataStore;
 import org.datasand.store.jdbc.ResultSet.RSID;
+
+import java.net.InetAddress;
+import java.sql.*;
+import java.util.*;
+import java.util.concurrent.Executor;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class Connection extends AutonomousAgent implements java.sql.Connection {
+public class Connection extends MicroService implements java.sql.Connection {
     private MetaData metaData = null;
     private DataStore dataDataStore;
-    private ServiceID destination = null;
+    private HabitatID destination = null;
     private Map<RSID,QueryContainer> queries = new HashMap<RSID,QueryContainer>();
     private Map<RSID,QueryUpdater> updaters = new HashMap<RSID,QueryUpdater>();
     private Message repetitve = new Message(-1,null);
@@ -51,7 +36,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     	Message.passThroughOutgoingMessage.put(JDBCMessage.TYPE_QUERY_RECORD, JDBCMessage.TYPE_QUERY_RECORD);
     }
     
-    public Connection(AutonomousAgentManager manager, DataStore _dataStore) {
+    public Connection(MicroServicesManager manager, DataStore _dataStore) {
         super(107,manager);
         this.dataDataStore = _dataStore;
         this.setARPGroup(107);
@@ -59,14 +44,14 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
         this.registerRepetitiveMessage(10000, 10000, 0,repetitve);
     }
 
-    public Connection(AutonomousAgentManager manager, String addr) {
+    public Connection(MicroServicesManager manager, String addr) {
         super(107,manager);
         try{
-            if(manager.getServiceNode().getLocalHost().getPort()==50000){
-                destination = ServiceID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:107");
-                manager.getServiceNode().joinNetworkAsSingle(addr);
+            if(manager.getHabitat().getLocalHost().getPort()==50000){
+                destination = HabitatID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:107");
+                manager.getHabitat().joinNetworkAsSingle(addr);
             }else{
-                destination = ServiceID.valueOf(this.getAgentManager().getServiceNode().getLocalHost().getIPv4AddressAsString()+":50000:107");
+                destination = HabitatID.valueOf(this.getMicroServiceManager().getHabitat().getLocalHost().getIPv4AddressAsString()+":50000:107");
             }
         }catch(Exception err){
             err.printStackTrace();
@@ -82,7 +67,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,ServiceID unreachableSource) {
+    public void processDestinationUnreachable(Message message,HabitatID unreachableSource) {
         System.out.println("Destination Unreachable:"+message.getMessageType()+":"+unreachableSource);
         try{
             throw new Exception("EX");
@@ -93,8 +78,9 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     public void sendToDestination(JDBCMessage m){
         this.send(m, destination);
     }
+
     @Override
-    public void processMessage(Message message, ServiceID source, ServiceID destination) {
+    public void processMessage(Message message, HabitatID source, HabitatID destination) {
         if(message==repetitve){
             sendARP(JDBCMessage.TYPE_HELLO_GROUP);
             return;
@@ -114,7 +100,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
                 break;
             case JDBCMessage.TYPE_DELEGATE_QUERY:
                 try{
-                    System.out.println("Starting to execute Query-"+getAgentID()+" From aggregator="+source);
+                    System.out.println("Starting to execute Query-"+getMicroServiceID()+" From aggregator="+source);
                     JDBCServer.execute(msg.getRS(), this.dataDataStore,true);
                     QueryUpdater u = new QueryUpdater(msg.getRS(),source);
                     updaters.put(msg.getRS().getRSID(), u);
@@ -124,7 +110,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
                 }
                 break;
             case JDBCMessage.TYPE_EXECUTE_QUERY:
-                System.out.println("Execute Query:"+getAgentID());
+                System.out.println("Execute Query:"+getMicroServiceID());
                 try {
                     QueryContainer qc = new QueryContainer(source, msg.getRS());
                     this.queries.put(msg.getRSID(),qc);
@@ -162,7 +148,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
                 break;
             case JDBCMessage.TYPE_DELEGATE_QUERY_FINISH:
             {
-                System.out.println("Finished Query "+getAgentID());
+                System.out.println("Finished Query "+getMicroServiceID());
                 QueryContainer c = queries.get(msg.getRSID());
                 MessageEntry e = this.getJournalEntry(c.msg);
                 e.removePeer(source);
@@ -216,10 +202,10 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
     }
 
     private class QueryContainer {
-        private Map<ServiceID,Boolean> destToFinish = new HashMap<ServiceID,Boolean>();
-        private ServiceID source = null;
-        private Message msg = null;
-        public QueryContainer(ServiceID _source, ResultSet _rs){
+        private final Map<HabitatID,Boolean> destToFinish = new HashMap<HabitatID,Boolean>();
+        private final HabitatID source;
+        private final Message msg;
+        public QueryContainer(HabitatID _source, ResultSet _rs){
             this.source = _source;
             msg = new JDBCMessage(_rs,0,0);
             sendARP(msg);
@@ -229,11 +215,11 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
 
     private class QueryUpdater implements Runnable {
 
-        private ResultSet rs = null;
-        private ServiceID source = null;
+        private final ResultSet rs;
+        private final HabitatID source;
         private Object waitingObject = new Object();
 
-        public QueryUpdater(ResultSet _rs, ServiceID _source) {
+        public QueryUpdater(ResultSet _rs, HabitatID _source) {
             this.rs = _rs;
             this.source = _source;
         }
@@ -249,7 +235,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
                     send(recs,source);
                     synchronized(waitingObject){
                     	records.clear();
-                        JDBCMessage m = new JDBCMessage(getAgentID(),rs.getRSID());
+                        JDBCMessage m = new JDBCMessage(getMicroServiceID(),rs.getRSID());
                         send(m,source);
                         try{waitingObject.wait();}catch(Exception err){err.printStackTrace();}
                         count = 0;
@@ -286,7 +272,7 @@ public class Connection extends AutonomousAgent implements java.sql.Connection {
 
     @Override
     public void close() throws SQLException {
-        this.getAgentManager().shutdown();
+        this.getMicroServiceManager().shutdown();
     }
 
     @Override

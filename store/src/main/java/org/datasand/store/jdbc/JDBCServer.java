@@ -7,20 +7,16 @@
  */
 package org.datasand.store.jdbc;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentHashMap;
-import org.datasand.microservice.AutonomousAgentManager;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VColumn;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
+import org.datasand.microservice.MicroServicesManager;
 import org.datasand.store.DataStore;
+
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -35,7 +31,7 @@ public class JDBCServer {
 
     public JDBCServer(DataStore a) {
         this.database = a;
-        this.agent = new Connection(new AutonomousAgentManager(),this.database);
+        this.agent = new Connection(new MicroServicesManager(),this.database);
     }
 
     public void close(){

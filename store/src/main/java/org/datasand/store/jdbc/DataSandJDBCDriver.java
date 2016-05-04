@@ -7,16 +7,13 @@
  */
 package org.datasand.store.jdbc;
 
-import java.sql.Driver;
-import java.sql.DriverManager;
-import java.sql.DriverPropertyInfo;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.util.Properties;
-import java.util.logging.Logger;
-import org.datasand.microservice.AutonomousAgentManager;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
+import org.datasand.microservice.MicroServicesManager;
+
+import java.sql.*;
+import java.util.Properties;
+import java.util.logging.Logger;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -46,7 +43,7 @@ public class DataSandJDBCDriver implements Driver {
     public java.sql.Connection connect(String url, Properties arg1) throws SQLException {
         VLogger.info("Data Sand JDBC Connection");
         try {
-            AutonomousAgentManager manager = new AutonomousAgentManager(true);
+            MicroServicesManager manager = new MicroServicesManager(true);
             return new Connection(manager, url);
         } catch (Exception err) {
             err.printStackTrace();

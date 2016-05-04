@@ -7,44 +7,20 @@
  */
 package org.datasand.store.jdbc;
 
+import org.datasand.codec.*;
+import org.datasand.network.HabitatID;
+import org.datasand.store.HObject;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.Clob;
+import java.sql.*;
 import java.sql.Date;
-import java.sql.NClob;
-import java.sql.Ref;
-import java.sql.ResultSetMetaData;
-import java.sql.RowId;
-import java.sql.SQLException;
-import java.sql.SQLWarning;
-import java.sql.SQLXML;
 import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import org.datasand.codec.BytesArray;
-import org.datasand.codec.Encoder;
-import org.datasand.codec.Observers;
-import org.datasand.codec.VColumn;
-import org.datasand.codec.VSchema;
-import org.datasand.codec.VTable;
-import org.datasand.network.ServiceID;
-import org.datasand.store.HObject;
 //import org.datasand.store.ObjectDataStore.ObjectWithInfo;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -78,7 +54,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
     private int collectedDataType = 0;
 
     public static class RSID{
-        private int address = ServiceID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
+        private int address = HabitatID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
         private long time = System.currentTimeMillis();
         private int localID = -1;
         public RSID(){

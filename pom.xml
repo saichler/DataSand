@@ -12,7 +12,7 @@
     <module>codec</module>
     <module>security</module>
     <module>network</module>
-    <module>agents</module>
+    <module>micro-service</module>
     <module>store</module>
     <module>filesystem</module>
     <module>disk</module>

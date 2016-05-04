@@ -7,13 +7,14 @@
  */
 package org.datasand.store.jdbc;
 
-import java.util.List;
-import java.util.Map;
-import org.datasand.microservice.Message;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.network.ServiceID;
+import org.datasand.microservice.Message;
+import org.datasand.network.HabitatID;
 import org.datasand.store.jdbc.ResultSet.RSID;
+
+import java.util.List;
+import java.util.Map;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -90,19 +91,19 @@ public class JDBCMessage extends Message {
         super(TYPE_METADATA,new JDBCDataContainer(null,null));
     }
 
-    public JDBCMessage(ServiceID netID, RSID rsID){
+    public JDBCMessage(HabitatID netID, RSID rsID){
         super(TYPE_DELEGATE_WAITING,new JDBCDataContainer(netID,rsID));
     }
 
-    public JDBCMessage(ServiceID netID, RSID rsID, int temp){
+    public JDBCMessage(HabitatID netID, RSID rsID, int temp){
         super(TYPE_NODE_WAITING_MARK,new JDBCDataContainer(netID,rsID));
     }
 
-    public JDBCMessage(ServiceID netID, RSID rsID, int temp, int temp1){
+    public JDBCMessage(HabitatID netID, RSID rsID, int temp, int temp1){
         super(TYPE_NODE_WAITING_MARK_REPLY,new JDBCDataContainer(netID,rsID));
     }
 
-    public JDBCMessage(ServiceID netID, RSID rsID, int temp, int temp1, int temp2){
+    public JDBCMessage(HabitatID netID, RSID rsID, int temp, int temp1, int temp2){
         super(TYPE_DELEGATE_CONTINUE,new JDBCDataContainer(netID,rsID));
     }
 
@@ -146,8 +147,8 @@ public class JDBCMessage extends Message {
     public MetaData getMetaData(){
         return (MetaData)((JDBCDataContainer)this.getMessageData()).getData();
     }
-    public ServiceID getWaiting(){
-        return (ServiceID)((JDBCDataContainer)this.getMessageData()).getData();
+    public HabitatID getWaiting(){
+        return (HabitatID) ((JDBCDataContainer)this.getMessageData()).getData();
     }
     @Override
     public void encode(Object value, BytesArray edc) {
