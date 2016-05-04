@@ -12,11 +12,12 @@ Say you just opened a company that gives some kind of standard service, for exam
  
 Same in DataSand, you instantiate a MicroServiceManager that instantiate a ServiceHabitat that includes model Seriaization, Networking and data store services for your MicroService so Initially you just extend the MicroService, implement  your business logic of your MicroService & add it to your MicroServiceManager.
 
-//Instantiate the micro service manager that will also instantiate the habitat for your micro service
+#### Instantiate the micro service manager that will also instantiate the habitat for your micro service
 MicroServiceManager msm = new MicroServiceManager();
-//Instantiate your micro service
-//First argument is your habitat ID so the MicroService can create its ID under this habitat
-//Second argument is “who is your manager”
+
+#### Instantiate your micro service
+#### First argument is your habitat ID so the MicroService can create its ID under this habitat
+#### Second argument is “who is your manager”
 MyMicroService mms = new MyMicroService(msm.getHabitat().getLocalHost(),msm);
 
 ## Adding More Services
@@ -38,3 +39,5 @@ Same in DataSand, you just instantiate another MicroServiceManager in a differen
 So you outgrown your building and need to open another office in a different building…
 
 Same in DataSand, you just need to instantiate a MicroServiceManager in another VM, if the VMs are in the same subnet, the Habitats will connect automatically with no effort on your side and the communication and service will be transparent to your MicroService as if they were on the same process…:o)
+
+# Work in progress....still writing documentation
