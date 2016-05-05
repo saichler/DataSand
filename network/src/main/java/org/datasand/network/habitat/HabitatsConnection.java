@@ -103,9 +103,9 @@ public class HabitatsConnection extends Thread {
         this.in = tmpIn;
         this.out = tmpOut;
         if(unicastOnly==1){
-            unicast = true;
+            this.unicast = true;
         }else{
-            unicast = false;
+            this.unicast = false;
         }
         this.start();
     }
@@ -164,6 +164,7 @@ public class HabitatsConnection extends Thread {
     }
 
     public void run() {
+        VLogger.info(this.servicesHabitat.getLocalHost()+" Started connection "+getConnectionKey());
         HabitatID id = null;
 
         new Switch();
@@ -221,6 +222,7 @@ public class HabitatsConnection extends Thread {
         }
 
         public void run() {
+            VLogger.info(getConnectionKey()+" Starting Switch ");
             while (running) {
                 byte packetData[] = null;
                 synchronized (incoming) {

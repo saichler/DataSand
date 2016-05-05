@@ -28,16 +28,8 @@ public class ConnectionID {
                 zSide = new HabitatID(addr1,port1,service1);
                 aSide = new HabitatID(addr2,port2,service2);
             } else {
-                if(service1<service2){
-                    aSide = new HabitatID(addr1,port1,service1);
-                    zSide = new HabitatID(addr2,port2,service2);
-                } else if (service1>service2){
-                    zSide = new HabitatID(addr1,port1,service1);
-                    aSide = new HabitatID(addr2,port2,service2);
-                } else {
-                    aSide = new HabitatID(addr1,port1,service1);
-                    zSide = new HabitatID(addr2,port2,service2);
-                }
+                aSide = new HabitatID(addr1,port1,service1);
+                zSide = new HabitatID(addr2,port2,service2);
             }
         }
     }
@@ -60,5 +52,9 @@ public class ConnectionID {
 
     public HabitatID getaSide() {
         return aSide;
+    }
+
+    public String toString(){
+        return this.aSide+"<-->"+this.zSide;
     }
 }

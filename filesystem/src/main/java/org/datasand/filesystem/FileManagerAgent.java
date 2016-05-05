@@ -3,14 +3,14 @@ package org.datasand.filesystem;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import org.datasand.microservice.AutonomousAgent;
-import org.datasand.microservice.AutonomousAgentManager;
-import org.datasand.microservice.Message;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.network.ServiceID;
+import org.datasand.microservice.Message;
+import org.datasand.microservice.MicroService;
+import org.datasand.microservice.MicroServicesManager;
+import org.datasand.network.HabitatID;
 
-public class FileManagerAgent extends AutonomousAgent{
+public class FileManagerAgent extends MicroService{
 	
 	public static final int FILE_MANAGER_MULTICAST_GROUP = 616;
 	public static final int TYPE_REPO_MANIFEST = 1;
@@ -24,23 +24,23 @@ public class FileManagerAgent extends AutonomousAgent{
 	private Map<String,FileRepositoryManifest> repositories = new HashMap<String, FileRepositoryManifest>();
 	private Message helloMSG = new Message(); 
 	
-	public FileManagerAgent(AutonomousAgentManager manager){
+	public FileManagerAgent(MicroServicesManager manager){
 		super(FILE_MANAGER_MULTICAST_GROUP,manager);
 		this.setARPGroup(FILE_MANAGER_MULTICAST_GROUP);		
 		this.registerRepetitiveMessage(10000, -1, 2, helloMSG);
 	}
 
 	@Override
-	public void processDestinationUnreachable(Message message,ServiceID unreachableSource) {
+	public void processDestinationUnreachable(Message message,HabitatID unreachableSource) {
 	}
 
 	@Override
-	public void processMessage(Message message, ServiceID source, ServiceID destination) {
+	public void processMessage(Message message, HabitatID source, HabitatID destination) {
 		if(message==helloMSG){
 			publishRepositorys();
 			return;
 		}
-		if(source.equals(this.getAgentID())) return;
+		if(source.equals(this.getMicroServiceID())) return;
 		switch(message.getMessageType()){
 			case TYPE_REPO_MANIFEST:
 				processPeerRepository(source, (FileRepositoryManifest)message.getMessageData());
@@ -48,7 +48,7 @@ public class FileManagerAgent extends AutonomousAgent{
 		}
 	}
 
-	public void processPeerRepository(ServiceID source, FileRepositoryManifest frm){
+	public void processPeerRepository(HabitatID source, FileRepositoryManifest frm){
 		String repoName = frm.getDirectory();
 		if(repoName.equals("./repo1"))
 			repoName = "./repo2";
@@ -74,7 +74,7 @@ public class FileManagerAgent extends AutonomousAgent{
 	
 	private File currentFile = null;
 	
-	public void sendFile(String fileName,ServiceID dest){
+	public void sendFile(String fileName,HabitatID dest){
 		File f = new File(fileName);
 		if(f.exists()){
 			FileData fileData = new FileData(f);

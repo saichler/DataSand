@@ -78,12 +78,18 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
             }else{
                 this.discovery = null;
             }
+            VLogger.info(this.getName()+" Sleeping for 2 seconds ");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    private void connectToSwitch(){
+    private void connectToSwitch(boolean unicast){
         try {
-            HabitatsConnection conn = new HabitatsConnection(this, InetAddress.getByName(Encoder.getLocalIPAddress()), SERVICE_NODE_SWITCH_PORT);
+            HabitatsConnection conn = new HabitatsConnection(this, InetAddress.getByName(Encoder.getLocalIPAddress()), SERVICE_NODE_SWITCH_PORT,unicast);
             addConnection(conn);
         }catch(UnknownHostException e){
             VLogger.error("Error opening connection to switch",e);
@@ -128,7 +134,6 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
 
     private void addConnection(HabitatsConnection c) throws UnknownHostException {
         synchronized (this.connections){
-
             if(c.isUnicast()){
                 boolean foundSpace = false;
                 for(int i=0;i<this.clientConnections.length;i++){
@@ -198,9 +203,10 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
 
         try {
             VLogger.info("Started Node on port " + this.localHost.getPort());
-            if(!this.unicast && this.localHost.getPort()>SERVICE_NODE_SWITCH_PORT){
-                connectToSwitch();
+            if(this.unicast || this.localHost.getPort()>SERVICE_NODE_SWITCH_PORT){
+                connectToSwitch(this.unicast);
             }
+
             while (running) {
                 Socket s = socket.accept();
                 addConnection(new HabitatsConnection(this, s));
@@ -243,18 +249,18 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
     public void send(Packet m) {
         BytesArray ba = new BytesArray(new byte[Packet.PACKET_DATA_LOCATION + m.getData().length]);
 
-        if(this.connections.length==0){
+
+        if(this.unicast){
+            try {
+                m.encode(m,ba);
+                this.clientConnections[0].sendPacket(ba);
+            } catch (IOException e) {
+                VLogger.error("failed to send unicast packet",e);
+            }
+        }else if(this.connections.length==0 && this.clientConnections.length==0){
             VLogger.error("No Connections Exist for "+this.getLocalHost(),null);
             return;
-        }else
-        if(this.connections.length==1){
-            m.encode(m,ba);
-            try {
-                this.connections[0].sendPacket(ba);
-            } catch (IOException e) {
-                VLogger.error("Failed to send packet",e);
-            }
-        }else{
+        } else {
             //This is the switch and it is a Multicast/Broadcast packet
             if(m.getDestination().getIPv4Address()==0){
                 HabitatsConnection sourceCon = getNodeConnection(m.getSource().getIPv4Address(), m.getSource().getPort(),false);

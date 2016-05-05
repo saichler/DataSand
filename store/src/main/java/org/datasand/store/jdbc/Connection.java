@@ -7,6 +7,26 @@
  */
 package org.datasand.store.jdbc;
 
+import java.net.InetAddress;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.CallableStatement;
+import java.sql.Clob;
+import java.sql.DatabaseMetaData;
+import java.sql.NClob;
+import java.sql.PreparedStatement;
+import java.sql.SQLClientInfoException;
+import java.sql.SQLException;
+import java.sql.SQLWarning;
+import java.sql.SQLXML;
+import java.sql.Savepoint;
+import java.sql.Struct;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.Executor;
 import org.datasand.codec.BytesArray;
 import org.datasand.microservice.Message;
 import org.datasand.microservice.MessageEntry;
@@ -15,11 +35,6 @@ import org.datasand.microservice.MicroServicesManager;
 import org.datasand.network.HabitatID;
 import org.datasand.store.DataStore;
 import org.datasand.store.jdbc.ResultSet.RSID;
-
-import java.net.InetAddress;
-import java.sql.*;
-import java.util.*;
-import java.util.concurrent.Executor;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -112,7 +127,7 @@ public class Connection extends MicroService implements java.sql.Connection {
             case JDBCMessage.TYPE_EXECUTE_QUERY:
                 System.out.println("Execute Query:"+getMicroServiceID());
                 try {
-                    QueryContainer qc = new QueryContainer(source, msg.getRS());
+                    QueryContainer qc = new QueryContainer(this,source, msg.getRS());
                     this.queries.put(msg.getRSID(),qc);
                     JDBCServer.execute(msg.getRS(), this.dataDataStore,false);
                     send(new JDBCMessage(msg.getRS(),0),source);
@@ -129,10 +144,10 @@ public class Connection extends MicroService implements java.sql.Connection {
                 QueryContainer c = queries.get(msg.getRSID());
                 if(msg.getMessageData() instanceof JDBCDataContainer){
 	                JDBCMessage m = new JDBCMessage(msg.getRecords(),msg.getRSID());
-	                this.send(m, c.source);
+	                this.send(m, c.getSource());
                 }else{
 	                JDBCMessage m = new JDBCMessage((BytesArray)msg.getMessageData(),msg.getRSID());
-	                this.send(m, c.source);
+	                this.send(m, c.getSource());
                 }
             }
                 break;
@@ -150,11 +165,11 @@ public class Connection extends MicroService implements java.sql.Connection {
             {
                 System.out.println("Finished Query "+getMicroServiceID());
                 QueryContainer c = queries.get(msg.getRSID());
-                MessageEntry e = this.getJournalEntry(c.msg);
+                MessageEntry e = this.getJournalEntry(c.getMsg());
                 e.removePeer(source);
                 if(e.isFinished()){
                     JDBCMessage end = new JDBCMessage(msg.getRSID());
-                    send(end,c.source);
+                    send(end,c.getSource());
                 }
             }
                 break;
@@ -169,7 +184,7 @@ public class Connection extends MicroService implements java.sql.Connection {
                 }
             case JDBCMessage.TYPE_DELEGATE_WAITING:
                 QueryContainer qc = queries.get(msg.getRSID());
-                send(new JDBCMessage(msg.getWaiting(),msg.getRSID(),0),qc.source);
+                send(new JDBCMessage(msg.getWaiting(),msg.getRSID(),0),qc.getSource());
                 break;
             case JDBCMessage.TYPE_NODE_WAITING_MARK:
                 send(new JDBCMessage(msg.getWaiting(),msg.getRSID(),0,0),source);
@@ -199,18 +214,6 @@ public class Connection extends MicroService implements java.sql.Connection {
     @Override
     public String getName() {
         return "Data Sand JDBC Connection";
-    }
-
-    private class QueryContainer {
-        private final Map<HabitatID,Boolean> destToFinish = new HashMap<HabitatID,Boolean>();
-        private final HabitatID source;
-        private final Message msg;
-        public QueryContainer(HabitatID _source, ResultSet _rs){
-            this.source = _source;
-            msg = new JDBCMessage(_rs,0,0);
-            sendARP(msg);
-            addARPJournal(msg,true);
-        }
     }
 
     private class QueryUpdater implements Runnable {

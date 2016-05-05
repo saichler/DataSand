@@ -122,15 +122,9 @@ public class JDBCMessage extends Message {
     	}else
     	if(this.getMessageData() instanceof BytesArray){
     		BytesArray edc = (BytesArray)this.getMessageData();
-    		//reset the location to 0
     		edc.resetLocation();
-    		//decode only the RDID
-    		//2 - for the type Message
-    		//4 - for the Message Type
-    		//8 - for the Message ID
-    		//2 - for the DataSandObjectContainer Type
-    		// == 16
-    		edc.advance(16);
+            //Advance to the location of the RSID
+    		edc.advance(44);
     		int a = Encoder.decodeInt32(edc);
     		long b = Encoder.decodeInt64(edc);
     		int c = Encoder.decodeInt32(edc);

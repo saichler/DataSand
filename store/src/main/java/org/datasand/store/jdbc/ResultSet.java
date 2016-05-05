@@ -44,7 +44,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
     private Map<String, Map<VColumn, List<Criteria>>> criteria = new ConcurrentHashMap<String, Map<VColumn, List<Criteria>>>();
 
     private Map currentRecord = null;
-    private static Integer nextID = new Integer(0);
+    private static int nextID = 0;
     public int numberOfTasks = 0;
     private Exception err = null;
     private List<JDBCRecord> EMPTY_RESULT = new LinkedList<JDBCRecord>();

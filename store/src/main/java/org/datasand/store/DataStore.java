@@ -49,6 +49,12 @@ public class DataStore {
         jdbcServer = new JDBCServer(this);
     }
 
+    public void shutdownJDBC(){
+        if(this.jdbcServer!=null){
+            jdbcServer.close();
+        }
+    }
+
     private DataKey getDataKeyFromKey(Object key){
         DataKey dataKey = null;
         if(key!=null){

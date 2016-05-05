@@ -39,10 +39,8 @@ public class POJODBTest {
 
     @After
     public void closeDBAndDeleteIT(){
-        if(database!=null){
-            database.truncateAll();
-            database = null;
-        }
+        database.truncateAll();
+        database.close();
     }
 
     public static PojoObject buildPojo(int pojoIndex){
