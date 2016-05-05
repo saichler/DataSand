@@ -78,12 +78,6 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
             }else{
                 this.discovery = null;
             }
-            VLogger.info(this.getName()+" Sleeping for 2 seconds ");
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -249,7 +243,6 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
     public void send(Packet m) {
         BytesArray ba = new BytesArray(new byte[Packet.PACKET_DATA_LOCATION + m.getData().length]);
 
-
         if(this.unicast){
             try {
                 m.encode(m,ba);
@@ -402,7 +395,7 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
         }else{
             HabitatsConnection connection = null;
             if(map != null){
-                if(address==this.getLocalHost().getIPv4Address()) {
+                if(address==this.getLocalHost().getIPv4Address() && this.getLocalHost().getPort()==SERVICE_NODE_SWITCH_PORT) {
                     Integer index = map.get(port);
                     if(index==null){
                         VLogger.info(this.getLocalHost()+" No Connectionn for port "+port);

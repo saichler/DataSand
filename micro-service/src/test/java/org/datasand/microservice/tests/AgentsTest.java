@@ -7,49 +7,30 @@
  */
 package org.datasand.microservice.tests;
 
+import java.io.File;
+import org.datasand.microservice.Message;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
-import org.datasand.microservice.Message;
 import org.datasand.microservice.cmap.CMap;
 import org.datasand.network.HabitatID;
 import org.datasand.network.habitat.HabitatsConnection;
 import org.datasand.network.habitat.ServicesHabitat;
-import org.junit.*;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.PrintStream;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class AgentsTest {
 
-    private ByteArrayOutputStream bout = null;
-    private PrintStream orig = System.out;
-
     @Before
     public void before() {
-        try {
-            bout = new ByteArrayOutputStream();
-            System.setOut(new PrintStream(bout));
-        } catch (Exception err) {
-            err.printStackTrace();
-        }
     }
 
     @After
     public void after() {
-        setOrigOut();
-        System.out
-                .println("Sleeping for 5 seconds to allow proper nodes shutdown");
-        try {
-            Thread.sleep(5000);
-        } catch (Exception err) {
-        }
-    }
-
-    public void setOrigOut() {
-        System.setOut(orig);
     }
 
     @Test
@@ -70,16 +51,18 @@ public class AgentsTest {
             Thread.sleep(1000);
         } catch (Exception err) {
         }
+
+        int broascastCount = 0;
+        int unreachableCount = 0;
         for (int i = 0; i < nodes.length; i++) {
+            broascastCount+=nodes[i].getServicesHabitatMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getServicesHabitatMetrics().getUnreachableFrameCount();
             nodes[i].shutdown();
         }
+
         try {
-            bout.close();
-            String output = new String(bout.toByteArray());
-            setOrigOut();
-            int count = countSubstring("Dest=0.0.0.0:0:10", output);
-            Assert.assertEquals(new Integer(10), new Integer(count));
-            Assert.assertEquals(true, output.indexOf("Unreachable") != -1);
+            Assert.assertEquals(new Integer(11), new Integer(broascastCount));
+            Assert.assertEquals(true, unreachableCount>0);
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -107,16 +90,18 @@ public class AgentsTest {
         } catch (Exception err) {
         }
 
+        int broascastCount = 0;
+        int unreachableCount = 0;
+        int regularCount = 0;
         for (int i = 0; i < nodes.length; i++) {
+            broascastCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
+            regularCount += nodes[i].getHabitat().getServicesHabitatMetrics().getRegularFrameCount();
             nodes[i].shutdown();
         }
 
         try {
-            bout.close();
-            String output = new String(bout.toByteArray());
-            setOrigOut();
-            int count = countSubstring("Recieved Object, comparing..", output);
-            Assert.assertEquals(new Integer(10), new Integer(count));
+            Assert.assertEquals(new Integer(11),new Integer(broascastCount));
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -151,16 +136,20 @@ public class AgentsTest {
         } catch (Exception err) {
         }
 
+        int broascastCount = 0;
+        int unreachableCount = 0;
+        int regularCount = 0;
+        int multicastCount = 0;
         for (int i = 0; i < nodes.length; i++) {
+            broascastCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
+            regularCount += nodes[i].getHabitat().getServicesHabitatMetrics().getRegularFrameCount();
+            multicastCount += nodes[i].getHabitat().getServicesHabitatMetrics().getMulticastFrameCount();
             nodes[i].shutdown();
         }
 
         try {
-            bout.close();
-            String output = new String(bout.toByteArray());
-            setOrigOut();
-            int count = countSubstring("Recieved Object, comparing..", output);
-            Assert.assertEquals(new Integer(5), new Integer(count));
+            Assert.assertEquals(new Integer(11), new Integer(multicastCount));
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -187,16 +176,20 @@ public class AgentsTest {
         } catch (Exception err) {
         }
 
+        int broascastCount = 0;
+        int unreachableCount = 0;
+        int regularCount = 0;
+        int multicastCount = 0;
         for (int i = 0; i < nodes.length; i++) {
+            broascastCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
+            regularCount += nodes[i].getHabitat().getServicesHabitatMetrics().getRegularFrameCount();
+            multicastCount += nodes[i].getHabitat().getServicesHabitatMetrics().getMulticastFrameCount();
             nodes[i].shutdown();
         }
 
         try {
-            bout.close();
-            String output = new String(bout.toByteArray());
-            setOrigOut();
-            int count = countSubstring("Recieved Object, comparing..", output);
-            Assert.assertEquals(new Integer(1), new Integer(count));
+            Assert.assertEquals(new Integer(1), new Integer(regularCount));
         } catch (Exception err) {
             err.printStackTrace();
         }
@@ -233,7 +226,6 @@ public class AgentsTest {
 
     @Test
     public void testCMapTestObject() {
-        setOrigOut();
         MicroServicesManager m1 = new MicroServicesManager();
         MicroServicesManager m2 = new MicroServicesManager();
         CMap<String, TestObject> map1 = new CMap<String, TestObject>(125, m1,252,null);
@@ -283,7 +275,6 @@ public class AgentsTest {
 
     @Test
     public void testUnreachable(){
-        setOrigOut();
         MicroServicesManager m1 = new MicroServicesManager();
         CMap<String, TestObject> map1 = new CMap<String, TestObject>(125, m1,252,null);
 

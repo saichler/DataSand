@@ -53,7 +53,7 @@ public class NetworkTest {
             nodes[i].shutdown();
         }
         try {
-            Assert.assertEquals("10", ""+brCount);
+            Assert.assertEquals("11", ""+brCount);
             Assert.assertEquals(true, unreachCount>0);
         } catch (Exception err) {
             err.printStackTrace();
