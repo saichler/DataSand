@@ -16,6 +16,7 @@
     <module>store</module>
     <module>filesystem</module>
     <module>disk</module>
+    <module>yang</module>
   </modules>
   <dependencies>
       <dependency>

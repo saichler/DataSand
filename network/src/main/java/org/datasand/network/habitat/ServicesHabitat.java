@@ -7,14 +7,6 @@
  */
 package org.datasand.network.habitat;
 
-import org.datasand.codec.BytesArray;
-import org.datasand.codec.Encoder;
-import org.datasand.codec.VLogger;
-import org.datasand.network.ConnectionID;
-import org.datasand.network.HabitatID;
-import org.datasand.network.IFrameListener;
-import org.datasand.network.Packet;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -24,22 +16,29 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.VLogger;
+import org.datasand.codec.util.ThreadNode;
+import org.datasand.network.ConnectionID;
+import org.datasand.network.HabitatID;
+import org.datasand.network.IFrameListener;
+import org.datasand.network.Packet;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.AdjacentMachineListener{
+public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscovery.AdjacentMachineListener{
 
     private static final int SERVICE_NODE_SWITCH_PORT = 50000;
     private final ServerSocket socket;
     private final HabitatID localHost;
-    private boolean running = true;
 
     private HabitatsConnection[] connections = new HabitatsConnection[0];
     private HabitatsConnection[] clientConnections = new HabitatsConnection[0];
     private final Map<ConnectionID,Integer> connIndex = new HashMap<>();
     private final Map<Integer,Map<Integer,Integer>> routingTable = new HashMap<>();
 
-    private PacketProcessor packetProcessor = null;
+    private final PacketProcessor packetProcessor = new PacketProcessor(this);
     private IFrameListener frameListener = null;
     private boolean unicast = false;
     private final ServicesHabitatMetrics servicesHabitatMetrics = new ServicesHabitatMetrics();
@@ -50,6 +49,7 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
     }
 
     public ServicesHabitat(IFrameListener _frameListener, boolean unicastOnly) {
+        super((ThreadNode)_frameListener,"");
         this.frameListener = _frameListener;
         this.unicast = unicastOnly;
         synchronized(ServicesHabitat.class) {
@@ -60,10 +60,9 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
                     new HabitatID(0, 0, 0);
                     new Packet(id, id, (byte[]) null);
                     int localhost = HabitatID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
-                    this.packetProcessor = new PacketProcessor(this);
                     s = new ServerSocket(i);
                     id = new HabitatID(localhost, i, 0);
-                    this.setName("Service Node-" + id);
+                    this.setName("Service Habitat-" + id);
                 } catch (Exception err) {
                     //err.printStackTrace();
                 }
@@ -72,12 +71,15 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
             }
             this.socket = s;
             this.localHost = id;
-            this.start();
             if(!this.unicast && this.localHost.getPort()==SERVICE_NODE_SWITCH_PORT){
                 this.discovery = new AdjacentMachineDiscovery(this.localHost,this);
             }else{
                 this.discovery = null;
             }
+        }
+
+        if(_frameListener==null) {
+            this.start();
         }
     }
 
@@ -99,34 +101,15 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
     }
 
     public void shutdown() {
-        this.running = false;
-        this.packetProcessor.shutdown();
-
+        super.shutdown();
         try {
             this.socket.close();
         } catch (Exception err) {
         }
-
-        if(this.discovery!=null){
-            discovery.shutdown();
-        }
-
-        for(HabitatsConnection con:connections){
-            try {
-                con.shutdown();
-            } catch (Exception err) {
-            }
-        }
-
-        for (HabitatsConnection con: clientConnections) {
-            try {
-                con.shutdown();
-            } catch (Exception err) {
-            }
-        }
     }
 
     private void addConnection(HabitatsConnection c) throws UnknownHostException {
+        c.start();
         synchronized (this.connections){
             if(c.isUnicast()){
                 boolean foundSpace = false;
@@ -193,24 +176,19 @@ public class ServicesHabitat extends Thread implements AdjacentMachineDiscovery.
     }
 
 
-    public void run() {
-
-        try {
-            VLogger.info("Started Node on port " + this.localHost.getPort());
-            if(this.unicast || this.localHost.getPort()>SERVICE_NODE_SWITCH_PORT){
-                connectToSwitch(this.unicast);
-            }
-
-            while (running) {
-                Socket s = socket.accept();
-                addConnection(new HabitatsConnection(this, s));
-            }
-        } catch (IOException e) {
-            if(running) {
-                VLogger.error(this.getName() + " Socket was Closed", null);
-            }
+    public void initialize(){
+        if(this.unicast || this.localHost.getPort()>SERVICE_NODE_SWITCH_PORT){
+            connectToSwitch(this.unicast);
         }
-        VLogger.info(this.getName()+" was shutdown.");
+    }
+
+    public void distruct(){
+
+    }
+
+    public void execute() throws Exception{
+        Socket s = socket.accept();
+        addConnection(new HabitatsConnection(this, s));
     }
 
     public void send(byte data[], HabitatID source, HabitatID dest) {

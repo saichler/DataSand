@@ -7,24 +7,29 @@
  */
 package org.datasand.microservice;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
+import org.datasand.codec.util.ThreadNode;
 import org.datasand.codec.util.ThreadPool;
 import org.datasand.network.HabitatID;
 import org.datasand.network.IFrameListener;
 import org.datasand.network.Packet;
 import org.datasand.network.habitat.ServicesHabitat;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.*;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
-
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class MicroServicesManager extends Thread implements IFrameListener {
+public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     private final ServicesHabitat habitat;
     private final Map<HabitatID, MicroService> habitatIDtoMicroService = new HashMap<HabitatID, MicroService>();
@@ -32,54 +37,49 @@ public class MicroServicesManager extends Thread implements IFrameListener {
     private ThreadPool threadPool = new ThreadPool(20, "Handlers Threads", 2000);
     private final Object servicesSeynchronizeObject = new Object();
     private Map<Integer, Set<MicroService>> multicasts = new HashMap<Integer, Set<MicroService>>();
-    private boolean running = true;
 
     public MicroServicesManager() {
         this(false);
     }
 
     public MicroServicesManager(boolean unicastOnly) {
+        super(null,"");
         this.habitat = new ServicesHabitat(this,unicastOnly);
-        this.setName("Micro Service Manager - " + habitat.toString());
+        this.setName("Micro Service Manager - " + habitat.getName());
         this.start();
-        //Sleep for 100 to allow the threads to start up
-        try{Thread.sleep(100);}catch(Exception err){}
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     protected Object getSyncObject() {
         return this.servicesSeynchronizeObject;
     }
 
-    public void shutdown() {
-        habitat.shutdown();
-        this.running = false;
-    }
+    public void initialize(){}
+    public void distruct(){}
 
-    public void run() {
-        while (running) {
-            try {
-                boolean addedTask = false;
-                for (MicroService h : habitatIDtoMicroService.values()) {
-                    if (!h.working) {
-                        h.checkForRepetitive();
-                        if (h.incoming.size() > 0) {
-                            h.pop();
-                            threadPool.addTask(h);
-                            addedTask = true;
-                        }
-                    }
+    public void execute() throws Exception {
+        boolean addedTask = false;
+        for (MicroService h : habitatIDtoMicroService.values()) {
+            if (!h.working) {
+                h.checkForRepetitive();
+                if (h.incoming.size() > 0) {
+                    h.pop();
+                    threadPool.addTask(h);
+                    addedTask = true;
                 }
-                if (!addedTask) {
-                    synchronized (servicesSeynchronizeObject) {
-                        try {
-                            servicesSeynchronizeObject.wait(5000);
-                        } catch (Exception err) {
-                            err.printStackTrace();
-                        }
-                    }
+            }
+        }
+        if (!addedTask) {
+            synchronized (servicesSeynchronizeObject) {
+                try {
+                    servicesSeynchronizeObject.wait(5000);
+                } catch (Exception err) {
+                    err.printStackTrace();
                 }
-            } catch (ConcurrentModificationException err) {
-                err.printStackTrace();
             }
         }
     }

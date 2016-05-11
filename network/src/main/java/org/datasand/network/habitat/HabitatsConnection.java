@@ -7,23 +7,26 @@
  */
 package org.datasand.network.habitat;
 
-import org.datasand.codec.BytesArray;
-import org.datasand.codec.Encoder;
-import org.datasand.codec.VLogger;
-import org.datasand.network.ConnectionID;
-import org.datasand.network.HabitatID;
-import org.datasand.network.Packet;
-import org.datasand.network.PriorityLinkedList;
-
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.VLogger;
+import org.datasand.codec.util.ThreadNode;
+import org.datasand.network.ConnectionID;
+import org.datasand.network.HabitatID;
+import org.datasand.network.Packet;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class HabitatsConnection extends Thread {
+public class HabitatsConnection extends ThreadNode {
 
     public static final int DESTINATION_UNREACHABLE = 9999;
     public static final int DESTINATION_BROADCAST = 10;
@@ -35,17 +38,15 @@ public class HabitatsConnection extends Thread {
     private final DataInputStream in;
     private final DataOutputStream out;
     private final ServicesHabitat servicesHabitat;
-    private final PriorityLinkedList<byte[]> incoming = new PriorityLinkedList<byte[]>();
-    private boolean running = true;
     private final boolean unicast;
 
     private final int intAddress;
     private final int intPort;
+    private final HabitatConnectionSwitch hcSwitch;
 
     public HabitatsConnection(ServicesHabitat servicesHabitat, InetAddress addr, int port, boolean unicastOnly) {
+        super(servicesHabitat,servicesHabitat.getName()+" Connection");
         this.servicesHabitat = servicesHabitat;
-        this.setDaemon(true);
-        this.setName(servicesHabitat.getName()+" Connection");
         Socket tmpSocket = null;
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
@@ -72,7 +73,8 @@ public class HabitatsConnection extends Thread {
         this.in = tmpIn;
         this.out = tmpOut;
         this.unicast = unicastOnly;
-        this.start();
+        this.setName(this.servicesHabitat.getLocalHost()+" connection "+getConnectionKey());
+        hcSwitch = new HabitatConnectionSwitch(this);
     }
 
     public HabitatsConnection(ServicesHabitat servicesHabitat, InetAddress addr, int port) {
@@ -80,9 +82,9 @@ public class HabitatsConnection extends Thread {
     }
 
     public HabitatsConnection(ServicesHabitat servicesHabitat, Socket socket) {
+        super(servicesHabitat,servicesHabitat.getName()+" Connection");
         this.socket = socket;
         this.servicesHabitat = servicesHabitat;
-        this.setName(servicesHabitat.getName()+" Connection");
         this.setDaemon(true);
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
@@ -107,7 +109,8 @@ public class HabitatsConnection extends Thread {
         }else{
             this.unicast = false;
         }
-        this.start();
+        this.setName(this.servicesHabitat.getLocalHost()+" connection "+getConnectionKey());
+        this.hcSwitch = new HabitatConnectionSwitch(this);
     }
 
     public boolean isUnicast(){
@@ -126,6 +129,10 @@ public class HabitatsConnection extends Thread {
         return new ConnectionID(this.intAddress,this.intPort,0,this.servicesHabitat.getLocalHost().getIPv4Address(),this.servicesHabitat.getLocalHost().getPort(),0);
     }
 
+    protected ServicesHabitat getServicesHabitat(){
+        return this.servicesHabitat;
+    }
+
     public boolean isASide(){
         ConnectionID cID = getConnectionKey();
         if(cID.getaSide().equals(new HabitatID(this.intAddress,this.intPort,0))){
@@ -138,7 +145,7 @@ public class HabitatsConnection extends Thread {
     public BytesArray sendPacket(BytesArray ba) throws IOException {
         byte data[] = ba.getBytes();
         synchronized (out) {
-            if(running){
+            if(this.isRunning()){
                 try{
                     out.writeInt(data.length);
                     out.write(data);
@@ -156,35 +163,24 @@ public class HabitatsConnection extends Thread {
     }
 
     public void shutdown() {
-        this.running = false;
+        super.shutdown();
         try {
             this.socket.close();
         } catch (Exception err) {
         }
     }
 
-    public void run() {
-        VLogger.info(this.servicesHabitat.getLocalHost()+" Started connection "+getConnectionKey());
-        HabitatID id = null;
+    public void initialize(){
+    }
 
-        new Switch();
+    public void distruct(){
+    }
 
-        try {
-            while (socket != null && !socket.isClosed() && running) {
-                int size = in.readInt();
-                byte data[] = new byte[size];
-                in.readFully(data);
-                synchronized (incoming) {
-                    incoming.add(data, data[Packet.PACKET_MULTIPART_AND_PRIORITY_LOCATION] / 2);
-                    incoming.notifyAll();
-                }
-            }
-        } catch (Exception err) {
-            if(this.running) {
-                VLogger.error("Failed to read from socket", err);
-            }
-        }
-        VLogger.info(this.getName()+" was closed.");
+    public void execute() throws Exception {
+        int size = in.readInt();
+        byte data[] = new byte[size];
+        in.readFully(data);
+        hcSwitch.addPacket(data);
     }
 
     public static final BytesArray markAsUnreachable(BytesArray ba) {
@@ -211,97 +207,5 @@ public class HabitatsConnection extends Thread {
         Encoder.encodeInt32(destAddress, _unreachable, data.length);
         Encoder.encodeInt16(destPort, _unreachable, data.length+4);
         return new BytesArray(_unreachable);
-    }
-
-    private class Switch extends Thread {
-
-        public Switch() {
-            this.setName("Switch - " + HabitatsConnection.this.getName());
-            this.setDaemon(true);
-            this.start();
-        }
-
-        public void run() {
-            VLogger.info(getConnectionKey()+" Starting Switch ");
-            while (running) {
-                byte packetData[] = null;
-                synchronized (incoming) {
-                    if (incoming.size() == 0) {
-                        try {
-                            incoming.wait(5000);
-                        } catch (Exception err) {
-                        }
-                    }
-                    if (incoming.size() > 0) {
-                        packetData = incoming.next();
-                    }
-                }
-
-                if (packetData != null && packetData.length > 0) {
-                    BytesArray ba = new BytesArray(packetData);
-                    int destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
-                    int destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                    if (destAddr == 0) {
-                        if (servicesHabitat.getLocalHost().getPort() != 50000) {
-                            servicesHabitat.receivedPacket(ba);
-                        } else {
-                            servicesHabitat.broadcast(ba);
-                        }
-                    } else if (destAddr == servicesHabitat.getLocalHost().getIPv4Address() && destPort == servicesHabitat.getLocalHost().getPort()) {
-                        servicesHabitat.receivedPacket(ba);
-                    } else if (destAddr == servicesHabitat.getLocalHost().getIPv4Address() && servicesHabitat.getLocalHost().getPort() == 50000 && destPort != 50000) {
-                        HabitatsConnection other = servicesHabitat.getNodeConnection(destAddr, destPort,true);
-                        if (other != null && other.running) {
-                            try {
-                                other.sendPacket(ba);
-                            } catch (Exception err) {
-                                err.printStackTrace();
-                            }
-                        } else {
-                            ba = markAsUnreachable(ba);
-                            destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
-                            destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                            HabitatsConnection source = servicesHabitat.getNodeConnection(destAddr, destPort,true);
-                            if (source != null) {
-                                try {
-                                    source.sendPacket(ba);
-                                } catch (Exception err) {
-                                    err.printStackTrace();
-                                }
-                            } else
-                                System.err.println("Source unreachable:"
-                                        + new HabitatID(destAddr, destPort,
-                                                Encoder.decodeInt16(ba.getBytes(), 16)));
-                        }
-                    } else if (destAddr != servicesHabitat.getLocalHost().getIPv4Address() && servicesHabitat.getLocalHost().getPort() == 50000) {
-                        HabitatsConnection other = servicesHabitat.getNodeConnection(destAddr, 50000,true);
-                        if (other != null) {
-                            try {
-                                other.sendPacket(ba);
-                            } catch (Exception err) {
-                                err.printStackTrace();
-                            }
-                        } else {
-                            ba = markAsUnreachable(ba);
-                            destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
-                            destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                            HabitatsConnection source = servicesHabitat.getNodeConnection(destAddr, destPort,true);
-                            if (source != null) {
-                                try {
-                                    source.sendPacket(ba);
-                                } catch (Exception err) {
-                                    err.printStackTrace();
-                                }
-                            } else
-                                System.err.println("Source unreachable:"
-                                        + new HabitatID(destAddr, destPort,
-                                                Encoder.decodeInt16(ba.getBytes(), 16)));
-                        }
-                    }
-
-                }
-            }
-            System.out.println(this.getName()+" end.");
-        }
     }
 }

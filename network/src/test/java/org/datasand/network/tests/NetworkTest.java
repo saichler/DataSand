@@ -19,30 +19,30 @@ public class NetworkTest {
 
     @After
     public void after() {
-        System.out.println("Sleeping for 5 seconds to allow proper nodes shutdown");
-        try {
-            Thread.sleep(5000);
-        } catch (Exception err) {
-        }
     }
 
     @Test
     public void testBroadcastToNodes() throws InterruptedException {
         ServicesHabitat nodes[] = new ServicesHabitat[10];
-        nodes[0] = new ServicesHabitat(null);
-        Thread.sleep(2000);
-        for (int i = 1; i < 10; i++) {
-            nodes[i] = new ServicesHabitat(null);
+        boolean allStarted = false;
+        while(!allStarted){
+            allStarted=true;
+            for (int i = 0; i < 10; i++) {
+                if (nodes[i] == null) {
+                    nodes[i] = new ServicesHabitat(null);
+                }
+                if(!nodes[i].isRunning()){
+                    allStarted = false;
+                }
+            }
+            Thread.sleep(200);
         }
 
-        System.out.println("Sleeping for 10 seconds");
-        Thread.sleep(5000);
-        System.out.println("Ready");
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
         HabitatID unreach = new HabitatID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
         try {
-            Thread.sleep(5000);
+            Thread.sleep(1000);
         } catch (Exception err) {
         }
         int brCount = 0;

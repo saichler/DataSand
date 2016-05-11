@@ -14,23 +14,21 @@ import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
+import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.Packet;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class PacketProcessor extends Thread {
+public class PacketProcessor extends ThreadNode {
     private LinkedList<BytesArray> incomingFrames = new LinkedList<BytesArray>();
     private Map<Packet, MultiPartContainer> multiparts = new HashMap<Packet, MultiPartContainer>();
     private final Packet serializer = new Packet((Object) null, null);
-    private boolean running = true;
     private final ServicesHabitat servicesHabitat;
 
     public PacketProcessor(ServicesHabitat servicesHabitat) {
+        super(servicesHabitat,servicesHabitat.getName()+" packet processor");
         this.servicesHabitat = servicesHabitat;
-        this.setName(servicesHabitat.getName()+" packet processor");
-        this.setDaemon(true);
-        this.start();
     }
 
     public void addPacket(BytesArray ba) {
@@ -65,62 +63,59 @@ public class PacketProcessor extends Thread {
         }
     }
 
-    public void run() {
-        while (running) {
-            BytesArray frame = null;
-            synchronized (incomingFrames) {
-                if (incomingFrames.size() == 0) {
-                    try {
-                        incomingFrames.wait(5000);
-                    } catch (Exception err) {
-                    }
-                }
-                if (incomingFrames.size() > 0) {
-                    frame = incomingFrames.removeFirst();
+    public void initialize(){}
+    public void distruct(){}
+
+    public void execute() throws Exception{
+        BytesArray frame = null;
+        synchronized (incomingFrames) {
+            if (incomingFrames.size() == 0) {
+                try {
+                    incomingFrames.wait(5000);
+                } catch (Exception err) {
                 }
             }
+            if (incomingFrames.size() > 0) {
+                frame = incomingFrames.removeFirst();
+            }
+        }
 
-            if (frame != null) {
-                Packet f = (Packet) serializer.decode(frame);
-                if (servicesHabitat.getFrameListener() != null) {
-                    if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
-                        servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
-                        servicesHabitat.getFrameListener().processDestinationUnreachable(f);
-                    } else if (f.getDestination().getIPv4Address() == 0
-                            && f.getDestination().getSubSystemID() == HabitatsConnection.DESTINATION_BROADCAST) {
-                        servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
-                        servicesHabitat.getFrameListener().processBroadcast(f);
-                    } else if (f.getDestination().getIPv4Address() == 0
-                            && f.getDestination().getSubSystemID() > HabitatsConnection.DESTINATION_BROADCAST) {
-                        servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
-                        servicesHabitat.getFrameListener().processMulticast(f);
-                    } else {
-                        servicesHabitat.getServicesHabitatMetrics().addRegularFrameCount();
-                        servicesHabitat.getFrameListener().process(f);
-                    }
+        if (frame != null) {
+            Packet f = (Packet) serializer.decode(frame);
+            if (servicesHabitat.getFrameListener() != null) {
+                if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
+                    servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
+                    servicesHabitat.getFrameListener().processDestinationUnreachable(f);
+                } else if (f.getDestination().getIPv4Address() == 0
+                        && f.getDestination().getSubSystemID() == HabitatsConnection.DESTINATION_BROADCAST) {
+                    servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
+                    servicesHabitat.getFrameListener().processBroadcast(f);
+                } else if (f.getDestination().getIPv4Address() == 0
+                        && f.getDestination().getSubSystemID() > HabitatsConnection.DESTINATION_BROADCAST) {
+                    servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
+                    servicesHabitat.getFrameListener().processMulticast(f);
                 } else {
-                    if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
-                        servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
-                        VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Unreachable Frame"+f);
-                    } else if (f.getDestination().getIPv4Address() == 0
-                            && f.getDestination().getSubSystemID() == HabitatsConnection.DESTINATION_BROADCAST) {
-                        servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
-                        VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Broadcast Frame"+f);
-                    } else if (f.getDestination().getIPv4Address() == 0
-                            && f.getDestination().getSubSystemID() > HabitatsConnection.DESTINATION_BROADCAST) {
-                        servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
-                        VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Multicast Frame"+f);
-                    } else {
-                        servicesHabitat.getServicesHabitatMetrics().addRegularFrameCount();
-                        VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Regular Frame"+f);
-                    }
+                    servicesHabitat.getServicesHabitatMetrics().addRegularFrameCount();
+                    servicesHabitat.getFrameListener().process(f);
+                }
+            } else {
+                if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
+                    servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
+                    VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Unreachable Frame"+f);
+                } else if (f.getDestination().getIPv4Address() == 0
+                        && f.getDestination().getSubSystemID() == HabitatsConnection.DESTINATION_BROADCAST) {
+                    servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
+                    VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Broadcast Frame"+f);
+                } else if (f.getDestination().getIPv4Address() == 0
+                        && f.getDestination().getSubSystemID() > HabitatsConnection.DESTINATION_BROADCAST) {
+                    servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
+                    VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Multicast Frame"+f);
+                } else {
+                    servicesHabitat.getServicesHabitatMetrics().addRegularFrameCount();
+                    VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Regular Frame"+f);
                 }
             }
         }
-    }
-
-    public void shutdown(){
-        this.running = false;
     }
 
     private static class MultiPartContainer {

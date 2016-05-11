@@ -30,18 +30,24 @@ public class AgentsTest {
     }
 
     @After
-    public void after() {
+    public void after() throws InterruptedException{
     }
 
     @Test
-    public void testBroadcastToNodes() {
+    public void testBroadcastToNodes() throws InterruptedException {
         ServicesHabitat nodes[] = new ServicesHabitat[10];
-        for (int i = 0; i < 10; i++) {
-            nodes[i] = new ServicesHabitat(null);
-        }
-        try {
-            Thread.sleep(2000);
-        } catch (Exception err) {
+        boolean allStarted = false;
+        while(!allStarted){
+            allStarted=true;
+            for (int i = 0; i < 10; i++) {
+                if (nodes[i] == null) {
+                    nodes[i] = new ServicesHabitat(null);
+                }
+                if(!nodes[i].isRunning()){
+                    allStarted = false;
+                }
+            }
+            Thread.sleep(200);
         }
         System.out.println("Ready");
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
@@ -274,8 +280,9 @@ public class AgentsTest {
     }
 
     @Test
-    public void testUnreachable(){
+    public void testUnreachable() throws InterruptedException {
         MicroServicesManager m1 = new MicroServicesManager();
+        Thread.sleep(3000);
         CMap<String, TestObject> map1 = new CMap<String, TestObject>(125, m1,252,null);
 
         map1.put("TestKey1", createTestObject());
@@ -398,7 +405,6 @@ public class AgentsTest {
         m2.shutdown();
         m3.shutdown();
         m4.shutdown();
-        //m4.shutdown();
     }
 
     /*
