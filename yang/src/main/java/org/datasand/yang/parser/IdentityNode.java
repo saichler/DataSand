@@ -11,17 +11,8 @@ package org.datasand.yang.parser;
  * @author Sharon Aicler (saichler@gmail.com)
  * Created by saichler on 5/10/16.
  */
-public enum YangTagEnum {
-    module,
-    grouping,
-    container,
-    list,
-    leaf,
-    revision,
-    _import,
-    typedef,
-    enumeration,
-    _enum,
-    augment,
-    identity;
+public class IdentityNode extends YangNode {
+    public IdentityNode(String data, int startPoint, NameAndType nameAndType){
+        super(data,startPoint,nameAndType);
+    }
 }

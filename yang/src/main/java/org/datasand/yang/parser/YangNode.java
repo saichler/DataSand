@@ -54,6 +54,21 @@ public class YangNode {
                 nameAndType.setFilePath(this.nameAndType.getFilePath());
                 YangNode subNode = null;
                 switch (nameAndType.type) {
+                    case identity:
+                        subNode = new IdentityNode(data,index1+1,nameAndType);
+                        break;
+                    case augment:
+                        subNode = new AugmentNode(data,index1+1,nameAndType);
+                        break;
+                    case _enum:
+                        subNode = new EnumNode(data,index1+1,nameAndType);
+                        break;
+                    case enumeration:
+                        subNode = new EnumerationNode(data,index1+1,nameAndType);
+                        break;
+                    case typedef:
+                        subNode = new TypeDefNode(data,index1+1,nameAndType);
+                        break;
                     case _import:
                         subNode = new ImportNode(data,index1+1,nameAndType);
                         break;
