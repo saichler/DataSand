@@ -49,10 +49,10 @@ public class YangManager {
     }
 
     public static void addType(String yangType,String javaType){
-        yangType2JavaType.put(yangType,javaType);
+        yangType2JavaType.put(yangType.toLowerCase(),javaType);
     }
 
     public static String getJavaTypeFromYangType(String yangType){
-        return yangType2JavaType.get(yangType);
+        return yangType2JavaType.get(yangType.toLowerCase());
     }
 }
