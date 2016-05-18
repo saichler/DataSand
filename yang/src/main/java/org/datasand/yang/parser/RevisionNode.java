@@ -11,6 +11,8 @@ package org.datasand.yang.parser;
  * @author Sharon Aicler (saichler@gmail.com)
  * Created by saichler on 5/10/16.
  */
-public interface YangParsingRule {
-
+public class RevisionNode extends YangNode {
+    public RevisionNode(String data, int startPoint, String packageName, NameAndType nameAndType){
+        super(data,startPoint,packageName,nameAndType);
+    }
 }

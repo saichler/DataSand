@@ -62,14 +62,16 @@ public class YangParser {
     }
 
     public void build(){
-        YangNode node = new YangNode(this.fileContent,0);
-        node.buildElement();
-        System.out.println(node);
+        YangNode.NameAndType nameAndType = YangNode.getNameAndType(this.fileContent,0);
+        ModuleNode node = new ModuleNode(this.fileContent,0,nameAndType);
+        node.buildElement(node.getPackageName());
+        node.generateCode();
+        System.out.println(node.getJavaCode());
     }
 
     public static void main(String args[]){
         try{
-            YangParser yp = new YangParser(new File("/home/saichler/DataSand/yang/src/main/yang/yang-parent.yang"));
+            YangParser yp = new YangParser(new File("/Users/sharonaicler/DataSand/yang/src/main/yang/yang-parent.yang"));
             yp.build();
         }catch(IOException e){
             e.printStackTrace();

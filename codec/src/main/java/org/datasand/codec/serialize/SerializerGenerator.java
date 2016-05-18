@@ -24,7 +24,7 @@ import org.datasand.codec.VTable;
  */
 public class SerializerGenerator {
 
-    private static final void append(String text, int level, StringBuffer buff) {
+    public static final void append(String text, int level, StringBuilder buff) {
         for (int i = 0; i < level; i++) {
             buff.append(" ");
         }
@@ -33,7 +33,7 @@ public class SerializerGenerator {
     }
 
     public static String replaceAll(String src, String that, String withThis) {
-        StringBuffer buff = new StringBuffer();
+        StringBuilder buff = new StringBuilder();
         int index0 = 0;
         int index1 = src.indexOf(that);
         if (index1 == -1)
@@ -64,7 +64,7 @@ public class SerializerGenerator {
     }
 
     private static String generateSerializerText(VTable vTable){
-        StringBuffer buff = new StringBuffer();
+        StringBuilder buff = new StringBuilder();
 
         append("", 0, buff);
         append("/**\n  * Copyright (c) 2015 DataSand,Sharon Aicler and others.  All rights reserved.\n  * Generated Code! Do Not Edit unless you move the java file. \n**/",0,buff);
