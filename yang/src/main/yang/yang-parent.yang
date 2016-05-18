@@ -31,12 +31,21 @@ module yang-parent {
                 "example-string";
             type string;
         }
+        leaf example-long {
+            type int64;
+        }
     }
 
     container container-example {
         uses grouping-example;
         leaf example-int {
             type int32;
+        }
+    }
+
+    list list-example {
+        leaf name {
+            type string;
         }
     }
 }

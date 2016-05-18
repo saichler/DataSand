@@ -12,7 +12,19 @@ package org.datasand.yang.parser;
  * Created by saichler on 5/10/16.
  */
 public class LeafNode extends YangNode {
-    public LeafNode(String data, int startPoint, String packageName, NameAndType nameAndType){
-        super(data,startPoint,packageName,nameAndType);
+    public LeafNode(String data, int startPoint, NameAndType nameAndType){
+        super(data,startPoint,nameAndType);
+    }
+    public Class getType(){
+        String type = YangParser.extractValue("type",this.startPoint,";",this.data,false).toLowerCase();
+
+        if(type.equals("string")){
+            return String.class;
+        } else if (type.equals("int32")){
+            return int.class;
+        } else if (type.equals("int64")){
+            return long.class;
+        }
+        throw new IllegalArgumentException("Unknown type"+type);
     }
 }

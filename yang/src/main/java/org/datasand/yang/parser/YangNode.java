@@ -17,24 +17,20 @@ import org.datasand.codec.serialize.SerializerGenerator;
  */
 public class YangNode {
 
-    private final int startPoint;
-    private int valuePoint=-1;
-    private int endPoint=-1;
-    private final String data;
-    private final String name;
-    private final YangTagEnum type;
+    protected final int startPoint;
+    protected int valuePoint=-1;
+    protected int endPoint=-1;
+    protected final String data;
     private final List<YangNode> children = new ArrayList<>();
-    private final String packageName;
     private StringBuilder javaCode = new StringBuilder();
+    private final NameAndType nameAndType;
 
-
-    public YangNode(String data,int startPoint,String packageName,NameAndType nameAndType){
+    public YangNode(String data,int startPoint,NameAndType nameAndType){
         this.startPoint = startPoint;
         this.data = data;
-        this.packageName = packageName;
         this.endPoint = data.length();
-        this.name = nameAndType.name;
-        this.type = nameAndType.type;
+        this.valuePoint = data.indexOf("{",startPoint);
+        this.nameAndType = nameAndType;
     }
 
     public int buildElement(String packageName){
@@ -54,28 +50,32 @@ public class YangNode {
                 return endPoint;
             } else if (index2!=-1 && index2<index3){
                 NameAndType nameAndType = getNameAndType(data,index1+1);
+                nameAndType.setPackageName(this.nameAndType.getPackageName());
+                nameAndType.setFilePath(this.nameAndType.getFilePath());
                 YangNode subNode = null;
                 switch (nameAndType.type) {
+                    case _import:
+                        subNode = new ImportNode(data,index1+1,nameAndType);
+                        break;
                     case module:
                         subNode = new ModuleNode(data,index1+1,nameAndType);
                         break;
                     case grouping:
-                        subNode = new GroupingNode(data,index1+1,packageName,nameAndType);
+                        subNode = new GroupingNode(data,index1+1,nameAndType);
                         break;
                     case list:
-                        subNode = new ListNode(data,index1+1,packageName,nameAndType);
+                        subNode = new ListNode(data,index1+1,nameAndType);
                         break;
                     case leaf:
-                        subNode = new LeafNode(data,index1+1,packageName,nameAndType);
+                        subNode = new LeafNode(data,index1+1,nameAndType);
                         break;
                     case revision:
-                        subNode = new RevisionNode(data,index1+1,packageName,nameAndType);
+                        subNode = new RevisionNode(data,index1+1,nameAndType);
                         break;
                     case container:
-                        subNode = new ContainerNode(data,index1+1,packageName,nameAndType);
+                        subNode = new ContainerNode(data,index1+1,nameAndType);
                         break;
                 }
-
                 children.add(subNode);
                 index1 = subNode.buildElement(packageName);
                 index2 = data.indexOf("{",index1+1);
@@ -90,7 +90,7 @@ public class YangNode {
     }
 
     public String toString(){
-        StringBuilder sb = new StringBuilder("\nNAME:"+this.name +" Tag Type:"+this.type+"\nVALUE=\n"+this.data.substring(this.valuePoint,this.endPoint+1));
+        StringBuilder sb = new StringBuilder("\nNAME:"+this.nameAndType.name +" Tag Type:"+this.nameAndType.type+"\nVALUE=\n"+this.data.substring(this.valuePoint,this.endPoint+1));
         for(YangNode child:this.children){
             sb.append(child.toString());
         }
@@ -118,7 +118,11 @@ public class YangNode {
         YangTagEnum enums[] = YangTagEnum.values();
 
         for(int i=0;i<enums.length;i++){
-            int x = str.lastIndexOf(enums[i].name()+" ");
+            String enumName = enums[i].name();
+            if(enumName.startsWith("_")){
+                enumName = enumName.substring(1);
+            }
+            int x = str.lastIndexOf(enumName+" ");
             if(x>startPoint){
                 startPoint = x;
                 index = i;
@@ -131,11 +135,11 @@ public class YangNode {
     }
 
     public String getPackageName() {
-        return packageName;
+        return nameAndType.getPackageName();
     }
 
     public String getName() {
-        return name;
+        return nameAndType.getName();
     }
 
     protected void app(String text, int level){
@@ -149,9 +153,56 @@ public class YangNode {
     public static class NameAndType {
         private final String name;
         private final YangTagEnum type;
+        private String packageName = null;
+        private String filePath = null;
+        private final String fileName;
+
         public NameAndType(String name, YangTagEnum type){
             this.name = name;
             this.type = type;
+            this.fileName = YangParser.formatElementName(this.name)+".java";
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public YangTagEnum getType() {
+            return type;
+        }
+
+        public String getPackageName() {
+            return packageName;
+        }
+
+        public void setPackageName(String packageName) {
+            this.packageName = packageName;
+        }
+
+        public String getFilePath() {
+            return filePath;
+        }
+
+        public void setFilePath(String filePath) {
+            this.filePath = filePath;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+    }
+
+    public void generateCode(){
+        appendPackageName();
+        appendInterfaceName();
+        appendChildrenMethods();
+        app("\n}",0);
+    }
+
+    public void print(){
+        System.out.println(this.javaCode);
+        for(YangNode child:this.children){
+            child.print();
         }
     }
 
@@ -160,7 +211,52 @@ public class YangNode {
     }
 
     protected void appendInterfaceName(){
-        app("public interface "+this.getFormatedName()+" {",0);
-        app("}",0);
+        String uses = getUses();
+        if(uses==null) {
+            app("public interface " + this.getFormatedName() + " {", 0);
+        } else {
+            app("public interface " + this.getFormatedName() + " extends "+YangParser.formatElementName(uses)+" {", 0);
+        }
+    }
+
+    protected void appendChildrenMethods(){
+        app("",1);
+        for(YangNode child:this.children){
+            switch(child.nameAndType.getType()){
+                case list:
+                    app("public void set"+child.getFormatedName()+"(List<"+child.getFormatedName()+"> "+child.getFormatedName().toLowerCase()+");",1);
+                    app("public List<"+child.getFormatedName()+"> get"+child.getFormatedName()+"();",1);
+                    app("public void add"+child.getFormatedName()+"("+child.getFormatedName()+" "+child.getFormatedName().toLowerCase()+");",1);
+                    app("public "+child.getFormatedName()+" del"+child.getFormatedName()+"();",1);
+                    app("",0);
+                    child.generateCode();
+                case grouping:
+                    child.generateCode();
+                    break;
+                case container:
+                    app("public void set"+child.getFormatedName()+"("+child.getFormatedName()+" "+child.getFormatedName().toLowerCase()+");",1);
+                    app("public "+child.getFormatedName()+" get"+child.getFormatedName()+"();",1);
+                    app("",0);
+                    child.generateCode();
+                    break;
+                case leaf:
+                    String type = ((LeafNode)child).getType().getSimpleName();
+                    app("public void set"+child.getFormatedName()+"("+type+" "+child.getFormatedName().toLowerCase()+");",1);
+                    app("public "+type+" get"+child.getFormatedName()+"();",1);
+                    app("",0);
+                    break;
+            }
+        }
+    }
+
+    protected String getUses(){
+        int valueEndPoint = -1;
+        if(this.children.isEmpty()){
+            valueEndPoint = this.endPoint;
+        }else{
+            valueEndPoint = this.children.get(0).valuePoint;
+        }
+        String uses = YangParser.extractValue("uses",this.startPoint,valueEndPoint,";",this.data,false);
+        return uses;
     }
 }

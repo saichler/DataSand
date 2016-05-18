@@ -12,7 +12,7 @@ package org.datasand.yang.parser;
  * Created by saichler on 5/10/16.
  */
 public class RevisionNode extends YangNode {
-    public RevisionNode(String data, int startPoint, String packageName, NameAndType nameAndType){
-        super(data,startPoint,packageName,nameAndType);
+    public RevisionNode(String data, int startPoint, NameAndType nameAndType){
+        super(data,startPoint,nameAndType);
     }
 }

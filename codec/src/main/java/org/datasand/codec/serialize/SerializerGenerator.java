@@ -26,7 +26,7 @@ public class SerializerGenerator {
 
     public static final void append(String text, int level, StringBuilder buff) {
         for (int i = 0; i < level; i++) {
-            buff.append(" ");
+            buff.append("    ");
         }
         buff.append(text);
         buff.append("\n");

@@ -11,8 +11,8 @@ package org.datasand.yang.parser;
  * @author Sharon Aicler (saichler@gmail.com)
  * Created by saichler on 5/10/16.
  */
-public class ListNode extends YangNode {
-    public ListNode(String data, int startPoint, NameAndType nameAndType){
+public class ImportNode extends YangNode {
+    public ImportNode(String data, int startPoint, NameAndType nameAndType){
         super(data,startPoint,nameAndType);
     }
 }
