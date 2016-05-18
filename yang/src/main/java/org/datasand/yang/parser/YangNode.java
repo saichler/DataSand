@@ -255,7 +255,7 @@ public class YangNode {
                     child.generateCode();
                     break;
                 case leaf:
-                    String type = ((LeafNode)child).getType().getSimpleName();
+                    String type = ((LeafNode)child).getType();
                     app("public void set"+child.getFormatedName()+"("+type+" "+child.getFormatedName().toLowerCase()+");",1);
                     app("public "+type+" get"+child.getFormatedName()+"();",1);
                     app("",0);

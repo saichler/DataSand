@@ -15,15 +15,17 @@ public class LeafNode extends YangNode {
     public LeafNode(String data, int startPoint, NameAndType nameAndType){
         super(data,startPoint,nameAndType);
     }
-    public Class getType(){
+    public String getType(){
         String type = YangParser.extractValue("type",this.startPoint,";",this.data,false).toLowerCase();
 
         if(type.equals("string")){
-            return String.class;
+            return String.class.getSimpleName();
         } else if (type.equals("int32")){
-            return int.class;
+            return int.class.getSimpleName();
         } else if (type.equals("int64")){
-            return long.class;
+            return long.class.getSimpleName();
+        } else if (YangManager.getJavaTypeFromYangType(type)!=null){
+            return YangManager.getJavaTypeFromYangType(type);
         }
         throw new IllegalArgumentException("Unknown type"+type);
     }

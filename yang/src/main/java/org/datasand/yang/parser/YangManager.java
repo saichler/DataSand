@@ -9,14 +9,19 @@ package org.datasand.yang.parser;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Sharon Aicler (saichler@gmail.com)
  * Created by saichler on 5/10/16.
  */
 public class YangManager {
+
+    private static final Map<String,String> yangType2JavaType = new HashMap<>();
+
     public static void main(String args[]){
         List<File> yangFiles = new LinkedList<>();
         findYangFiles(new File("./"),yangFiles);
@@ -41,5 +46,13 @@ public class YangManager {
                 }
             }
         }
+    }
+
+    public static void addType(String yangType,String javaType){
+        yangType2JavaType.put(yangType,javaType);
+    }
+
+    public static String getJavaTypeFromYangType(String yangType){
+        return yangType2JavaType.get(yangType);
     }
 }
