@@ -17,6 +17,7 @@
     <module>filesystem</module>
     <module>disk</module>
     <module>yang</module>
+    <module>model</module>
   </modules>
   <dependencies>
       <dependency>
