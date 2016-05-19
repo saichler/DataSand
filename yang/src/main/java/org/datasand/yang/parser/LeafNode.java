@@ -12,11 +12,11 @@ package org.datasand.yang.parser;
  * Created by saichler on 5/10/16.
  */
 public class LeafNode extends YangNode {
-    public LeafNode(String data, int startPoint, NameAndType nameAndType){
-        super(data,startPoint,nameAndType);
+    public LeafNode(String data, int startPoint, YangNodeAttributes yangNodeAttributes){
+        super(data,startPoint, yangNodeAttributes);
     }
-    public String getType(){
-        String type = YangParser.extractValue("type ",this.startPoint,";",this.data,false).toLowerCase();
+    public static final String getType(YangNode node){
+        String type = YangParser.extractValue("type ",node.startPoint,";",node.data,false).toLowerCase();
         if(type.equals("binary")){
             return boolean.class.getSimpleName();
         }else

@@ -8,19 +8,19 @@ import java.util.StringTokenizer;
  */
 public class ModuleNode extends YangNode {
 
-    public ModuleNode(String data, int startPoint, YangNode.NameAndType nameAndType){
-        super(data,startPoint,nameAndType);
+    public ModuleNode(String data, int startPoint, YangNodeAttributes yangNodeAttributes){
+        super(data,startPoint, yangNodeAttributes);
     }
 
-    public static final void setPackageName(YangNode.NameAndType nameAndType,String data,int startPoint){
+    public static final void setPackageName(YangNodeAttributes yangNodeAttributes, String data, int startPoint){
         int valuePoint = data.indexOf("{",startPoint);
         String namespace = YangParser.extractValue("namespace",valuePoint+1,";",data,true);
         final String revision = YangParser.extractValue("revision ",valuePoint+1,"{",data,true);
 
         StringBuilder packageName = new StringBuilder("org.datasand.model");
         StringBuilder filePath = new StringBuilder("./model/src/main/java/org/datasand/model");
-        //packageName.append(YangParser.formatElementName(nameAndType.getName()).toLowerCase());
-        //filePath.append(YangParser.formatElementName(nameAndType.getName()).toLowerCase());
+        //packageName.append(YangParser.formatElementName(yangNodeAttributes.getName()).toLowerCase());
+        //filePath.append(YangParser.formatElementName(yangNodeAttributes.getName()).toLowerCase());
         int lastSlash = namespace.lastIndexOf("/");
         if(lastSlash!=-1){
             namespace = namespace.substring(lastSlash+1);
@@ -46,8 +46,8 @@ public class ModuleNode extends YangNode {
             packageName.append(token);
             filePath.append(token);
         }
-        nameAndType.setPackageName(packageName.toString());
-        nameAndType.setFilePath(filePath.toString());
+        yangNodeAttributes.setPackageName(packageName.toString());
+        yangNodeAttributes.setFilePath(filePath.toString());
     }
 
 }

@@ -12,7 +12,7 @@ package org.datasand.yang.parser;
  * Created by saichler on 5/10/16.
  */
 public class ImportNode extends YangNode {
-    public ImportNode(String data, int startPoint, NameAndType nameAndType){
-        super(data,startPoint,nameAndType);
+    public ImportNode(String data, int startPoint, YangNodeAttributes yangNodeAttributes){
+        super(data,startPoint, yangNodeAttributes);
     }
 }

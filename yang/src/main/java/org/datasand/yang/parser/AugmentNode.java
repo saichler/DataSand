@@ -7,12 +7,34 @@
  */
 package org.datasand.yang.parser;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @author Sharon Aicler (saichler@gmail.com)
  * Created by saichler on 5/10/16.
  */
 public class AugmentNode extends YangNode {
-    public AugmentNode(String data, int startPoint, NameAndType nameAndType){
-        super(data,startPoint,nameAndType);
+
+    private static final Map<String,Integer> augmentationCount = new HashMap<>();
+    private final String formattedName;
+
+    public AugmentNode(String data, int startPoint, YangNodeAttributes yangNodeAttributes){
+        super(data,startPoint, yangNodeAttributes);
+        Integer count = augmentationCount.get(this.getName());
+        if(count==null){
+            count = new Integer(0);
+        }
+        count++;
+        augmentationCount.put(this.getName(),count);
+        String name = this.getName().substring(2,this.getName().length()-1);
+        this.formattedName = YangParser.formatElementName(name)+"Augmentation"+count;
+        this.yangNodeAttributes.setFileName(this.formattedName+".java");
+
+    }
+
+    @Override
+    public String getFormatedName() {
+        return this.formattedName;
     }
 }

@@ -82,9 +82,9 @@ public class YangParser {
     }
 
     public void build(){
-        YangNode.NameAndType nameAndType = YangNode.getNameAndType(this.fileContent,0);
-        ModuleNode.setPackageName(nameAndType,this.fileContent,0);
-        ModuleNode node = new ModuleNode(this.fileContent,0,nameAndType);
+        YangNodeAttributes yangNodeAttributes = YangNodeAttributes.getNameAndType(this.fileContent,0);
+        ModuleNode.setPackageName(yangNodeAttributes,this.fileContent,0);
+        ModuleNode node = new ModuleNode(this.fileContent,0, yangNodeAttributes);
         node.buildElement(node.getPackageName());
         node.generateCode();
         node.print();

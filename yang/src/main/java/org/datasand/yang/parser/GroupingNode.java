@@ -12,7 +12,7 @@ package org.datasand.yang.parser;
  * Created by saichler on 5/10/16.
  */
 public class GroupingNode extends YangNode {
-    public GroupingNode(String data, int startPoint, NameAndType nameAndType){
-        super(data,startPoint,nameAndType);
+    public GroupingNode(String data, int startPoint, YangNodeAttributes yangNodeAttributes){
+        super(data,startPoint, yangNodeAttributes);
     }
 }

@@ -12,8 +12,8 @@ package org.datasand.yang.parser;
  * Created by saichler on 5/10/16.
  */
 public class TypeNode extends YangNode {
-    public TypeNode(String data, int startPoint, NameAndType nameAndType){
-        super(data,startPoint,nameAndType);
-        YangManager.addType(nameAndType.getName(),this.getFormatedName());
+    public TypeNode(String data, int startPoint, YangNodeAttributes yangNodeAttributes){
+        super(data,startPoint, yangNodeAttributes);
+        YangManager.addType(yangNodeAttributes.getName(),this.getFormatedName());
     }
 }

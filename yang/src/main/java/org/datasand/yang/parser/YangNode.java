@@ -24,16 +24,16 @@ public class YangNode {
     protected int valuePoint=-1;
     protected int endPoint=-1;
     protected final String data;
-    private final List<YangNode> children = new ArrayList<>();
+    protected final List<YangNode> children = new ArrayList<>();
     private StringBuilder javaCode = new StringBuilder();
-    private final NameAndType nameAndType;
+    protected final YangNodeAttributes yangNodeAttributes;
 
-    public YangNode(String data,int startPoint,NameAndType nameAndType){
+    public YangNode(String data,int startPoint,YangNodeAttributes yangNodeAttributes){
         this.startPoint = startPoint;
         this.data = data;
         this.endPoint = data.length();
         this.valuePoint = data.indexOf("{",startPoint);
-        this.nameAndType = nameAndType;
+        this.yangNodeAttributes = yangNodeAttributes;
     }
 
     public int buildElement(String packageName){
@@ -52,50 +52,50 @@ public class YangNode {
                 this.endPoint = index3;
                 return endPoint;
             } else if (index2!=-1 && index2<index3){
-                NameAndType nameAndType = getNameAndType(data,index1+1);
-                nameAndType.setPackageName(this.nameAndType.getPackageName());
-                nameAndType.setFilePath(this.nameAndType.getFilePath());
+                YangNodeAttributes yangNodeAttributes = YangNodeAttributes.getNameAndType(data,index1+1);
+                yangNodeAttributes.setPackageName(this.yangNodeAttributes.getPackageName());
+                yangNodeAttributes.setFilePath(this.yangNodeAttributes.getFilePath());
                 YangNode subNode = null;
-                switch (nameAndType.type) {
+                switch (yangNodeAttributes.getType()) {
                     case identity:
-                        subNode = new IdentityNode(data,index1+1,nameAndType);
+                        subNode = new IdentityNode(data,index1+1, yangNodeAttributes);
                         break;
                     case augment:
-                        subNode = new AugmentNode(data,index1+1,nameAndType);
+                        subNode = new AugmentNode(data,index1+1, yangNodeAttributes);
                         break;
                     case _enum:
-                        subNode = new EnumNode(data,index1+1,nameAndType);
+                        subNode = new EnumNode(data,index1+1, yangNodeAttributes);
                         break;
                     case enumeration:
-                        subNode = new EnumerationNode(data,index1+1,nameAndType);
+                        subNode = new EnumerationNode(data,index1+1, yangNodeAttributes);
                         break;
                     case typedef:
-                        subNode = new TypeDefNode(data,index1+1,nameAndType);
+                        subNode = new TypeDefNode(data,index1+1, yangNodeAttributes);
                         break;
                     case _import:
-                        subNode = new ImportNode(data,index1+1,nameAndType);
+                        subNode = new ImportNode(data,index1+1, yangNodeAttributes);
                         break;
                     case module:
-                        subNode = new ModuleNode(data,index1+1,nameAndType);
+                        subNode = new ModuleNode(data,index1+1, yangNodeAttributes);
                         break;
                     case grouping:
-                        subNode = new GroupingNode(data,index1+1,nameAndType);
+                        subNode = new GroupingNode(data,index1+1, yangNodeAttributes);
                         break;
                     case list:
-                        subNode = new ListNode(data,index1+1,nameAndType);
+                        subNode = new ListNode(data,index1+1, yangNodeAttributes);
                         break;
                     case leaf:
-                        subNode = new LeafNode(data,index1+1,nameAndType);
+                        subNode = new LeafNode(data,index1+1, yangNodeAttributes);
                         break;
                     case revision:
-                        subNode = new RevisionNode(data,index1+1,nameAndType);
+                        subNode = new RevisionNode(data,index1+1, yangNodeAttributes);
                         break;
                     case container:
-                        subNode = new ContainerNode(data,index1+1,nameAndType);
+                        subNode = new ContainerNode(data,index1+1, yangNodeAttributes);
                         break;
                     case type:
                     case bit:
-                        subNode = new TypeNode(data,index1+1,nameAndType);
+                        subNode = new TypeNode(data,index1+1, yangNodeAttributes);
                         break;
                 }
                 children.add(subNode);
@@ -112,73 +112,19 @@ public class YangNode {
     }
 
     public String toString(){
-        StringBuilder sb = new StringBuilder("\nNAME:"+this.nameAndType.name +" Tag Type:"+this.nameAndType.type+"\nVALUE=\n"+this.data.substring(this.valuePoint,this.endPoint+1));
+        StringBuilder sb = new StringBuilder("\nNAME:"+this.yangNodeAttributes.getName() +" Tag Type:"+this.yangNodeAttributes.getType()+"\nVALUE=\n"+this.data.substring(this.valuePoint,this.endPoint+1));
         for(YangNode child:this.children){
             sb.append(child.toString());
         }
         return sb.toString();
     }
 
-    public static final NameAndType getNameAndType(String data,int startPoint){
-        int index = data.indexOf("{",startPoint);
-        String prevData = data.substring(0,index);
-        int startIndex1 = prevData.lastIndexOf(";");
-        int startIndex2 = prevData.lastIndexOf("}");
-        int startIndex3 = prevData.lastIndexOf("{");
-        int startIndex = 0;
-        if(startIndex1!=-1){
-            startIndex = startIndex1;
-        }
-
-        if(startIndex2>startIndex) {
-            startIndex = startIndex2;
-        }
-
-        if(startIndex3>startIndex) {
-            startIndex = startIndex3;
-        }
-
-        String str = data.substring(startIndex,index);
-
-        index = -1;
-        YangTagEnum enums[] = YangTagEnum.values();
-
-        boolean found = false;
-        int x = -1;
-        int y = -1;
-        for(int i=0;i<enums.length;i++){
-            String enumName = enums[i].name();
-            if(enumName.startsWith("_")){
-                enumName = enumName.substring(1);
-            }
-            x = str.lastIndexOf(enumName);
-            if(x==-1){
-                continue;
-            }
-            y = str.indexOf(enumName);
-            if(y<x){
-                x = y;
-            }
-            if(x+startIndex>=startPoint){
-                found = true;
-                startPoint = x;
-                index = i;
-                break;
-            }
-        }
-
-        if(index==-1){
-            throw new IllegalArgumentException("Can't figure out node type from "+str);
-        }
-        return new NameAndType(str.substring(x+enums[index].name().length()).trim(),enums[index]);
-    }
-
     public String getPackageName() {
-        return nameAndType.getPackageName();
+        return yangNodeAttributes.getPackageName();
     }
 
     public String getName() {
-        return nameAndType.getName();
+        return yangNodeAttributes.getName();
     }
 
     protected void app(String text, int level){
@@ -189,67 +135,29 @@ public class YangNode {
         return javaCode;
     }
 
-    public static class NameAndType {
-        private final String name;
-        private final YangTagEnum type;
-        private String packageName = null;
-        private String filePath = null;
-        private final String fileName;
-
-        public NameAndType(String name, YangTagEnum type){
-            this.name = name;
-            this.type = type;
-            this.fileName = YangParser.formatElementName(this.name)+".java";
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public YangTagEnum getType() {
-            return type;
-        }
-
-        public String getPackageName() {
-            return packageName;
-        }
-
-        public void setPackageName(String packageName) {
-            this.packageName = packageName;
-        }
-
-        public String getFilePath() {
-            return filePath;
-        }
-
-        public void setFilePath(String filePath) {
-            this.filePath = filePath;
-        }
-
-        public String getFileName() {
-            return fileName;
-        }
-    }
 
     public void generateCode(){
         appendPackageName();
+        appendImports();
         appendInterfaceName();
         appendChildrenMethods();
         app("\n}",0);
     }
 
     public void print(){
-        switch(this.nameAndType.getType()){
+        switch(this.yangNodeAttributes.getType()){
+            case augment:
+            case typedef:
             case container:
             case list:
             case grouping:
                 System.out.println(this.javaCode);
-                File dir = new File(this.nameAndType.getFilePath());
+                File dir = new File(this.yangNodeAttributes.getFilePath());
                 if(!dir.exists()){
                     dir.mkdirs();
                 }
 
-                File f = new File(dir,this.nameAndType.getFileName());
+                File f = new File(dir,this.yangNodeAttributes.getFileName());
                 try{
                     FileOutputStream out = new FileOutputStream(f);
                     out.write(this.getJavaCode().toString().getBytes());
@@ -264,7 +172,12 @@ public class YangNode {
     }
 
     protected void appendPackageName(){
-        app("package "+this.getPackageName()+";",0);
+        app("package "+this.getPackageName()+";\n",0);
+    }
+
+    protected void appendImports() {
+        app("import java.util.List;",0);
+        app("",0);
     }
 
     protected void appendInterfaceName(){
@@ -279,7 +192,8 @@ public class YangNode {
     protected void appendChildrenMethods(){
         app("",1);
         for(YangNode child:this.children){
-            switch(child.nameAndType.getType()){
+            switch(child.yangNodeAttributes.getType()){
+                case typedef:
                 case augment:
                     child.generateCode();
                     break;
@@ -301,7 +215,7 @@ public class YangNode {
                     child.generateCode();
                     break;
                 case leaf:
-                    String type = ((LeafNode)child).getType();
+                    String type = LeafNode.getType(child);
                     app("public void set"+child.getFormatedName()+"("+type+" "+child.getFormatedName().toLowerCase()+");",1);
                     app("public "+type+" get"+child.getFormatedName()+"();",1);
                     app("",0);
