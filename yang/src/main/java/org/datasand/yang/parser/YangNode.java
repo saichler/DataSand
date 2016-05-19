@@ -7,6 +7,9 @@
  */
 package org.datasand.yang.parser;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.datasand.codec.serialize.SerializerGenerator;
@@ -90,6 +93,10 @@ public class YangNode {
                     case container:
                         subNode = new ContainerNode(data,index1+1,nameAndType);
                         break;
+                    case type:
+                    case bit:
+                        subNode = new TypeNode(data,index1+1,nameAndType);
+                        break;
                 }
                 children.add(subNode);
                 index1 = subNode.buildElement(packageName);
@@ -117,6 +124,7 @@ public class YangNode {
         String prevData = data.substring(0,index);
         int startIndex1 = prevData.lastIndexOf(";");
         int startIndex2 = prevData.lastIndexOf("}");
+        int startIndex3 = prevData.lastIndexOf("{");
         int startIndex = 0;
         if(startIndex1!=-1){
             startIndex = startIndex1;
@@ -126,27 +134,43 @@ public class YangNode {
             startIndex = startIndex2;
         }
 
+        if(startIndex3>startIndex) {
+            startIndex = startIndex3;
+        }
+
         String str = data.substring(startIndex,index);
 
-        startPoint = -1;
         index = -1;
         YangTagEnum enums[] = YangTagEnum.values();
 
+        boolean found = false;
+        int x = -1;
+        int y = -1;
         for(int i=0;i<enums.length;i++){
             String enumName = enums[i].name();
             if(enumName.startsWith("_")){
                 enumName = enumName.substring(1);
             }
-            int x = str.lastIndexOf(enumName+" ");
-            if(x>startPoint){
+            x = str.lastIndexOf(enumName);
+            if(x==-1){
+                continue;
+            }
+            y = str.indexOf(enumName);
+            if(y<x){
+                x = y;
+            }
+            if(x+startIndex>=startPoint){
+                found = true;
                 startPoint = x;
                 index = i;
+                break;
             }
         }
+
         if(index==-1){
             throw new IllegalArgumentException("Can't figure out node type from "+str);
         }
-        return new NameAndType(str.substring(startPoint+enums[index].name().length()).trim(),enums[index]);
+        return new NameAndType(str.substring(x+enums[index].name().length()).trim(),enums[index]);
     }
 
     public String getPackageName() {
@@ -215,7 +239,25 @@ public class YangNode {
     }
 
     public void print(){
-        System.out.println(this.javaCode);
+        switch(this.nameAndType.getType()){
+            case container:
+            case list:
+            case grouping:
+                System.out.println(this.javaCode);
+                File dir = new File(this.nameAndType.getFilePath());
+                if(!dir.exists()){
+                    dir.mkdirs();
+                }
+
+                File f = new File(dir,this.nameAndType.getFileName());
+                try{
+                    FileOutputStream out = new FileOutputStream(f);
+                    out.write(this.getJavaCode().toString().getBytes());
+                    out.close();
+                }catch(IOException e){
+                    e.printStackTrace();
+                }
+        }
         for(YangNode child:this.children){
             child.print();
         }
@@ -238,6 +280,9 @@ public class YangNode {
         app("",1);
         for(YangNode child:this.children){
             switch(child.nameAndType.getType()){
+                case augment:
+                    child.generateCode();
+                    break;
                 case list:
                     app("public void set"+child.getFormatedName()+"(List<"+child.getFormatedName()+"> "+child.getFormatedName().toLowerCase()+");",1);
                     app("public List<"+child.getFormatedName()+"> get"+child.getFormatedName()+"();",1);
@@ -245,6 +290,7 @@ public class YangNode {
                     app("public "+child.getFormatedName()+" del"+child.getFormatedName()+"();",1);
                     app("",0);
                     child.generateCode();
+                    break;
                 case grouping:
                     child.generateCode();
                     break;
