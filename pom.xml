@@ -18,6 +18,7 @@
     <module>disk</module>
     <module>yang</module>
     <module>model</module>
+    <module>port</module>
   </modules>
   <dependencies>
       <dependency>
