@@ -12,6 +12,11 @@ import java.util.Map;
 public class ObjectImpl implements InvocationHandler{
 
     private final Map<String,Object> data = new HashMap<String, Object>();
+    private final Class<? extends IObject> oType;
+
+    public ObjectImpl(Class<? extends IObject> oType){
+        this.oType = oType;
+    }
 
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if(method.getName().startsWith("set")){
