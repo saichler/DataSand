@@ -28,7 +28,7 @@ public class QueryContainer {
         this.connection = connection;
         this.source = _source;
         msg = new JDBCMessage(_rs,0,0);
-        connection.sendARP(msg);
+        connection.multicast(msg);
         connection.addARPJournal(msg,true);
     }
 

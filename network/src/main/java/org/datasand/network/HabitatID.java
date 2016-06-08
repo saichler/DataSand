@@ -15,21 +15,16 @@ import org.datasand.codec.serialize.ISerializer;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class HabitatID implements ISerializer {
-    private int[] address = null;
-    public static final HabitatID serializer = new HabitatID();
+    private final int[] address;
     static {
-        Encoder.registerSerializer(HabitatID.class,new HabitatID());
+        Encoder.registerSerializer(HabitatID.class,new HabitatID(-1,-1,-1));
     }
 
-    private HabitatID() {
-
-    }
-
-    public HabitatID(int _address, int _port, int _subSystemID) {
+    public HabitatID(int address, int port, int _serviceID) {
         this.address = new int[3];
-        this.address[0] = _address;
-        this.address[1] = _port;
-        this.address[2] = _subSystemID;
+        this.address[0] = address;
+        this.address[1] = port;
+        this.address[2] = _serviceID;
     }
 
     public static HabitatID valueOf(String str) {
@@ -60,7 +55,7 @@ public class HabitatID implements ISerializer {
         return this.address[this.address.length - 2];
     }
 
-    public int getSubSystemID() {
+    public int getServiceID() {
         return this.address[this.address.length - 1];
     }
 
@@ -164,7 +159,7 @@ public class HabitatID implements ISerializer {
         System.arraycopy(port,0,data,location+4,port.length);
 
         byte subSystem[] = new byte[2];
-        Encoder.encodeInt16(netID.getSubSystemID(),subSystem,0);
+        Encoder.encodeInt16(netID.getServiceID(),subSystem,0);
         System.arraycopy(subSystem,0,data,location+6,subSystem.length);
     }
 
@@ -173,7 +168,7 @@ public class HabitatID implements ISerializer {
         HabitatID id = (HabitatID)value;
         Encoder.encodeInt32(id.getIPv4Address(), ba);
         Encoder.encodeInt16(id.getPort(), ba);
-        Encoder.encodeInt16(id.getSubSystemID(), ba);
+        Encoder.encodeInt16(id.getServiceID(), ba);
     }
 
 

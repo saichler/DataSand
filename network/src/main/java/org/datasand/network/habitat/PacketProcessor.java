@@ -83,15 +83,15 @@ public class PacketProcessor extends ThreadNode {
         if (frame != null) {
             Packet f = (Packet) serializer.decode(frame);
             if (servicesHabitat.getFrameListener() != null) {
-                if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
+                if (f.getSource().getIPv4Address() == 0 && f.getSource().getServiceID() == 9999) {
                     servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
                     servicesHabitat.getFrameListener().processDestinationUnreachable(f);
                 } else if (f.getDestination().getIPv4Address() == 0
-                        && f.getDestination().getSubSystemID() == HabitatsConnection.DESTINATION_BROADCAST) {
+                        && f.getDestination().getServiceID() == HabitatsConnection.DESTINATION_BROADCAST) {
                     servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
                     servicesHabitat.getFrameListener().processBroadcast(f);
                 } else if (f.getDestination().getIPv4Address() == 0
-                        && f.getDestination().getSubSystemID() > HabitatsConnection.DESTINATION_BROADCAST) {
+                        && f.getDestination().getServiceID() > HabitatsConnection.DESTINATION_BROADCAST) {
                     servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
                     servicesHabitat.getFrameListener().processMulticast(f);
                 } else {
@@ -99,15 +99,15 @@ public class PacketProcessor extends ThreadNode {
                     servicesHabitat.getFrameListener().process(f);
                 }
             } else {
-                if (f.getSource().getIPv4Address() == 0 && f.getSource().getSubSystemID() == 9999) {
+                if (f.getSource().getIPv4Address() == 0 && f.getSource().getServiceID() == 9999) {
                     servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
                     VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Unreachable Frame"+f);
                 } else if (f.getDestination().getIPv4Address() == 0
-                        && f.getDestination().getSubSystemID() == HabitatsConnection.DESTINATION_BROADCAST) {
+                        && f.getDestination().getServiceID() == HabitatsConnection.DESTINATION_BROADCAST) {
                     servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
                     VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Broadcast Frame"+f);
                 } else if (f.getDestination().getIPv4Address() == 0
-                        && f.getDestination().getSubSystemID() > HabitatsConnection.DESTINATION_BROADCAST) {
+                        && f.getDestination().getServiceID() > HabitatsConnection.DESTINATION_BROADCAST) {
                     servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
                     VLogger.info(servicesHabitat.getLocalHost()+" No Frame Listener, Received Multicast Frame"+f);
                 } else {

@@ -37,6 +37,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     private ThreadPool threadPool = new ThreadPool(20, "Handlers Threads", 2000);
     private final Object servicesSeynchronizeObject = new Object();
     private Map<Integer, Set<MicroService>> multicasts = new HashMap<Integer, Set<MicroService>>();
+    private int nextMicroServiceID = 1000;
 
     public MicroServicesManager() {
         this(false);
@@ -54,6 +55,16 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
         }
     }
 
+    public int getNextMicroServiceID(){
+        synchronized (this){
+            try{
+                nextMicroServiceID++;
+            }finally {
+                return nextMicroServiceID;
+            }
+        }
+    }
+
     protected Object getSyncObject() {
         return this.servicesSeynchronizeObject;
     }
@@ -64,9 +75,9 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     public void execute() throws Exception {
         boolean addedTask = false;
         for (MicroService h : habitatIDtoMicroService.values()) {
-            if (!h.working) {
+            if (!h.isBusy()) {
                 h.checkForRepetitive();
-                if (h.incoming.size() > 0) {
+                if (h.getQueueSize() > 0) {
                     h.pop();
                     threadPool.addTask(h);
                     addedTask = true;

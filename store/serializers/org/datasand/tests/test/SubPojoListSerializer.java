@@ -11,15 +11,15 @@ import org.datasand.codec.serialize.ISerializer;
 import org.datasand.tests.test.SubPojoList;
 
 public class SubPojoListSerializer implements ISerializer{
-    @Override
-    public void encode(Object value, BytesArray ba) {
-        SubPojoList element = (SubPojoList) value;
-        Encoder.encodeString(element.getName(), ba);
-    }
-    @Override
-    public Object decode(BytesArray ba) {
-        SubPojoList builder = new SubPojoList();
-        builder.setName(Encoder.decodeString(ba));
-        return builder;
-    }
+                @Override
+                public void encode(Object value, BytesArray ba) {
+                                SubPojoList element = (SubPojoList) value;
+                                Encoder.encodeString(element.getName(), ba);
+                }
+                @Override
+                public Object decode(BytesArray ba) {
+                                SubPojoList builder = new SubPojoList();
+                                builder.setName(Encoder.decodeString(ba));
+                                return builder;
+                }
 }

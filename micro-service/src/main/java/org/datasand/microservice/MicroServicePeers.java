@@ -64,4 +64,11 @@ public class MicroServicePeers {
         }
         return microServicePeerEntry;
     }
+
+    public synchronized HabitatID getAPeer(){
+        if(this.peers.size()>0) {
+            return this.peers.values().iterator().next().getHabitatID();
+        }
+        return null;
+    }
 }

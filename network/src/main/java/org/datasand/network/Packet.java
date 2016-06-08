@@ -135,8 +135,9 @@ public class Packet implements ISerializer {
     public Object decode(BytesArray ba) {
         Packet m = new Packet();
         ba.resetLocation();
-        m.source = (HabitatID) HabitatID.serializer.decode(ba);
-        m.destination = (HabitatID) HabitatID.serializer.decode(ba);
+        ISerializer serializer = Encoder.getSerializerByClass(HabitatID.class);
+        m.source = (HabitatID) serializer.decode(ba);
+        m.destination = (HabitatID) serializer.decode(ba);
         m.packetID = Encoder.decodeInt16(ba);
         m.priority = ((int) ba.getBytes()[ba.getLocation()]) / 2;
         m.multiPart = ba.getBytes()[ba.getLocation()] % 2 == 1;
@@ -144,8 +145,8 @@ public class Packet implements ISerializer {
         if(ba.getBytes().length>Packet.PACKET_DATA_LOCATION) {
             if(m.source.getIPv4Address()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getIPv4Address()
                     && m.source.getPort()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getPort() &&
-                       m.source.getSubSystemID()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getSubSystemID()){
-                this.originalAddress = (HabitatID) HabitatID.serializer.decode(ba);
+                       m.source.getServiceID()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getServiceID()){
+                this.originalAddress = (HabitatID) serializer.decode(ba);
                 m.data = Encoder.decodeByteArray(ba);
             }else {
                 int location = ba.getLocation();
@@ -163,7 +164,7 @@ public class Packet implements ISerializer {
     public int hashCode() {
         return source.getIPv4Address() ^ destination.getIPv4Address()
                 ^ source.getPort() ^ destination.getPort()
-                ^ source.getSubSystemID() ^ destination.getSubSystemID();
+                ^ source.getServiceID() ^ destination.getServiceID();
     }
 
     @Override

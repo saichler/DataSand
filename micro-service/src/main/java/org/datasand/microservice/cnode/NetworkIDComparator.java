@@ -32,10 +32,10 @@ public class NetworkIDComparator implements Comparator<HabitatID>{
         else
         if(o1.getPort()>o2.getPort())
             return 1;
-        if(o1.getSubSystemID()<o2.getSubSystemID())
+        if(o1.getServiceID()<o2.getServiceID())
             return -1;
         else
-        if(o1.getSubSystemID()>o2.getSubSystemID())
+        if(o1.getServiceID()>o2.getServiceID())
             return 1;
         return 0;
     }

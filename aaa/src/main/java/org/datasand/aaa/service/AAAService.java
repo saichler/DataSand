@@ -17,7 +17,6 @@ public class AAAService extends MicroService{
     public AAAService(MicroServicesManager manager){
         super(AAA_SERVICE_TYPE,manager);
         MicroServiceTypeRegistration.getInstance().registerServiceType(AAA_SERVICE_TYPE,"AAA Service");
-        setARPGroup(AAA_SERVICE_TYPE);
     }
 
     @Override
@@ -42,6 +41,6 @@ public class AAAService extends MicroService{
 
     public void authenticate(String user,String password){
         AuthenticateMessage authMsg = new AuthenticateMessage(user,password);
-        this.sendARP(authMsg);
+        this.multicast(authMsg);
     }
 }

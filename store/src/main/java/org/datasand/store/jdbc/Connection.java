@@ -41,10 +41,10 @@ import org.datasand.store.jdbc.ResultSet.RSID;
 public class Connection extends MicroService implements java.sql.Connection {
     private MetaData metaData = null;
     private DataStore dataDataStore;
-    private HabitatID destination = null;
     private Map<RSID,QueryContainer> queries = new HashMap<RSID,QueryContainer>();
     private Map<RSID,QueryUpdater> updaters = new HashMap<RSID,QueryUpdater>();
     private Message repetitve = new Message(-1,null);
+    private HabitatID aPeer = null;
 
     static{
     	Message.passThroughIncomingMessage.put(JDBCMessage.TYPE_DELEGATE_QUERY_RECORD, JDBCMessage.TYPE_DELEGATE_QUERY_RECORD);
@@ -54,8 +54,7 @@ public class Connection extends MicroService implements java.sql.Connection {
     public Connection(MicroServicesManager manager, DataStore _dataStore) {
         super(107,manager);
         this.dataDataStore = _dataStore;
-        this.setARPGroup(107);
-        this.sendARP(JDBCMessage.TYPE_HELLO_GROUP);
+        this.multicast(JDBCMessage.TYPE_HELLO_GROUP);
         this.registerRepetitiveMessage(10000, 10000, 0,repetitve);
     }
 
@@ -63,10 +62,10 @@ public class Connection extends MicroService implements java.sql.Connection {
         super(107,manager);
         try{
             if(manager.getHabitat().getLocalHost().getPort()==50000){
-                destination = HabitatID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:107");
+                //destination = HabitatID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:"+this.getMicroServiceID().getServiceID());
                 manager.getHabitat().joinNetworkAsSingle(addr);
             }else{
-                destination = HabitatID.valueOf(this.getMicroServiceManager().getHabitat().getLocalHost().getIPv4AddressAsString()+":50000:107");
+                //destination = HabitatID.valueOf(this.getMicroServiceManager().getHabitat().getLocalHost().getIPv4AddressAsString()+":50000:"+this.getMicroServiceID().getServiceID());
             }
         }catch(Exception err){
             err.printStackTrace();
@@ -90,14 +89,16 @@ public class Connection extends MicroService implements java.sql.Connection {
             err.printStackTrace();
         }
     }
+
     public void sendToDestination(JDBCMessage m){
-        this.send(m, destination);
+        aPeer = getAPeer();
+        this.send(m, aPeer);
     }
 
     @Override
     public void processMessage(Message message, HabitatID source, HabitatID destination) {
         if(message==repetitve){
-            sendARP(JDBCMessage.TYPE_HELLO_GROUP);
+            multicast(JDBCMessage.TYPE_HELLO_GROUP);
             return;
         }
         if(message instanceof JDBCMessage){
@@ -375,7 +376,8 @@ public class Connection extends MicroService implements java.sql.Connection {
         if (this.metaData == null) {
             JDBCMessage cmd = new JDBCMessage(-1,-1);
             synchronized (this) {
-                send(cmd,destination);
+                aPeer = getAPeer();
+                send(cmd,aPeer);
                 try {
                     this.wait();
                 } catch (Exception err) {

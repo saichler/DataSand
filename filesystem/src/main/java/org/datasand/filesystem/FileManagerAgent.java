@@ -21,12 +21,11 @@ public class FileManagerAgent extends MicroService{
 		Encoder.registerSerializer(FileRepositoryManifest.class, new FileRepositoryManifestSerializer());
 	}
 
-	private Map<String,FileRepositoryManifest> repositories = new HashMap<String, FileRepositoryManifest>();
-	private Message helloMSG = new Message(); 
+	private final Map<String,FileRepositoryManifest> repositories = new HashMap<String, FileRepositoryManifest>();
+	private final Message helloMSG = new Message();
 	
 	public FileManagerAgent(MicroServicesManager manager){
 		super(FILE_MANAGER_MULTICAST_GROUP,manager);
-		this.setARPGroup(FILE_MANAGER_MULTICAST_GROUP);		
 		this.registerRepetitiveMessage(10000, -1, 2, helloMSG);
 	}
 
@@ -68,7 +67,7 @@ public class FileManagerAgent extends MicroService{
 	public void publishRepositorys(){
 		for(FileRepositoryManifest rmf:this.repositories.values()){
 			rmf.collectFiles();
-			sendARP(new Message(TYPE_REPO_MANIFEST,rmf));
+			multicast(new Message(TYPE_REPO_MANIFEST,rmf));
 		}
 	}
 	

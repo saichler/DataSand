@@ -7,30 +7,34 @@
  */
 package org.datasand.microservice;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.network.HabitatID;
 import org.datasand.network.Packet;
 import org.datasand.network.PriorityLinkedList;
 import org.datasand.network.habitat.HabitatsConnection;
-
-import java.util.*;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public abstract class MicroService implements Runnable {
 
-    private HabitatID microServiceID = null;
-    private HabitatID arpGroup = null;
-    private MicroServicesManager manager = null;
-    protected PriorityLinkedList<Packet> incoming = new PriorityLinkedList<Packet>();
-    protected boolean working = false;
+    private final HabitatID microServiceID;
+    private final HabitatID microServiceGroup;
+    private final MicroServicesManager microServiceManager;
+    private final  PriorityLinkedList<Packet> queue = new PriorityLinkedList<Packet>();
+    private boolean busy = false;
     private Packet currentFrame = null;
-    private List<RepetitiveFrameEntry> repetitiveTasks = new ArrayList<RepetitiveFrameEntry>();
+    private final List<RepetitiveFrameEntry> repetitiveTasks = new ArrayList<RepetitiveFrameEntry>();
     private long lastRepetitiveCheck = 0;
-    private Map<Long,MessageEntry> journal = new LinkedHashMap<Long, MessageEntry>();
-    private static final Message timeoutID = new Message();
-    private MicroServicePeers microServicePeers = new MicroServicePeers(this);
+    private final Map<Long,MessageEntry> journal = new LinkedHashMap<Long, MessageEntry>();
+    private static final Message timeoutIdentifier = new Message();
+    private final MicroServicePeers microServicePeers = new MicroServicePeers(this);
 
     public boolean _ForTestOnly_pseudoSendEnabled = false;
 
@@ -38,43 +42,42 @@ public abstract class MicroService implements Runnable {
         Encoder.registerSerializer(Message.class, new Message());
     }
 
-    public MicroService(int subSystemID, MicroServicesManager _manager) {
-        this.microServiceID = new HabitatID(_manager.getHabitat().getLocalHost().getIPv4Address(),_manager.getHabitat().getLocalHost().getPort(), subSystemID);
-        this.manager = _manager;
-        this.manager.registerMicroService(this);
-        registerRepetitiveMessage(10000, 10000, 0, timeoutID);
+    public MicroService(int microServiceGroup, MicroServicesManager manager) {
+        this.microServiceManager = manager;
+        this.microServiceID = new HabitatID(microServiceManager.getHabitat().getLocalHost().getIPv4Address(),
+                microServiceManager.getHabitat().getLocalHost().getPort(),
+                microServiceManager.getNextMicroServiceID());
+        this.microServiceGroup = new HabitatID(HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),microServiceGroup,microServiceGroup);
+        this.microServiceManager.registerMicroService(this);
+        this.microServiceManager.registerForMulticast(microServiceGroup,this);
+        registerRepetitiveMessage(10000, 10000, 0, timeoutIdentifier);
     }
 
-    public void setARPGroup(int group){
-        this.arpGroup = new HabitatID(HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),group,group);
-        this.getMicroServiceManager().registerForMulticast(group, this);
+    public void multicast(int msgType){
+        this.send(new Message(msgType,null), this.microServiceGroup);
     }
 
-    public HabitatID getARPGroup(){
-        return this.arpGroup;
-    }
-
-    public void sendARP(int msgType){
-        this.send(new Message(msgType,null), arpGroup);
-    }
-
-    public void sendARP(Message msg){
-        this.send(msg, arpGroup);
+    public void multicast(Message msg){
+        this.send(msg, this.microServiceGroup);
     }
 
     public HabitatID getMicroServiceID() {
         return this.microServiceID;
     }
 
+    public HabitatID getMicroServiceGroup(){
+        return this.microServiceGroup;
+    }
+
     public void addFrame(Packet p) {
-        incoming.add(p, p.getPriority());
+        queue.add(p, p.getPriority());
     }
 
     public void checkForRepetitive() {
         if (System.currentTimeMillis() - lastRepetitiveCheck > 10000) {
             for (RepetitiveFrameEntry e : repetitiveTasks) {
                 if (e.shouldExecute()) {
-                    incoming.add(e.frame, e.priority);
+                    queue.add(e.frame, e.priority);
                 }
             }
             lastRepetitiveCheck = System.currentTimeMillis();
@@ -82,16 +85,16 @@ public abstract class MicroService implements Runnable {
     }
 
     public void pop() {
-        working = true;
-        currentFrame = incoming.next();
+        busy = true;
+        currentFrame = queue.next();
     }
 
     public void run() {
         currentFrame.decode();
-        if(currentFrame.getMessage()==timeoutID){
+        if(currentFrame.getMessage()==timeoutIdentifier){
             this.checkForTimeoutMessages();
         }else
-        if(currentFrame.getSource().getSubSystemID()== HabitatsConnection.DESTINATION_UNREACHABLE){
+        if(currentFrame.getSource().getServiceID()== HabitatsConnection.DESTINATION_UNREACHABLE){
             processDestinationUnreachable((Message)currentFrame.getMessage(),currentFrame.getUnreachableOrigAddress());
         }else
         if (currentFrame.getMessage() instanceof ISideTask) {
@@ -100,9 +103,9 @@ public abstract class MicroService implements Runnable {
             processMessage((Message)currentFrame.getMessage(),currentFrame.getSource(),currentFrame.getDestination());
         }
         currentFrame = null;
-        synchronized (manager.getSyncObject()) {
-            working = false;
-            manager.getSyncObject().notifyAll();
+        synchronized (microServiceManager.getSyncObject()) {
+            busy = false;
+            microServiceManager.getSyncObject().notifyAll();
         }
     }
 
@@ -119,18 +122,18 @@ public abstract class MicroService implements Runnable {
         }
         BytesArray ba = new BytesArray(1024);
         Encoder.encodeObject(obj, ba);
-        manager.getHabitat().send(ba.getData(), this.microServiceID, destination);
+        microServiceManager.getHabitat().send(ba.getData(), this.microServiceID, destination);
     }
 
     public void send(byte data[], HabitatID destination) {
-        manager.getHabitat().send(data, this.microServiceID, destination);
+        microServiceManager.getHabitat().send(data, this.microServiceID, destination);
     }
 
     public void registerRepetitiveMessage(long interval,long intervalStart,int priority,Message message){
         Packet p = new Packet(message,this.getMicroServiceID());
         RepetitiveFrameEntry entry = new RepetitiveFrameEntry(p, interval,intervalStart, priority);
         if(entry.shouldExecute()){
-            incoming.add(entry.frame, entry.priority);
+            queue.add(entry.frame, entry.priority);
             this.getMicroServiceManager().messageWasEnqueued();
         }
         repetitiveTasks.add(entry);
@@ -167,7 +170,7 @@ public abstract class MicroService implements Runnable {
     }
 
     protected MicroServicesManager getMicroServiceManager() {
-        return this.manager;
+        return this.microServiceManager;
     }
 
     public void checkForTimeoutMessages(){
@@ -222,5 +225,17 @@ public abstract class MicroService implements Runnable {
 
     public Collection<MessageEntry> getJournalEntries(){
         return this.journal.values();
+    }
+
+    public boolean isBusy(){
+        return this.busy;
+    }
+
+    public int getQueueSize(){
+        return this.queue.size();
+    }
+
+    public HabitatID getAPeer(){
+        return this.microServicePeers.getAPeer();
     }
 }
