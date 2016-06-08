@@ -6,21 +6,19 @@
     <version>${project.version}</version>
     <relativePath>../</relativePath>
   </parent>
-  <groupId>org.datasand</groupId>
-  <artifactId>datasand-store</artifactId>
-  <version>${project.version}</version>
-  <name>DataSand Store</name>
-  <description>DataSand Store</description>
+  <artifactId>datasand-aaa</artifactId>
+  <name>Datasand AAA</name>
+  <description>Datasand AAA</description>
   <dependencies>
     <dependency>
-        <groupId>org.datasand</groupId>
-        <artifactId>datasand-codec</artifactId>
-        <version>${project.version}</version>
+      <groupId>org.datasand</groupId>
+      <artifactId>datasand-model</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
-        <groupId>org.datasand</groupId>
-        <artifactId>datasand-micro-service</artifactId>
-        <version>${project.version}</version>
+      <groupId>org.datasand</groupId>
+      <artifactId>datasand-micro-service</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 </project>

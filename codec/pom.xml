@@ -15,12 +15,12 @@
   <parent>
     <groupId>org.datasand</groupId>
     <artifactId>main</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>${project.version}</version>
     <relativePath>../</relativePath>
   </parent>
   <groupId>org.datasand</groupId>
   <artifactId>datasand-codec</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>${project.version}</version>
   <name>DataSand Codec</name>
   <description>DataSand Codec</description>
 </project>

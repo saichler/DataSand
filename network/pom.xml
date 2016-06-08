@@ -15,19 +15,19 @@
     <parent>
     <groupId>org.datasand</groupId>
     <artifactId>main</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>${project.version}</version>
     <relativePath>../</relativePath>
   </parent>
   <groupId>org.datasand</groupId>
   <artifactId>datasand-network</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>${project.version}</version>
   <name>DataSand Network</name>
   <description>DataSand Network</description>
   <dependencies>
     <dependency>
         <groupId>org.datasand</groupId>
         <artifactId>datasand-codec</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>${project.version}</version>
     </dependency>
     <dependency>
         <groupId>junit</groupId>

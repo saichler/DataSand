@@ -11,17 +11,17 @@ public class OFactory {
 
     private static Map<Class<?>,ClassLoader> classToLoader = new HashMap<>();
 
-    public static Object newObject(Class<? extends IObject> oType){
+    public static Object newObject(Class<? extends IObjectData> oType){
         ClassLoader loader = classToLoader.get(oType);
         return Proxy.newProxyInstance(loader,new Class[]{oType},new ObjectImpl(oType));
     }
 
-    public static Object newObjectID(Class<? extends IObject> oType){
+    public static Object newObjectID(Class<? extends IObjectID> oType){
         ClassLoader loader = classToLoader.get(oType);
         return Proxy.newProxyInstance(loader,new Class[]{oType},new ObjectIDImpl(oType));
     }
 
-    public static void addClassLoader(Class<? extends IObject> oType,ClassLoader cl){
+    public static void addClassLoader(Class<? extends IObject> oType, ClassLoader cl){
         classToLoader.put(oType,cl);
     }
 }
