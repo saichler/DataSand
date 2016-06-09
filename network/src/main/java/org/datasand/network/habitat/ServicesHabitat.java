@@ -43,6 +43,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
     private boolean unicast = false;
     private final ServicesHabitatMetrics servicesHabitatMetrics = new ServicesHabitatMetrics();
     private final AdjacentMachineDiscovery discovery;
+    private final RepetitiveTaskContainer repetitiveTaskContainer = new RepetitiveTaskContainer(this);
 
     public ServicesHabitat(IFrameListener _frameListener) {
         this(_frameListener,false);

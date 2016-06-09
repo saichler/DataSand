@@ -19,11 +19,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
+import org.datasand.codec.BytesArray;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.codec.util.ThreadPool;
 import org.datasand.network.HabitatID;
 import org.datasand.network.IFrameListener;
 import org.datasand.network.Packet;
+import org.datasand.network.habitat.HabitatsConnection;
 import org.datasand.network.habitat.ServicesHabitat;
 
 /**
@@ -38,6 +40,8 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     private final Object servicesSeynchronizeObject = new Object();
     private Map<Integer, Set<MicroService>> multicasts = new HashMap<Integer, Set<MicroService>>();
     private int nextMicroServiceID = 1000;
+    private final ServiceInventory serviceInventory = new ServiceInventory();
+    private long lastServiceInventoryBroadcast = 0;
 
     public MicroServicesManager() {
         this(false);
@@ -84,6 +88,12 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
                 }
             }
         }
+        if(System.currentTimeMillis()-lastServiceInventoryBroadcast>5000){
+            lastServiceInventoryBroadcast = System.currentTimeMillis();
+            BytesArray ba = new BytesArray(1024);
+            serviceInventory.encode(serviceInventory,ba);
+            this.getHabitat().send(ba.getData(),this.habitat.getLocalHost(),new HabitatID(HabitatsConnection.DESTINATION_BROADCAST,31,31));
+        }
         if (!addedTask) {
             synchronized (servicesSeynchronizeObject) {
                 try {
@@ -110,6 +120,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     public void registerMicroService(MicroService h) {
         habitatIDtoMicroService.put(h.getMicroServiceID(), h);
         handlerNameToHabitatID.put(h.getName(), h.getMicroServiceID());
+        serviceInventory.addService(h.getMicroServiceGroup().getServiceID(),h.getMicroServiceID());
     }
 
     public MicroService getHandlerByID(HabitatID id) {
