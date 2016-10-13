@@ -7,6 +7,9 @@
  */
 package org.datasand.network.habitat;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -16,34 +19,41 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.ConnectionID;
-import org.datasand.network.HabitatID;
 import org.datasand.network.IFrameListener;
+import org.datasand.network.NetUUID;
 import org.datasand.network.Packet;
+import org.datasand.network.RoutingTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscovery.AdjacentMachineListener{
 
-    private static final int SERVICE_NODE_SWITCH_PORT = 50000;
+    public static final int SERVICE_NODE_SWITCH_PORT = 50000;
+    private static final Logger LOG = LoggerFactory.getLogger(ServicesHabitat.class);
     private final ServerSocket socket;
-    private final HabitatID localHost;
+    private final NetUUID netUUID;
+    private final int servicePort;
 
     private HabitatsConnection[] connections = new HabitatsConnection[0];
     private HabitatsConnection[] clientConnections = new HabitatsConnection[0];
-    private final Map<ConnectionID,Integer> connIndex = new HashMap<>();
-    private final Map<Integer,Map<Integer,Integer>> routingTable = new HashMap<>();
 
+    private final Map<ConnectionID,Integer> connIndex = new HashMap<>();
     private final PacketProcessor packetProcessor = new PacketProcessor(this);
     private IFrameListener frameListener = null;
     private boolean unicast = false;
     private final ServicesHabitatMetrics servicesHabitatMetrics = new ServicesHabitatMetrics();
     private final AdjacentMachineDiscovery discovery;
     private final RepetitiveTaskContainer repetitiveTaskContainer = new RepetitiveTaskContainer(this);
+    private final RoutingTable routingTable = new RoutingTable();
 
     public ServicesHabitat(IFrameListener _frameListener) {
         this(_frameListener,false);
@@ -55,25 +65,23 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
         this.unicast = unicastOnly;
         synchronized(ServicesHabitat.class) {
             ServerSocket s = null;
-            HabitatID id = null;
+            int selectedPort = -1;
             for (int i = SERVICE_NODE_SWITCH_PORT; i < SERVICE_NODE_SWITCH_PORT + 10000; i++) {
                 try {
-                    new HabitatID(0, 0, 0);
-                    new Packet(id, id, (byte[]) null);
-                    int localhost = HabitatID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
                     s = new ServerSocket(i);
-                    id = new HabitatID(localhost, i, 0);
-                    this.setName("Service Habitat-" + id);
+                    selectedPort = i;
+                    this.setName("Service Habitat-" + selectedPort);
                 } catch (Exception err) {
-                    //err.printStackTrace();
+                    LOG.info("Failed to bind to port "+i+", will try next one.");
                 }
                 if (s != null)
                     break;
             }
             this.socket = s;
-            this.localHost = id;
-            if(!this.unicast && this.localHost.getPort()==SERVICE_NODE_SWITCH_PORT){
-                this.discovery = new AdjacentMachineDiscovery(this.localHost,this);
+            this.servicePort = selectedPort;
+            this.netUUID = loadHabitatID();
+            if(!this.unicast && this.servicePort ==SERVICE_NODE_SWITCH_PORT){
+                this.discovery = new AdjacentMachineDiscovery(this.netUUID,this);
             }else{
                 this.discovery = null;
             }
@@ -84,12 +92,45 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
         }
     }
 
+    private NetUUID loadHabitatID() {
+        File habitatIdFile = new File("./data/ids/hid-"+this.servicePort +".txt");
+        NetUUID result = null;
+        if(habitatIdFile.exists()){
+            try {
+                FileInputStream in = new FileInputStream(habitatIdFile);
+                byte data[] = new byte[(int)habitatIdFile.length()];
+                in.read(data);
+                in.close();
+                result = new NetUUID(UUID.fromString(new String(data)));
+            }catch(IOException e){
+                LOG.error("Failed to load habitat ID.",e);
+            }
+        }else {
+            if(!habitatIdFile.getParentFile().exists()){
+                habitatIdFile.getParentFile().mkdirs();
+            }
+            try {
+                FileOutputStream out = new FileOutputStream(habitatIdFile);
+                result = new NetUUID(UUID.randomUUID());
+                out.write(result.toString().getBytes());
+                out.close();
+            }catch(IOException e){
+                LOG.error("Failed to write Habitat ID",e);
+            }
+        }
+        return result;
+    }
+
+    public int getServicePort(){
+        return this.servicePort;
+    }
+
     private void connectToSwitch(boolean unicast){
         try {
             HabitatsConnection conn = new HabitatsConnection(this, InetAddress.getByName(Encoder.getLocalIPAddress()), SERVICE_NODE_SWITCH_PORT,unicast);
             addConnection(conn);
         }catch(UnknownHostException e){
-            VLogger.error("Error opening connection to switch",e);
+            LOG.error("Error opening connection to switch",e);
         }
     }
 
@@ -130,10 +171,10 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             }
 
             int connectionIndex = -1;
-            if(this.connIndex.containsKey(c.getConnectionKey())){
-                VLogger.info("Found an old connection");
+            if(this.connIndex.containsKey(c.getConnectionID())){
+                LOG.info("Found an old connection");
                 if(c.isASide()){
-                    connectionIndex = this.connIndex.get(c.getConnectionKey());
+                    connectionIndex = this.connIndex.get(c.getConnectionID());
                     this.connections[connectionIndex].shutdown();
                     this.connections[connectionIndex] = null;
                 }else {
@@ -141,6 +182,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                     return;
                 }
             }
+
             int nullPosition = -1;
             for(int i=0;i<connections.length;i++){
                 if(connections[i]!=null && !connections[i].isAlive()){
@@ -150,35 +192,27 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 }
             }
 
-            Map<Integer,Integer> ports = this.routingTable.get(c.getIntAddress());
-            if(ports==null){
-                ports = new HashMap<>();
-                this.routingTable.put(c.getIntAddress(),ports);
-            }
-
             if(connectionIndex!=-1){
                 connections[connectionIndex] = c;
-                ports.put(c.getIntPort(),connectionIndex);
             }else
             if(nullPosition!=-1){
-                connIndex.put(c.getConnectionKey(),nullPosition);
+                connIndex.put(c.getConnectionID(),nullPosition);
                 connections[nullPosition] = c;
-                ports.put(c.getIntPort(),nullPosition);
             }else{
                 HabitatsConnection temp[] = new HabitatsConnection[connections.length+1];
                 System.arraycopy(connections,0,temp,0,connections.length);
-                connIndex.put(c.getConnectionKey(),connections.length);
+                connIndex.put(c.getConnectionID(),connections.length);
                 temp[connections.length] = c;
-                ports.put(c.getIntPort(),connections.length);
                 connections = temp;
             }
-            VLogger.info(this.localHost+" added Connection for "+c.getIntPort());
+            this.routingTable.add(c.getConnectionID().getAdjacentNetUUID(this.netUUID),c.getConnectionID());
+            LOG.info(this.netUUID+" added Connection for "+c.getConnectionID());
         }
     }
 
 
     public void initialize(){
-        if(this.unicast || this.localHost.getPort()>SERVICE_NODE_SWITCH_PORT){
+        if(this.unicast || this.getServicePort()>SERVICE_NODE_SWITCH_PORT){
             connectToSwitch(this.unicast);
         }
     }
@@ -192,7 +226,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
         addConnection(new HabitatsConnection(this, s));
     }
 
-    public void send(byte data[], HabitatID source, HabitatID dest) {
+    public void send(byte data[], NetUUID source, NetUUID dest) {
         if (data.length < Packet.MAX_DATA_IN_ONE_PACKET) {
             Packet p = new Packet(source, dest, data);
             send(p);
@@ -227,15 +261,15 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 m.encode(m,ba);
                 this.clientConnections[0].sendPacket(ba);
             } catch (IOException e) {
-                VLogger.error("failed to send unicast packet",e);
+                LOG.error("failed to send unicast packet",e);
             }
         }else if(this.connections.length==0 && this.clientConnections.length==0){
-            VLogger.error("No Connections Exist for "+this.getLocalHost(),null);
+            LOG.error("No Connections Exist for "+this.netUUID);
             return;
         } else {
             //This is the switch and it is a Multicast/Broadcast packet
-            if(m.getDestination().getIPv4Address()==0){
-                HabitatsConnection sourceCon = getNodeConnection(m.getSource().getIPv4Address(), m.getSource().getPort(),false);
+            if(m.getDestination().getA()==0){
+                HabitatsConnection sourceCon = getNodeConnection(m.getSource(),false);
                 for(HabitatsConnection con:this.connections){
                     if(con==null){
                         continue;
@@ -244,7 +278,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                     try {
                         BytesArray unreachable = con.sendPacket(ba);
                         if(unreachable!=null){
-                            unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable, con.getIntAddress(), con.getIntPort());
+                            unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable,con.getConnectionID().getAdjacentNetUUID(this.netUUID));
                             if(sourceCon!=null){
                                 sourceCon.sendPacket(unreachable);
                             }else{
@@ -258,7 +292,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 m.encode(m, ba);
                 this.receivedPacket(ba);
             }else{
-                HabitatsConnection c = this.getNodeConnection(m.getDestination().getIPv4Address(), m.getDestination().getPort(),true);
+                HabitatsConnection c = this.getNodeConnection(m.getDestination(),true);
                 if (c != null) {
                     try {
                         m.encode(m, ba);
@@ -273,22 +307,22 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 } else {
                     m.encode(m,ba);
                     BytesArray unreachable = HabitatsConnection.markAsUnreachable(ba);
-                    this.receivedPacket(ba);
+                    this.receivedPacket(unreachable);
                 }
             }
         }
     }
 
-    public HabitatID getLocalHost() {
-        return this.localHost;
+    public NetUUID getNetUUID() {
+        return this.netUUID;
     }
 
-    public void unregisterNetworkNodeConnection(HabitatID source){
+    public void unregisterNetworkNodeConnection(NetUUID source){
         synchronized (this.connections) {
-            System.out.println("Unregister "+source);
+            LOG.info("Unregister "+source);
             for(int i=0;i<this.connections.length;i++){
-                if(this.connections[i].getIntAddress()==source.getIPv4Address() && this.connections[i].getIntPort()==source.getPort()){
-                    this.connIndex.remove(this.connections[i].getConnectionKey());
+                if(this.connections[i].getConnectionID().getAdjacentNetUUID(this.netUUID).equals(source)){
+                    this.connIndex.remove(this.connections[i].getConnectionID());
                     this.connections[i].shutdown();
                     this.connections[i] = null;
                     HabitatsConnection temp[] = new HabitatsConnection[this.connections.length-1];
@@ -302,31 +336,23 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
     }
 
     public void broadcast(BytesArray ba) {
-        int sourceAddress = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION);
-        int sourcePort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+4);
-        HabitatsConnection sourceCon = getNodeConnection(sourceAddress, sourcePort,false);
-        List<HabitatID> unreachableDest = new LinkedList<HabitatID>();
+        NetUUID source = new NetUUID(Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION),
+                Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+8));
+
+        HabitatsConnection sourceCon = getNodeConnection(source,false);
+        List<NetUUID> unreachableDest = new LinkedList<NetUUID>();
         for(HabitatsConnection connection:this.connections){
             BytesArray unreachable = null;
-            if (sourceAddress != this.getLocalHost().getIPv4Address()) {
-                if (connection.getIntAddress() == this.getLocalHost().getIPv4Address()) {
-                    try {
-                        unreachable = connection.sendPacket(ba);
-                    } catch (Exception err) {
-                        err.printStackTrace();
-                    }
-                }
-            } else {
-                try {
-                    unreachable = connection.sendPacket(ba);
-                } catch (Exception err) {
-                    err.printStackTrace();
-                }
+            try {
+                unreachable = connection.sendPacket(ba);
+            } catch (Exception e) {
+                LOG.error("Failed to broadcast",e);
             }
+
             if(unreachable!=null){
-                HabitatID nid = new HabitatID(connection.getIntAddress(),connection.getIntPort(), 0);
+                NetUUID nid = connection.getConnectionID().getAdjacentNetUUID(this.netUUID);
                 unreachableDest.add(nid);
-                unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable, connection.getIntAddress(), connection.getIntPort());
+                unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable,nid);
                 if(sourceCon!=null){
                     try{
                         sourceCon.sendPacket(unreachable);
@@ -339,7 +365,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             }
         }
         if(!unreachableDest.isEmpty()){
-            for(HabitatID unreach:unreachableDest){
+            for(NetUUID unreach:unreachableDest){
                 unregisterNetworkNodeConnection(unreach);
             }
         }
@@ -350,76 +376,44 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
         packetProcessor.addPacket(ba);
     }
 
-    public HabitatsConnection getNodeConnection(int address, int port, boolean includeUnicastOnlyNodes) {
-        Map<Integer, Integer> map = routingTable.get(address);
-        if(!includeUnicastOnlyNodes){
-            if (map == null){
+    public HabitatsConnection getNodeConnection(NetUUID dest, boolean includeUnicastOnlyNodes) {
+        if(this.servicePort==SERVICE_NODE_SWITCH_PORT) {
+            ConnectionID connID = this.routingTable.get(dest);
+            if (connID == null) {
                 return null;
             }
-            if(address==this.getLocalHost().getIPv4Address()) {
-                Integer index = map.get(port);
-                if(index==null){
-                    VLogger.info(this.getLocalHost()+" No Connectionn for port "+port);
-                    return null;
+            Integer index = this.connIndex.get(connID);
+            if (index != null) {
+                return this.connections[index];
+            }
+
+            if (includeUnicastOnlyNodes) {
+                for (HabitatsConnection c : this.clientConnections) {
+                    if (c.getConnectionID().equals(connID)) {
+                        return c;
+                    }
                 }
-                return connections[index];
-            }else {
-                Integer index = map.get(SERVICE_NODE_SWITCH_PORT);
-                if(index==null){
-                    VLogger.info(this.getLocalHost()+" No Connectionn for port "+SERVICE_NODE_SWITCH_PORT);
-                    return null;
-                }
-                return connections[index];
             }
         }else{
-            HabitatsConnection connection = null;
-            if(map != null){
-                if(address==this.getLocalHost().getIPv4Address() && this.getLocalHost().getPort()==SERVICE_NODE_SWITCH_PORT) {
-                    Integer index = map.get(port);
-                    if(index==null){
-                        VLogger.info(this.getLocalHost()+" No Connectionn for port "+port);
-                        return null;
-                    }
-                    connection = connections[index];
-                }else {
-                    Integer index = map.get(SERVICE_NODE_SWITCH_PORT);
-                    if(index==null){
-                        VLogger.info(this.getLocalHost()+" No Connectionn for port "+SERVICE_NODE_SWITCH_PORT);
-                        return null;
-                    }
-                    connection = connections[index];
-                }
-            }
-
-            if(connection!=null){
-                return connection;
-            }
-
-            for(HabitatsConnection c:this.clientConnections){
-                if(c.getIntAddress()==address && c.getIntPort()==port){
-                    connection = c;
-                    break;
-                }
-            }
-
-            return connection;
+          return this.connections[0];
         }
+        return null;
     }
 
     public void joinNetworkAsSingle(String host) {
-        if (this.getLocalHost().getPort() != 50000) {
+        if (this.getServicePort() != 50000) {
             System.err.println("Only the node binded to port 50000 can join an external network.");
             return;
         }
         try {
             new HabitatsConnection(this, InetAddress.getByName(host), 50000,true);
-        } catch (Exception err) {
-            err.printStackTrace();
+        } catch (Exception e) {
+            LOG.error("Failed to join network",e);
         }
     }
 
     public void joinNetwork(String host) {
-        if (this.getLocalHost().getPort() != 50000) {
+        if (this.getServicePort() != 50000) {
             System.err.println("Only the node binded to port 50000 can join an external network.");
             return;
         }
@@ -431,10 +425,10 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
     }
 
     @Override
-    public void notifyAdjacentDiscovered(HabitatID adjacentID) {
-        HabitatsConnection existingConnection = getNodeConnection(adjacentID.getIPv4Address(),adjacentID.getPort(),true);
+    public void notifyAdjacentDiscovered(NetUUID adjacentID,String host) {
+        HabitatsConnection existingConnection = getNodeConnection(adjacentID,true);
         if(existingConnection==null || !existingConnection.isAlive()){
-            joinNetwork(adjacentID.getIPv4AddressAsString());
+            joinNetwork(host);
         }
     }
 }

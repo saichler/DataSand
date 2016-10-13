@@ -13,14 +13,15 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.cnode.CNode;
 import org.datasand.microservice.cnode.CMicroServicePeerEntry;
 import org.datasand.microservice.cnode.ICNodeCommandHandler;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class PutHandler<K,V> implements ICNodeCommandHandler<Map<K,V>,CMapEntry<K,V>>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, HabitatID source, HabitatID destination, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
+    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
         CMap<K,V> cmap = (CMap<K,V>)node;
         node.log("Putting Key:"+((CMapEntry<K,V>)cNodeCommand.getMessageData()).getKey());
         if(!cmap.containsKey(((CMapEntry<K,V>)cNodeCommand.getMessageData()).getKey())){
@@ -36,6 +37,6 @@ public class PutHandler<K,V> implements ICNodeCommandHandler<Map<K,V>,CMapEntry<
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand, HabitatID unreachableSource, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, NetUUID unreachableSource, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
     }
 }

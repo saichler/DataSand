@@ -12,7 +12,7 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
 import org.datasand.microservice.cmap.CMap;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 import org.datasand.network.habitat.HabitatsConnection;
 import org.datasand.network.habitat.ServicesHabitat;
 import org.junit.After;
@@ -51,7 +51,7 @@ public class AgentsTest {
         }
         System.out.println("Ready");
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
-        HabitatID unreach = new HabitatID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
+        NetUUID unreach = new NetUUID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
         try {
             Thread.sleep(1000);
@@ -121,7 +121,7 @@ public class AgentsTest {
         // Arbitrary number greater than 10 and not equal to 9999 (which is the
         // destination unreachable code)
         int MULTICAST_GROUP = 27;
-        HabitatID multiCast = new HabitatID(
+        NetUUID multiCast = new NetUUID(
                 HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
                 MULTICAST_GROUP, MULTICAST_GROUP);
         for (int i = 0; i < nodes.length; i++) {
@@ -165,7 +165,7 @@ public class AgentsTest {
     public void testUnicast() {
         MicroServicesManager nodes[] = new MicroServicesManager[10];
         MicroService agent[] = new MicroService[nodes.length];
-        HabitatID destination = null;
+        NetUUID destination = null;
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
             agent[i] = new TestAgent(nodes[i].getHabitat().getLocalHost(),

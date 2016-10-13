@@ -7,7 +7,7 @@
  */
 package org.datasand.microservice;
 
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +17,7 @@ import java.util.Map;
  */
 public class MicroServicePeers {
 
-    private final Map<HabitatID,MicroServicePeerEntry> peers = new HashMap<>();
+    private final Map<NetUUID,MicroServicePeerEntry> peers = new HashMap<>();
     private final MicroService service;
 
     public MicroServicePeers(MicroService service){
@@ -32,7 +32,7 @@ public class MicroServicePeers {
             for(MicroServicePeerEntry e:this.peers.values()){
                 if(!e.isUnreachable()){
                     hasOnePeer=true;
-                    entry.addPeer(e.getHabitatID());
+                    entry.addPeer(e.getNetUUID());
                 }
             }
 
@@ -50,11 +50,11 @@ public class MicroServicePeers {
         return null;
     }
 
-    public synchronized void replacePeerEntry(HabitatID source, MicroServicePeerEntry entry){
+    public synchronized void replacePeerEntry(NetUUID source, MicroServicePeerEntry entry){
         this.peers.put(source, entry);
     }
 
-    public synchronized MicroServicePeerEntry getPeerEntry(HabitatID source){
+    public synchronized MicroServicePeerEntry getPeerEntry(NetUUID source){
         if(source.equals(this.service.getMicroServiceID())) return null;
         MicroServicePeerEntry microServicePeerEntry = peers.get(source);
         if(microServicePeerEntry ==null){
@@ -65,9 +65,9 @@ public class MicroServicePeers {
         return microServicePeerEntry;
     }
 
-    public synchronized HabitatID getAPeer(){
+    public synchronized NetUUID getAPeer(){
         if(this.peers.size()>0) {
-            return this.peers.values().iterator().next().getHabitatID();
+            return this.peers.values().iterator().next().getNetUUID();
         }
         return null;
     }

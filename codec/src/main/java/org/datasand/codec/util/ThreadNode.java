@@ -28,27 +28,10 @@ public abstract class ThreadNode extends Thread{
     }
 
     public void run(){
-        boolean allChildrenStarted=false;
-        while(!allChildrenStarted){
-            try{
-                Thread.sleep(200);
-            }catch (Exception e){
-                VLogger.error("Interrupted",e);
-            }
-            int runningCount=0;
-            for(ThreadNode child:children){
-                if(child.running){
-                    runningCount++;
-                }
-            }
-            if(runningCount==children.size()){
-                allChildrenStarted=true;
-            }
-        }
-        this.running = true;
         initialize();
         VLogger.info(this.getName()+" was started.");
         try {
+            this.running = true;
             while (running) {
                 execute();
             }
@@ -66,16 +49,30 @@ public abstract class ThreadNode extends Thread{
     public abstract void distruct();
 
     public void shutdown(){
+        this.running = false;
         for(ThreadNode child:children){
             child.shutdown();
         }
-        this.running = false;
     }
 
     public void start(){
         for (ThreadNode child:this.children){
             child.start();
         }
+        boolean allstarted = false;
+        while(!allstarted){
+            allstarted = true;
+            for (ThreadNode child:this.children){
+                if(!child.isRunning()){
+                    allstarted = false;
+                    break;
+                }
+            }
+            if(!allstarted){
+                try{Thread.sleep(100);}catch(InterruptedException e){}
+            }
+        }
+
         super.start();
     }
 

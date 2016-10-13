@@ -10,7 +10,7 @@ package org.datasand.microservice.tests;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
 import org.datasand.microservice.Message;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 import org.junit.Assert;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -19,17 +19,17 @@ public class TestAgent extends MicroService {
 
     private TestObject testObject = AgentsTest.createTestObject();
 
-    public TestAgent(HabitatID localHost, MicroServicesManager m) {
+    public TestAgent(NetUUID localHost, MicroServicesManager m) {
         super(19, m);
         TestObject o = new TestObject();
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,HabitatID unreachableSource) {
+    public void processDestinationUnreachable(Message message,NetUUID unreachableSource) {
     }
 
     @Override
-    public void processMessage(Message message, HabitatID source, HabitatID destination) {
+    public void processMessage(Message message, NetUUID source, NetUUID destination) {
         if (message == null) {
             System.out.println("Received a currapted frame");
         } else {

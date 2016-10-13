@@ -7,7 +7,6 @@
  */
 package org.datasand.store.jdbc;
 
-import java.net.InetAddress;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -32,7 +31,7 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.MessageEntry;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 import org.datasand.store.DataStore;
 import org.datasand.store.jdbc.ResultSet.RSID;
 /**
@@ -44,7 +43,7 @@ public class Connection extends MicroService implements java.sql.Connection {
     private Map<RSID,QueryContainer> queries = new HashMap<RSID,QueryContainer>();
     private Map<RSID,QueryUpdater> updaters = new HashMap<RSID,QueryUpdater>();
     private Message repetitve = new Message(-1,null);
-    private HabitatID aPeer = null;
+    private NetUUID aPeer = null;
 
     static{
     	Message.passThroughIncomingMessage.put(JDBCMessage.TYPE_DELEGATE_QUERY_RECORD, JDBCMessage.TYPE_DELEGATE_QUERY_RECORD);
@@ -62,10 +61,10 @@ public class Connection extends MicroService implements java.sql.Connection {
         super(107,manager);
         try{
             if(manager.getHabitat().getLocalHost().getPort()==50000){
-                //destination = HabitatID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:"+this.getMicroServiceID().getServiceID());
+                //destination = NetUUID.valueOf(InetAddress.getByName(addr).getHostAddress() + ":50000:"+this.getMicroServiceID().getServiceID());
                 manager.getHabitat().joinNetworkAsSingle(addr);
             }else{
-                //destination = HabitatID.valueOf(this.getMicroServiceManager().getHabitat().getLocalHost().getIPv4AddressAsString()+":50000:"+this.getMicroServiceID().getServiceID());
+                //destination = NetUUID.valueOf(this.getMicroServiceManager().getHabitat().getLocalHost().getIPv4AddressAsString()+":50000:"+this.getMicroServiceID().getServiceID());
             }
         }catch(Exception err){
             err.printStackTrace();
@@ -81,7 +80,7 @@ public class Connection extends MicroService implements java.sql.Connection {
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,HabitatID unreachableSource) {
+    public void processDestinationUnreachable(Message message,NetUUID unreachableSource) {
         System.out.println("Destination Unreachable:"+message.getMessageType()+":"+unreachableSource);
         try{
             throw new Exception("EX");
@@ -96,7 +95,7 @@ public class Connection extends MicroService implements java.sql.Connection {
     }
 
     @Override
-    public void processMessage(Message message, HabitatID source, HabitatID destination) {
+    public void processMessage(Message message, NetUUID source, NetUUID destination) {
         if(message==repetitve){
             multicast(JDBCMessage.TYPE_HELLO_GROUP);
             return;
@@ -220,10 +219,10 @@ public class Connection extends MicroService implements java.sql.Connection {
     private class QueryUpdater implements Runnable {
 
         private final ResultSet rs;
-        private final HabitatID source;
+        private final NetUUID source;
         private Object waitingObject = new Object();
 
-        public QueryUpdater(ResultSet _rs, HabitatID _source) {
+        public QueryUpdater(ResultSet _rs, NetUUID _source) {
             this.rs = _rs;
             this.source = _source;
         }

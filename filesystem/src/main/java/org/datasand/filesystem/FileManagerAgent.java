@@ -8,7 +8,7 @@ import org.datasand.codec.Encoder;
 import org.datasand.microservice.Message;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 
 public class FileManagerAgent extends MicroService{
 	
@@ -30,11 +30,11 @@ public class FileManagerAgent extends MicroService{
 	}
 
 	@Override
-	public void processDestinationUnreachable(Message message,HabitatID unreachableSource) {
+	public void processDestinationUnreachable(Message message,NetUUID unreachableSource) {
 	}
 
 	@Override
-	public void processMessage(Message message, HabitatID source, HabitatID destination) {
+	public void processMessage(Message message, NetUUID source, NetUUID destination) {
 		if(message==helloMSG){
 			publishRepositorys();
 			return;
@@ -47,7 +47,7 @@ public class FileManagerAgent extends MicroService{
 		}
 	}
 
-	public void processPeerRepository(HabitatID source, FileRepositoryManifest frm){
+	public void processPeerRepository(NetUUID source, FileRepositoryManifest frm){
 		String repoName = frm.getDirectory();
 		if(repoName.equals("./repo1"))
 			repoName = "./repo2";
@@ -73,7 +73,7 @@ public class FileManagerAgent extends MicroService{
 	
 	private File currentFile = null;
 	
-	public void sendFile(String fileName,HabitatID dest){
+	public void sendFile(String fileName,NetUUID dest){
 		File f = new File(fileName);
 		if(f.exists()){
 			FileData fileData = new FileData(f);

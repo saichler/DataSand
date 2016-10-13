@@ -20,6 +20,7 @@ import org.datasand.codec.serialize.ISerializer;
  */
 public class Message implements ISerializer{
 
+    private int microServiceID = -1;
     private long messageID = -1;
     private int messageType = -1;
     private Object messageData = null;
@@ -30,19 +31,25 @@ public class Message implements ISerializer{
     public Message(){
     }
 
-    public Message(long _messageID,int _messageType,Object _messageData){
-        this.messageID = _messageID;
-        this.messageType = _messageType;
-        this.messageData = _messageData;
+    public Message(int microServiceID, long messageID,int messageType,Object messageData){
+        this.microServiceID = microServiceID;
+        this.messageID = messageID;
+        this.messageType = messageType;
+        this.messageData = messageData;
     }
 
-    public Message(int _messageType,Object _messageData){
+    public Message(int microServiceID,int messageType,Object messageData){
         synchronized(Message.class){
             this.messageID = nextMessageID;
             nextMessageID++;
         }
-        this.messageType = _messageType;
-        this.messageData = _messageData;
+        this.microServiceID = microServiceID;
+        this.messageType = messageType;
+        this.messageData = messageData;
+    }
+
+    public int getMicroServiceID(){
+        return this.microServiceID;
     }
 
     public long getMessageID() {
@@ -60,16 +67,18 @@ public class Message implements ISerializer{
     @Override
     public void encode(Object value, BytesArray ba) {
         Message m = (Message)value;
+        Encoder.encodeInt32(m.getMicroServiceID(),ba);
         Encoder.encodeInt32(m.getMessageType(), ba);
         Encoder.encodeInt64(m.messageID, ba);
         if(passThroughOutgoingMessage.containsKey(m.getMessageType()) && m.getMessageData() instanceof BytesArray){
         	//this is a passthrough message
         	//copy the data bytes from the other container to this message
+            //2 - for the micro service id
         	//2 - for the message class type
         	//4 - for the message type
         	//8 - for the message id
-        	// == 14
-        	ba.insert((BytesArray)m.getMessageData(),14);
+        	// == 16
+        	ba.insert((BytesArray)m.getMessageData(),16);
         }else
         	Encoder.encodeObject(m.messageData, ba);
     }
@@ -77,6 +86,7 @@ public class Message implements ISerializer{
     @Override
     public Object decode(BytesArray ba) {
         Message m = new Message();
+        m.microServiceID = Encoder.decodeInt32(ba);
         m.messageType = Encoder.decodeInt32(ba);
         m.messageID = Encoder.decodeInt64(ba);
         if(passThroughIncomingMessage.containsKey(m.messageType)){

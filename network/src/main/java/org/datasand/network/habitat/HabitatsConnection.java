@@ -11,6 +11,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -20,29 +21,24 @@ import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.ConnectionID;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 import org.datasand.network.Packet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class HabitatsConnection extends ThreadNode {
 
-    public static final int DESTINATION_UNREACHABLE = 9999;
-    public static final int DESTINATION_BROADCAST = 10;
-
-    public static final HabitatID PROTOCOL_ID_UNREACHABLE = new HabitatID(0, 0,DESTINATION_UNREACHABLE);
-    public static final HabitatID PROTOCOL_ID_BROADCAST = new HabitatID(0, 0,DESTINATION_BROADCAST);
-
+    private static final Logger LOG = LoggerFactory.getLogger(HabitatsConnection.class);
     private final Socket socket;
     private final DataInputStream in;
     private final DataOutputStream out;
     private final ServicesHabitat servicesHabitat;
     private final boolean unicast;
-
-    private final int intAddress;
-    private final int intPort;
     private final HabitatConnectionSwitch hcSwitch;
+    private final ConnectionID connectionID;
 
     public HabitatsConnection(ServicesHabitat servicesHabitat, InetAddress addr, int port, boolean unicastOnly) {
         super(servicesHabitat,servicesHabitat.getName()+" Connection");
@@ -50,30 +46,35 @@ public class HabitatsConnection extends ThreadNode {
         Socket tmpSocket = null;
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
-
+        byte otherData[] = new byte[16];
+        byte myData[] = new byte[16];
+        this.servicesHabitat.getNetUUID().encode(this.servicesHabitat.getNetUUID(),myData,0);
         try {
             tmpSocket = new Socket(addr, port);
             tmpIn = new DataInputStream(new BufferedInputStream(tmpSocket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(tmpSocket.getOutputStream()));
-            tmpOut.writeInt(this.servicesHabitat.getLocalHost().getIPv4Address());
-            tmpOut.writeInt(this.servicesHabitat.getLocalHost().getPort());
+            tmpOut.write(myData);
             if(unicastOnly){
                 tmpOut.writeInt(1);
             }else{
                 tmpOut.writeInt(0);
             }
             tmpOut.flush();
+            tmpIn.read(otherData);
         } catch(IOException e){
-            VLogger.error("Failed to open socket",e);
+            LOG.error("Failed to open socket",e);
         }
-        HabitatID destID = HabitatID.valueOf(addr.getHostAddress()+":"+port+":0");
-        this.intAddress = destID.getIPv4Address();
-        this.intPort = port;
+
         this.socket = tmpSocket;
+        long a = Encoder.decodeInt64(myData,0);
+        long b = Encoder.decodeInt64(myData,8);
+        long a1 = Encoder.decodeInt64(otherData,0);
+        long b1 = Encoder.decodeInt64(otherData,8);
+        this.connectionID = new ConnectionID(a,b,a1,b1);
         this.in = tmpIn;
         this.out = tmpOut;
         this.unicast = unicastOnly;
-        this.setName(this.servicesHabitat.getLocalHost()+" connection "+getConnectionKey());
+        this.setName(this.servicesHabitat.getServicePort()+" connection "+this.connectionID);
         hcSwitch = new HabitatConnectionSwitch(this);
     }
 
@@ -89,27 +90,33 @@ public class HabitatsConnection extends ThreadNode {
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
         int unicastOnly = 0;
-        int port = -1;
-        int addr = -1;
+        byte otherData[] = new byte[16];
+        byte myData[] = new byte[16];
+        this.servicesHabitat.getNetUUID().encode(this.servicesHabitat.getNetUUID(),myData,0);
         try {
             tmpIn = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(this.socket.getOutputStream()));
-            addr = tmpIn.readInt();
-            port = tmpIn.readInt();
+            tmpIn.read(otherData);
             unicastOnly = tmpIn.readInt();
+            tmpOut.write(myData);
+            tmpOut.flush();
         } catch (Exception e) {
-            VLogger.error("Failed to use input/output of socket",e);
+            LOG.error("Failed to use input/output of socket",e);
         }
-        this.intAddress = addr;
-        this.intPort = port;
         this.in = tmpIn;
         this.out = tmpOut;
+        long a = Encoder.decodeInt64(myData,0);
+        long b = Encoder.decodeInt64(myData,8);
+        long a1 = Encoder.decodeInt64(otherData,0);
+        long b1 = Encoder.decodeInt64(otherData,8);
+        this.connectionID = new ConnectionID(a,b,a1,b1);
+
         if(unicastOnly==1){
             this.unicast = true;
         }else{
             this.unicast = false;
         }
-        this.setName(this.servicesHabitat.getLocalHost()+" connection "+getConnectionKey());
+        this.setName(this.servicesHabitat.getServicePort()+" connection "+this.connectionID);
         this.hcSwitch = new HabitatConnectionSwitch(this);
     }
 
@@ -117,30 +124,20 @@ public class HabitatsConnection extends ThreadNode {
         return this.unicast;
     }
 
-    public int getIntAddress(){
-        return this.intAddress;
-    }
-
-    public int getIntPort(){
-        return this.intPort;
-    }
-
-    public ConnectionID getConnectionKey() {
-        return new ConnectionID(this.intAddress,this.intPort,0,this.servicesHabitat.getLocalHost().getIPv4Address(),this.servicesHabitat.getLocalHost().getPort(),0);
-    }
-
     protected ServicesHabitat getServicesHabitat(){
         return this.servicesHabitat;
     }
 
     public boolean isASide(){
-        ConnectionID cID = getConnectionKey();
-        if(cID.getaSide().equals(new HabitatID(this.intAddress,this.intPort,0))){
+        if(this.connectionID.getaSide().equals(this.servicesHabitat.getNetUUID())){
             return true;
         }
         return false;
     }
 
+    public ConnectionID getConnectionID(){
+        return this.connectionID;
+    }
 
     public BytesArray sendPacket(BytesArray ba) throws IOException {
         byte data[] = ba.getBytes();
@@ -165,6 +162,8 @@ public class HabitatsConnection extends ThreadNode {
     public void shutdown() {
         super.shutdown();
         try {
+            this.in.close();
+            this.out.close();
             this.socket.close();
         } catch (Exception err) {
         }
@@ -177,10 +176,14 @@ public class HabitatsConnection extends ThreadNode {
     }
 
     public void execute() throws Exception {
-        int size = in.readInt();
-        byte data[] = new byte[size];
-        in.readFully(data);
-        hcSwitch.addPacket(data);
+        try {
+            int size = in.readInt();
+            byte data[] = new byte[size];
+            in.readFully(data);
+            hcSwitch.addPacket(data);
+        }catch(EOFException e){
+            LOG.info("Connection "+this.getName()+"was closed");
+        }
     }
 
     public static final BytesArray markAsUnreachable(BytesArray ba) {
@@ -195,17 +198,17 @@ public class HabitatsConnection extends ThreadNode {
         //copy source to destination
         System.arraycopy(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION,mark,Packet.PACKET_DEST_LOCATION,Packet.PACKET_SOURCE_LENGHT);
         //mark source as unreachable
-        PROTOCOL_ID_UNREACHABLE.encode(PROTOCOL_ID_UNREACHABLE, mark,Packet.PACKET_SOURCE_LOCATION);
+        Packet.PROTOCOL_ID_UNREACHABLE.encode(Packet.PROTOCOL_ID_UNREACHABLE, mark,Packet.PACKET_SOURCE_LOCATION);
         return new BytesArray(mark);
     }
 
 
-    public static final BytesArray addUnreachableAddressForMulticast(BytesArray ba,int destAddress,int destPort){
+    public static final BytesArray addUnreachableAddressForMulticast(BytesArray ba, NetUUID destination){
         byte[] data = ba.getBytes();
-        byte[] _unreachable = new byte[data.length+6];
+        byte[] _unreachable = new byte[data.length+16];
         System.arraycopy(data, 0, _unreachable,0, data.length);
-        Encoder.encodeInt32(destAddress, _unreachable, data.length);
-        Encoder.encodeInt16(destPort, _unreachable, data.length+4);
+        Encoder.encodeInt64(destination.getA(), _unreachable, data.length);
+        Encoder.encodeInt64(destination.getB(), _unreachable, data.length+8);
         return new BytesArray(_unreachable);
     }
 }

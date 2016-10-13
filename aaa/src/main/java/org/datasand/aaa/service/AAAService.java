@@ -5,7 +5,7 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServiceTypeRegistration;
 import org.datasand.microservice.MicroServicesManager;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 
 /**
  * Created by saichler on 6/7/16.
@@ -20,12 +20,12 @@ public class AAAService extends MicroService{
     }
 
     @Override
-    public void processDestinationUnreachable(Message message, HabitatID unreachableSource) {
+    public void processDestinationUnreachable(Message message, NetUUID unreachableSource) {
 
     }
 
     @Override
-    public void processMessage(Message message, HabitatID source, HabitatID destination) {
+    public void processMessage(Message message, NetUUID source, NetUUID destination) {
 
     }
 

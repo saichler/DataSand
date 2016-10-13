@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -21,15 +21,15 @@ import org.datasand.network.HabitatID;
  * Message is the vessel which is used to transfer data from one node to another.
  */
 public class ServiceInventory extends Message {
-    private Map<Integer,List<HabitatID>> services = new HashMap<>();
-    private HabitatID habitatID = null;
+    private Map<Long,List<NetUUID>> services = new HashMap<>();
+    private NetUUID netUUID = null;
 
-    public void setHabitatID(HabitatID id){
-        this.habitatID = id;
+    public void setNetUUID(NetUUID id){
+        this.netUUID = id;
     }
 
-    public void addService(int serviceGroup,HabitatID id){
-        List<HabitatID> serviceList = services.get(serviceGroup);
+    public void addService(long serviceGroup,NetUUID id){
+        List<NetUUID> serviceList = services.get(serviceGroup);
         if(serviceList==null){
             serviceList = new ArrayList<>();
             services.put(serviceGroup,serviceList);
@@ -41,12 +41,12 @@ public class ServiceInventory extends Message {
     public void encode(Object value, BytesArray ba) {
         super.encode(value,ba);
         ServiceInventory si = (ServiceInventory)value;
-        Encoder.encodeObject(si.habitatID,ba);
+        Encoder.encodeObject(si.netUUID,ba);
         Encoder.encodeInt16(si.services.size(),ba);
-        for(Map.Entry<Integer,List<HabitatID>> entry:si.services.entrySet()){
-            Encoder.encodeInt16(entry.getKey(),ba);
+        for(Map.Entry<Long,List<NetUUID>> entry:si.services.entrySet()){
+            Encoder.encodeInt64(entry.getKey(),ba);
             Encoder.encodeInt16(entry.getValue().size(),ba);
-            for(HabitatID id:entry.getValue()){
+            for(NetUUID id:entry.getValue()){
                 Encoder.encodeObject(id,ba);
             }
         }
@@ -56,15 +56,15 @@ public class ServiceInventory extends Message {
     public Object decode(BytesArray ba) {
         ServiceInventory serviceInventory = new ServiceInventory();
         ServiceInventory si = (ServiceInventory)super.decode(ba);
-        si.habitatID = (HabitatID)Encoder.decodeObject(ba);
+        si.netUUID = (NetUUID)Encoder.decodeObject(ba);
         int size = Encoder.decodeInt16(ba);
         for(int i=0;i<size;i++){
-            int group = Encoder.decodeInt16(ba);
+            long group = Encoder.decodeInt64(ba);
             int groupSize = Encoder.decodeInt16(ba);
-            List<HabitatID> ids = new ArrayList<>(groupSize);
+            List<NetUUID> ids = new ArrayList<>(groupSize);
             si.services.put(group,ids);
             for(int j=0;j<groupSize;j++){
-                ids.add((HabitatID)Encoder.decodeObject(ba));
+                ids.add((NetUUID)Encoder.decodeObject(ba));
             }
         }
         return si;

@@ -1,5 +1,34 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.datasand</groupId>
+        <artifactId>main</artifactId>
+        <version>0.2.0</version>
+        <relativePath>../</relativePath>
+    </parent>
+    <groupId>org.datasand</groupId>
+    <artifactId>datasand-network</artifactId>
+    <version>${project.version}</version>
+    <name>DataSand Network</name>
+    <description>DataSand Network</description>
+    <dependencies>
+        <dependency>
+            <groupId>org.datasand</groupId>
+            <artifactId>datasand-codec</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.21</version>
+        </dependency>
+    </dependencies>
     <build>
         <plugins>
             <plugin>
@@ -12,27 +41,4 @@
             </plugin>
         </plugins>
     </build>
-    <parent>
-    <groupId>org.datasand</groupId>
-    <artifactId>main</artifactId>
-    <version>${project.version}</version>
-    <relativePath>../</relativePath>
-  </parent>
-  <groupId>org.datasand</groupId>
-  <artifactId>datasand-network</artifactId>
-  <version>${project.version}</version>
-  <name>DataSand Network</name>
-  <description>DataSand Network</description>
-  <dependencies>
-    <dependency>
-        <groupId>org.datasand</groupId>
-        <artifactId>datasand-codec</artifactId>
-        <version>${project.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.12</version>
-    </dependency>
-  </dependencies>
 </project>

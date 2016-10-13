@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.datasand</groupId>
     <artifactId>main</artifactId>
-    <version>${project.version}</version>
+    <version>0.2.0</version>
     <relativePath>../</relativePath>
   </parent>
   <groupId>org.datasand</groupId>

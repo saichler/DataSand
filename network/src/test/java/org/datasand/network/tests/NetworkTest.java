@@ -1,9 +1,9 @@
 package org.datasand.network.tests;
 
 import java.io.File;
-
-import org.datasand.network.HabitatID;
-import org.datasand.network.habitat.HabitatsConnection;
+import java.util.UUID;
+import org.datasand.network.NetUUID;
+import org.datasand.network.Packet;
 import org.datasand.network.habitat.ServicesHabitat;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -13,17 +13,11 @@ import org.junit.Test;
 
 public class NetworkTest {
 
+    private ServicesHabitat nodes[] = null;
+
     @Before
     public void before() {
-    }
-
-    @After
-    public void after() {
-    }
-
-    @Test
-    public void testBroadcastToNodes() throws InterruptedException {
-        ServicesHabitat nodes[] = new ServicesHabitat[10];
+        nodes = new ServicesHabitat[10];
         boolean allStarted = false;
         while(!allStarted){
             allStarted=true;
@@ -35,12 +29,22 @@ public class NetworkTest {
                     allStarted = false;
                 }
             }
-            Thread.sleep(200);
         }
+    }
 
-        nodes[3].send(new byte[5], nodes[3].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
-        HabitatID unreach = new HabitatID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
-        nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
+    @After
+    public void after() {
+        for (int i = 0; i < nodes.length; i++) {
+            nodes[i].shutdown();
+        }
+    }
+
+    @Test
+    public void testBroadcastToNodes() throws InterruptedException {
+
+        nodes[3].send(new byte[5], nodes[3].getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
+        NetUUID unreach = new NetUUID(UUID.randomUUID());
+        nodes[3].send(new byte[5], nodes[3].getNetUUID(), unreach);
         try {
             Thread.sleep(1000);
         } catch (Exception err) {
@@ -50,14 +54,15 @@ public class NetworkTest {
         for (int i = 0; i < nodes.length; i++) {
             brCount+=nodes[i].getServicesHabitatMetrics().getBroadcastFrameCount();
             unreachCount+=nodes[i].getServicesHabitatMetrics().getUnreachableFrameCount();
-            nodes[i].shutdown();
         }
+
         try {
             Assert.assertEquals("11", ""+brCount);
             Assert.assertEquals(true, unreachCount>0);
         } catch (Exception err) {
             err.printStackTrace();
         }
+
     }
 
     public static int countSubstring(String substr, String output) {
@@ -104,9 +109,9 @@ public class NetworkTest {
         }
         System.out.println("Ready");
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
-        HabitatID unreach = new HabitatID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
+        NetUUID unreach = new NetUUID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
-        HabitatID reachSingle = new HabitatID(nodes[3].getLocalHost().getIPv4Address(), 50010, 0);
+        NetUUID reachSingle = new NetUUID(nodes[3].getLocalHost().getIPv4Address(), 50010, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), reachSingle);
         nodes[10].send(new byte[5], nodes[10].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
         try {

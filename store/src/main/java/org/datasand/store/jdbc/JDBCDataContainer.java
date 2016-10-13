@@ -11,7 +11,7 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 import org.datasand.store.jdbc.ResultSet.RSID;
 
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ public class JDBCDataContainer implements ISerializer{
             Encoder.encodeInt32(dc.rsID.getLocalID(), ba);
         }else
             Encoder.encodeNULL(ba);
-        if(dc.data instanceof HabitatID){
+        if(dc.data instanceof NetUUID){
             Encoder.encodeInt16(5, ba);
             Encoder.encodeObject(dc.data, ba);
         }else

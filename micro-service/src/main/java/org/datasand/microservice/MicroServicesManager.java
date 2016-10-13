@@ -20,12 +20,12 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.codec.util.ThreadPool;
-import org.datasand.network.HabitatID;
 import org.datasand.network.IFrameListener;
+import org.datasand.network.NetUUID;
 import org.datasand.network.Packet;
-import org.datasand.network.habitat.HabitatsConnection;
 import org.datasand.network.habitat.ServicesHabitat;
 
 /**
@@ -34,8 +34,8 @@ import org.datasand.network.habitat.ServicesHabitat;
 public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     private final ServicesHabitat habitat;
-    private final Map<HabitatID, MicroService> habitatIDtoMicroService = new HashMap<HabitatID, MicroService>();
-    private final Map<String, HabitatID> handlerNameToHabitatID = new HashMap<String, HabitatID>();
+    private final Map<Integer, MicroService> id2MicroService = new HashMap<>();
+    private final Map<String, Integer> handlerNameToID = new HashMap<>();
     private ThreadPool threadPool = new ThreadPool(20, "Handlers Threads", 2000);
     private final Object servicesSeynchronizeObject = new Object();
     private Map<Integer, Set<MicroService>> multicasts = new HashMap<Integer, Set<MicroService>>();
@@ -78,7 +78,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     public void execute() throws Exception {
         boolean addedTask = false;
-        for (MicroService h : habitatIDtoMicroService.values()) {
+        for (MicroService h : id2MicroService.values()) {
             if (!h.isBusy()) {
                 h.checkForRepetitive();
                 if (h.getQueueSize() > 0) {
@@ -92,7 +92,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
             lastServiceInventoryBroadcast = System.currentTimeMillis();
             BytesArray ba = new BytesArray(1024);
             serviceInventory.encode(serviceInventory,ba);
-            this.getHabitat().send(ba.getData(),this.habitat.getLocalHost(),new HabitatID(HabitatsConnection.DESTINATION_BROADCAST,31,31));
+            this.getHabitat().send(ba.getData(),this.habitat.getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
         }
         if (!addedTask) {
             synchronized (servicesSeynchronizeObject) {
@@ -114,30 +114,35 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     }
 
     public void addMicroService(MicroService h) {
-        this.habitatIDtoMicroService.put(h.getMicroServiceID(), h);
+        this.id2MicroService.put(h.getMicroServiceID().getMicroServiceID(), h);
     }
 
     public void registerMicroService(MicroService h) {
-        habitatIDtoMicroService.put(h.getMicroServiceID(), h);
-        handlerNameToHabitatID.put(h.getName(), h.getMicroServiceID());
-        serviceInventory.addService(h.getMicroServiceGroup().getServiceID(),h.getMicroServiceID());
+        id2MicroService.put(h.getMicroServiceID().getMicroServiceID(), h);
+        handlerNameToID.put(h.getName(), h.getMicroServiceID().getMicroServiceID());
+        serviceInventory.addService(h.getMicroServiceGroup().getB(),h.getMicroServiceID());
     }
 
-    public MicroService getHandlerByID(HabitatID id) {
-        return this.habitatIDtoMicroService.get(id);
+    public MicroService getHandlerByID(int id) {
+        return this.id2MicroService.get(id);
     }
 
     public MicroService getHandlerByName(String name) {
-        HabitatID id = this.handlerNameToHabitatID.get(name);
+        Integer id = this.handlerNameToID.get(name);
         if (id != null) {
-            return this.habitatIDtoMicroService.get(id);
+            return this.id2MicroService.get(id);
         }
         return null;
     }
 
+    private int getMicroServiceIDFromFrame(Packet frame){
+        return Encoder.decodeInt32(frame.getData(),Packet.PACKET_DATA_LOCATION+16);
+    }
+
     @Override
     public void process(Packet frame) {
-        MicroService h = habitatIDtoMicroService.get(frame.getDestination());
+        int microServiceID = getMicroServiceIDFromFrame(frame);
+        MicroService h = id2MicroService.get(microServiceID);
         if (h != null) {
             h.addFrame(frame);
             synchronized (servicesSeynchronizeObject) {
@@ -154,7 +159,8 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     @Override
     public void processDestinationUnreachable(Packet frame) {
-        MicroService h = habitatIDtoMicroService.get(frame.getDestination());
+        int microServiceID = getMicroServiceIDFromFrame(frame);
+        MicroService h = id2MicroService.get(microServiceID);
         if (h != null) {
             h.addFrame(frame);
             synchronized (servicesSeynchronizeObject) {
@@ -175,7 +181,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     @Override
     public void processMulticast(Packet frame) {
-        int multicastGroupID = frame.getDestination().getPort();
+        long multicastGroupID = frame.getDestination().getB();
         Set<MicroService> handlers = this.multicasts.get(multicastGroupID);
         if (handlers != null) {
             for (MicroService h : handlers) {
@@ -193,9 +199,9 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
         return result.substring(0, index);
     }
 
-    public List<HabitatID> installJar(String jarFileName) {
+    public List<NetUUID> installJar(String jarFileName) {
 
-        List<HabitatID> result = new ArrayList<HabitatID>();
+        List<NetUUID> result = new ArrayList<NetUUID>();
 
         File f = new File(jarFileName);
         if (f.exists()) {
@@ -213,11 +219,11 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
                              */
                             // ModelClassLoaders.getInstance().addClassLoader(cl);
                             Class<?> handlerClass = cl.loadClass(className);
-                            MicroService newHandler = (MicroService) handlerClass.getConstructor(new Class[] {HabitatID.class,MicroServicesManager.class })
+                            MicroService newHandler = (MicroService) handlerClass.getConstructor(new Class[] {NetUUID.class,MicroServicesManager.class })
                                     .newInstance(
                                             new Object[] {
                                                     this.habitat
-                                                            .getLocalHost(),
+                                                            .getNetUUID(),
                                                     this });
                             registerMicroService(newHandler);
                             newHandler.start();

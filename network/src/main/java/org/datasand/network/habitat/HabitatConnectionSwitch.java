@@ -11,15 +11,18 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 import org.datasand.network.Packet;
 import org.datasand.network.PriorityLinkedList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class HabitatConnectionSwitch extends ThreadNode {
 
+    private static final Logger LOG = LoggerFactory.getLogger(HabitatConnectionSwitch.class);
     private final HabitatsConnection connection;
     private final PriorityLinkedList<byte[]> incoming = new PriorityLinkedList<byte[]>();
 
@@ -57,68 +60,36 @@ public class HabitatConnectionSwitch extends ThreadNode {
 
         if (packetData != null && packetData.length > 0) {
             BytesArray ba = new BytesArray(packetData);
-            int destAddr = Encoder.decodeInt32(ba.getBytes(), Packet.PACKET_DEST_LOCATION);
-            int destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-            if (destAddr == 0) {
-                if (connection.getServicesHabitat().getLocalHost().getPort() != 50000) {
+            NetUUID dest = new NetUUID(Encoder.decodeInt64(ba.getBytes(), Packet.PACKET_DEST_LOCATION),
+                    Encoder.decodeInt64(ba.getBytes(), Packet.PACKET_DEST_LOCATION + 8));
+
+            if (dest.getA() == 0) {
+                if (connection.getServicesHabitat().getServicePort() != ServicesHabitat.SERVICE_NODE_SWITCH_PORT) {
                     connection.getServicesHabitat().receivedPacket(ba);
                 } else {
                     connection.getServicesHabitat().broadcast(ba);
                 }
-            } else if (destAddr == connection.getServicesHabitat().getLocalHost().getIPv4Address() && destPort == connection.getServicesHabitat().getLocalHost().getPort()) {
+            } else if (dest.equals(connection.getServicesHabitat().getNetUUID())) {
                 connection.getServicesHabitat().receivedPacket(ba);
-            } else if (destAddr == connection.getServicesHabitat().getLocalHost().getIPv4Address() && connection.getServicesHabitat().getLocalHost().getPort() == 50000 && destPort != 50000) {
-                HabitatsConnection other = connection.getServicesHabitat().getNodeConnection(destAddr, destPort,true);
-                if (other != null && other.isRunning()) {
-                    try {
-                        other.sendPacket(ba);
-                    } catch (Exception err) {
-                        err.printStackTrace();
-                    }
+            } else if(connection.getServicesHabitat().getServicePort() == ServicesHabitat.SERVICE_NODE_SWITCH_PORT) {
+                HabitatsConnection other = connection.getServicesHabitat().getNodeConnection(dest,true);
+                if(other!=null){
+                    other.sendPacket(ba);
                 } else {
                     ba = this.connection.markAsUnreachable(ba);
-                    destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
-                    destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                    HabitatsConnection source = connection.getServicesHabitat().getNodeConnection(destAddr, destPort,true);
+                    //mark unreachable has switch the source & the destination,
+                    // hence we re-decode the destination (which is the source)
+                    dest = new NetUUID(Encoder.decodeInt64(ba.getBytes(), Packet.PACKET_DEST_LOCATION),
+                            Encoder.decodeInt64(ba.getBytes(), Packet.PACKET_DEST_LOCATION + 8));
+
+                    HabitatsConnection source = connection.getServicesHabitat().getNodeConnection(dest,true);
                     if (source != null) {
-                        try {
-                            source.sendPacket(ba);
-                        } catch (Exception err) {
-                            err.printStackTrace();
-                        }
+                        source.sendPacket(ba);
                     } else {
-                        VLogger.error("Source unreachable:"
-                                + new HabitatID(destAddr, destPort,
-                                Encoder.decodeInt16(ba.getBytes(), 16)),null);
-                    }
-                }
-            } else if (destAddr != connection.getServicesHabitat().getLocalHost().getIPv4Address() && connection.getServicesHabitat().getLocalHost().getPort() == 50000) {
-                HabitatsConnection other = connection.getServicesHabitat().getNodeConnection(destAddr, 50000,true);
-                if (other != null) {
-                    try {
-                        other.sendPacket(ba);
-                    } catch (Exception err) {
-                        VLogger.error("Failed to send packet",err);
-                    }
-                } else {
-                    ba = this.connection.markAsUnreachable(ba);
-                    destAddr = Encoder.decodeInt32(ba.getBytes(),Packet.PACKET_DEST_LOCATION);
-                    destPort = Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_DEST_LOCATION + 4);
-                    HabitatsConnection source = connection.getServicesHabitat().getNodeConnection(destAddr, destPort,true);
-                    if (source != null) {
-                        try {
-                            source.sendPacket(ba);
-                        } catch (Exception err) {
-                            VLogger.error("Failed to send packet",err);
-                        }
-                    } else {
-                        VLogger.error("Source unreachable:"
-                                + new HabitatID(destAddr, destPort,
-                                Encoder.decodeInt16(ba.getBytes(), 16)),null);
+                        LOG.error("Source unreachable:"+dest);
                     }
                 }
             }
-
         }
     }
 }

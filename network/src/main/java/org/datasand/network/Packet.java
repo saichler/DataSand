@@ -10,7 +10,6 @@ package org.datasand.network;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.network.habitat.HabitatsConnection;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -18,9 +17,9 @@ import org.datasand.network.habitat.HabitatsConnection;
 public class Packet implements ISerializer {
 
     public static final int PACKET_SOURCE_LOCATION = 0;
-    public static final int PACKET_SOURCE_LENGHT = 8;
+    public static final int PACKET_SOURCE_LENGHT = 16;
     public static final int PACKET_DEST_LOCATION = PACKET_SOURCE_LOCATION + PACKET_SOURCE_LENGHT;
-    public static final int PACKET_DEST_LENGTH = 8;
+    public static final int PACKET_DEST_LENGTH = 16;
     public static final int PACKET_ID_LOCATION = PACKET_DEST_LOCATION + PACKET_DEST_LENGTH;
     public static final int PACKET_ID_LENGTH = 2;
     public static final int PACKET_MULTIPART_AND_PRIORITY_LOCATION = PACKET_ID_LOCATION + PACKET_ID_LENGTH;
@@ -28,9 +27,16 @@ public class Packet implements ISerializer {
     public static final int PACKET_DATA_LOCATION = PACKET_MULTIPART_AND_PRIORITY_LOCATION + PACKET_MULTIPART_AND_PRIORITY_LENGTH;
     public static final int MAX_DATA_IN_ONE_PACKET = 1024 * 512;
 
-    private HabitatID source = null;
-    private HabitatID destination = null;
-    private HabitatID originalAddress = null;
+    public static final int DESTINATION_UNREACHABLE = 9998;
+    public static final int DESTINATION_BROADCAST = 10;
+
+    public static final NetUUID PROTOCOL_ID_UNREACHABLE = new NetUUID(0, DESTINATION_UNREACHABLE);
+    public static final NetUUID PROTOCOL_ID_BROADCAST = new NetUUID(0, DESTINATION_BROADCAST);
+
+
+    private NetUUID source = null;
+    private NetUUID destination = null;
+    private NetUUID originalAddress = null;
 
     private int packetID = -1;
     private boolean multiPart = false;
@@ -39,6 +45,7 @@ public class Packet implements ISerializer {
     private Object message = null;
 
     private static int nextPacketID = 1000;
+
     static {
         Encoder.registerSerializer(Packet.class, new Packet());
     }
@@ -46,15 +53,15 @@ public class Packet implements ISerializer {
     private Packet() {
     }
 
-    public Packet(HabitatID _source, HabitatID _dest) {
+    public Packet(NetUUID _source, NetUUID _dest) {
         this(_source, _dest, (byte[]) null);
     }
 
-    public Packet(HabitatID _source, HabitatID _destination, byte[] _data) {
+    public Packet(NetUUID _source, NetUUID _destination, byte[] _data) {
         this(_source, _destination, _data, -1, false);
     }
 
-    public Packet(HabitatID _source, HabitatID _destination, byte[] _data,
+    public Packet(NetUUID _source, NetUUID _destination, byte[] _data,
                   int _id, boolean _multiPart) {
         if (_id == -1) {
             synchronized (Packet.class) {
@@ -73,17 +80,17 @@ public class Packet implements ISerializer {
         }
     }
 
-    public Packet(Object message,HabitatID source){
+    public Packet(Object message, NetUUID source) {
         this.source = source;
         this.destination = source;
         this.message = message;
     }
 
-    public HabitatID getSource() {
+    public NetUUID getSource() {
         return source;
     }
 
-    public HabitatID getDestination() {
+    public NetUUID getDestination() {
         return destination;
     }
 
@@ -107,26 +114,26 @@ public class Packet implements ISerializer {
     public void encode(Object value, BytesArray ba) {
         Packet p = (Packet) value;
         ba.resetLocation();
-        p.source.encode(p.source,ba);
-        p.destination.encode(p.destination,ba);
-        Encoder.encodeInt16(p.packetID,ba);
+        p.source.encode(p.source, ba);
+        p.destination.encode(p.destination, ba);
+        Encoder.encodeInt16(p.packetID, ba);
 
         if (p.multiPart) {
             byte m_p = (byte) (p.priority * 2 + 1);
-            Encoder.encodeByte(m_p,ba);
+            Encoder.encodeByte(m_p, ba);
         } else {
             byte m_p = (byte) (p.priority * 2);
-            Encoder.encodeByte(m_p,ba);
+            Encoder.encodeByte(m_p, ba);
         }
-        Encoder.encodeByteArray(p.data,ba);
+        Encoder.encodeByteArray(p.data, ba);
     }
 
-    public Object decode(){
-        if(this.message!=null){
+    public Object decode() {
+        if (this.message != null) {
             return this.message;
-        }else{
+        } else {
             BytesArray ba = new BytesArray(this.data);
-            this.message =  Encoder.decodeObject(ba);
+            this.message = Encoder.decodeObject(ba);
             return this.message;
         }
     }
@@ -135,24 +142,21 @@ public class Packet implements ISerializer {
     public Object decode(BytesArray ba) {
         Packet m = new Packet();
         ba.resetLocation();
-        ISerializer serializer = Encoder.getSerializerByClass(HabitatID.class);
-        m.source = (HabitatID) serializer.decode(ba);
-        m.destination = (HabitatID) serializer.decode(ba);
+        ISerializer serializer = Encoder.getSerializerByClass(NetUUID.class);
+        m.source = (NetUUID) serializer.decode(ba);
+        m.destination = (NetUUID) serializer.decode(ba);
         m.packetID = Encoder.decodeInt16(ba);
         m.priority = ((int) ba.getBytes()[ba.getLocation()]) / 2;
         m.multiPart = ba.getBytes()[ba.getLocation()] % 2 == 1;
         ba.advance(1);
-        if(ba.getBytes().length>Packet.PACKET_DATA_LOCATION) {
-            if(m.source.getIPv4Address()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getIPv4Address()
-                    && m.source.getPort()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getPort() &&
-                       m.source.getServiceID()== HabitatsConnection.PROTOCOL_ID_UNREACHABLE.getServiceID()){
-                this.originalAddress = (HabitatID) serializer.decode(ba);
+        if (ba.getBytes().length > Packet.PACKET_DATA_LOCATION) {
+            if (isUnreachable(m.source)) {
+                this.originalAddress = (NetUUID) serializer.decode(ba);
                 m.data = Encoder.decodeByteArray(ba);
-            }else {
-                int location = ba.getLocation();
+            } else {
                 try {
                     m.data = Encoder.decodeByteArray(ba);
-                }catch(Exception err){
+                } catch (Exception err) {
                     err.printStackTrace();
                 }
             }
@@ -162,9 +166,7 @@ public class Packet implements ISerializer {
 
     @Override
     public int hashCode() {
-        return source.getIPv4Address() ^ destination.getIPv4Address()
-                ^ source.getPort() ^ destination.getPort()
-                ^ source.getServiceID() ^ destination.getServiceID();
+        return source.hashCode() ^ destination.hashCode();
     }
 
     @Override
@@ -184,17 +186,25 @@ public class Packet implements ISerializer {
         return buff.toString();
     }
 
-    public HabitatID getUnreachableOrigAddress(){
-        int destAddress = Encoder.decodeInt32(this.getData(),PACKET_DEST_LOCATION);
-        int destPort = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION+4);
-        if(destAddress==0){
-            destAddress = Encoder.decodeInt32(this.getData(), this.getData().length-6);
-            destPort = Encoder.decodeInt16(this.getData(), this.getData().length-2);
+    public NetUUID getUnreachableOrigAddress() {
+        long a = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION);
+        long b = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION + 8);
+        if (a == 0) {
+            a = Encoder.decodeInt64(this.getData(), this.getData().length - 16);
+            b = Encoder.decodeInt64(this.getData(), this.getData().length - 8);
         }
-        return new HabitatID(destAddress, destPort, 0);
+        return new NetUUID(a, b);
     }
 
-    public Object getMessage(){
+    public Object getMessage() {
         return this.message;
+    }
+
+    public static final boolean isUnreachable(NetUUID id) {
+        return id.equals(PROTOCOL_ID_UNREACHABLE);
+    }
+
+    public static final boolean isBroadcast(NetUUID id) {
+        return id.equals(PROTOCOL_ID_BROADCAST);
     }
 }

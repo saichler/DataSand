@@ -11,50 +11,60 @@ package org.datasand.network;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class ConnectionID {
-    private final HabitatID aSide;
-    private final HabitatID zSide;
-    public ConnectionID(int addr1,int port1,int service1,int addr2,int port2,int service2){
-        if(addr1<addr2){
-            aSide = new HabitatID(addr1,port1,service1);
-            zSide = new HabitatID(addr2,port2,service2);
-        } else if(addr1>addr2){
-            zSide = new HabitatID(addr1,port1,service1);
-            aSide = new HabitatID(addr2,port2,service2);
+    private final NetUUID aSide;
+    private final NetUUID zSide;
+
+    public ConnectionID(long a, long b, long a1, long b1) {
+        if (a < a1) {
+            aSide = new NetUUID(a, b);
+            zSide = new NetUUID(a1, b1);
+        } else if (a > a1) {
+            aSide = new NetUUID(a1, b1);
+            zSide = new NetUUID(a, b);
         } else {
-            if(port1<port2){
-                aSide = new HabitatID(addr1,port1,service1);
-                zSide = new HabitatID(addr2,port2,service2);
-            } else if(port1>port2){
-                zSide = new HabitatID(addr1,port1,service1);
-                aSide = new HabitatID(addr2,port2,service2);
+            if (b < b1) {
+                aSide = new NetUUID(a, b);
+                zSide = new NetUUID(a1, b1);
+            } else if (b > b1) {
+                aSide = new NetUUID(a1, b1);
+                zSide = new NetUUID(a, b);
             } else {
-                aSide = new HabitatID(addr1,port1,service1);
-                zSide = new HabitatID(addr2,port2,service2);
+                throw new IllegalArgumentException("Connection ID cannot have same aside & zside");
             }
         }
     }
 
-    public int hashCode(){
-        return aSide.hashCode()+zSide.hashCode();
+    public NetUUID getAdjacentNetUUID(NetUUID me){
+        if(this.aSide.equals(me)){
+            return this.zSide;
+        } else if (this.zSide.equals(me)) {
+            return this.aSide;
+        } else {
+            throw new IllegalArgumentException("This connectionID does not contain this NetUUID");
+        }
+    }
+
+    public int hashCode() {
+        return aSide.hashCode() + zSide.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
-        ConnectionID other = (ConnectionID)obj;
-        if(other.aSide.equals(this.aSide) && other.zSide.equals(this.zSide))
+        ConnectionID other = (ConnectionID) obj;
+        if (other.aSide.equals(this.aSide) && other.zSide.equals(this.zSide))
             return true;
         return false;
     }
 
-    public HabitatID getzSide() {
+    public NetUUID getzSide() {
         return zSide;
     }
 
-    public HabitatID getaSide() {
+    public NetUUID getaSide() {
         return aSide;
     }
 
-    public String toString(){
-        return this.aSide+"<-->"+this.zSide;
+    public String toString() {
+        return this.aSide + "<-->" + this.zSide;
     }
 }

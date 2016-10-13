@@ -7,12 +7,28 @@
  */
 package org.datasand.microservice.cnode;
 
-import org.datasand.microservice.*;
-import org.datasand.microservice.cnode.handlers.*;
-import org.datasand.network.HabitatID;
-import org.datasand.network.habitat.HabitatsConnection;
-
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import org.datasand.microservice.Message;
+import org.datasand.microservice.MessageEntry;
+import org.datasand.microservice.MicroService;
+import org.datasand.microservice.MicroServiceNetUUID;
+import org.datasand.microservice.MicroServicePeerEntry;
+import org.datasand.microservice.MicroServicesManager;
+import org.datasand.microservice.cnode.handlers.ARPMulticastHandler;
+import org.datasand.microservice.cnode.handlers.AcknowledgeHandler;
+import org.datasand.microservice.cnode.handlers.EnterSyncModeHandler;
+import org.datasand.microservice.cnode.handlers.NodeJoinHandler;
+import org.datasand.microservice.cnode.handlers.NodeOriginalDataHandler;
+import org.datasand.microservice.cnode.handlers.PeerSyncDataHandler;
+import org.datasand.microservice.cnode.handlers.RequestJournalDataHandler;
+import org.datasand.microservice.cnode.handlers.SetCurrentPeerIDHandler;
+import org.datasand.microservice.cnode.handlers.SetCurrentPeerIDReplyHandler;
+import org.datasand.network.NetUUID;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
@@ -28,22 +44,16 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
     public static final int SET_CURRENT_PEER_ID_REPLY   = 170;
     public static final int ACKNOWLEDGE                 = 180;
 
-    private HabitatID multicastGroupHabitatID = null;
-    private int multicastGroupID = -1;
     private Message arpID = new Message();
     private long nextID = 1000;
     private DataType localData = createDataTypeInstance();
     private Map<Integer,ICNodeCommandHandler<DataType,DataTypeElement>> handlers = new HashMap<Integer,ICNodeCommandHandler<DataType,DataTypeElement>>();
     private boolean synchronizing = false;
-    private HabitatID sortedHabitatIDs[] = new HabitatID[0];
+    private NetUUID sortedNetUUIDs[] = new NetUUID[0];
 
-    public CNode(int subSystemId, MicroServicesManager m, int _multicastGroupID){
+    public CNode(int subSystemId, MicroServicesManager m){
         super(subSystemId,m);
         this.addToSortedNetworkIDs(this.getMicroServiceID());
-        this.multicastGroupID = _multicastGroupID;
-        this.multicastGroupHabitatID = new HabitatID(
-                HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
-                multicastGroupID, multicastGroupID);
 
         this.registerHandler(NODE_JOIN, new NodeJoinHandler<DataType,DataTypeElement>());
         this.registerHandler(ACKNOWLEDGE, new AcknowledgeHandler<DataType,DataTypeElement>());
@@ -55,9 +65,8 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
         this.registerHandler(SET_CURRENT_PEER_ID_REPLY, new SetCurrentPeerIDReplyHandler<DataType,DataTypeElement>());
         this.registerHandler(ARP_MULTICAST, new ARPMulticastHandler<DataType,DataTypeElement>());
 
-        m.registerForMulticast(multicastGroupID, this);
         this.registerRepetitiveMessage(10000, 10000, 0, arpID);
-        this.multicast(new Message(this.nextID,NODE_JOIN,null));
+        this.multicast(new Message(this.getMicroServiceID().getMicroServiceID(),this.nextID,NODE_JOIN,null));
     }
 
     public long incrementID(){
@@ -65,16 +74,16 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
         return result;
     }
 
-    private void addToSortedNetworkIDs(HabitatID neid){
-        HabitatID temp[] = new HabitatID[this.sortedHabitatIDs.length+1];
-        System.arraycopy(this.sortedHabitatIDs,0, temp, 0, sortedHabitatIDs.length);
-        temp[this.sortedHabitatIDs.length] = neid;
+    private void addToSortedNetworkIDs(NetUUID neid){
+        NetUUID temp[] = new NetUUID[this.sortedNetUUIDs.length+1];
+        System.arraycopy(this.sortedNetUUIDs,0, temp, 0, sortedNetUUIDs.length);
+        temp[this.sortedNetUUIDs.length] = neid;
         Arrays.sort(temp,new NetworkIDComparator());
-        this.sortedHabitatIDs = temp;
+        this.sortedNetUUIDs = temp;
     }
 
-    public HabitatID[] getSortedHabitatIDs(){
-        return this.sortedHabitatIDs;
+    public NetUUID[] getSortedNetUUIDs(){
+        return this.sortedNetUUIDs;
     }
 
     public void registerHandler(Integer pType,ICNodeCommandHandler<DataType, DataTypeElement> handler){
@@ -94,14 +103,14 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
     }
 
     public void multicast(Message message){
-        this.send(message, this.multicastGroupHabitatID);
+        this.send(message, this.getMicroServiceGroup());
     }
 
     public void sendARPBroadcast(){
-        multicast(new Message(this.nextID-1,ARP_MULTICAST,null));
+        multicast(new Message(this.getMicroServiceID().getMicroServiceID(),this.nextID-1,ARP_MULTICAST,null));
     }
 
-    public CMicroServicePeerEntry<DataType> getPeerEntry(HabitatID source){
+    public CMicroServicePeerEntry<DataType> getPeerEntry(NetUUID source){
         MicroServicePeerEntry pEntry = super.getPeerEntry(source);
         if(pEntry!=null && !(pEntry instanceof CMicroServicePeerEntry)){
             pEntry = new CMicroServicePeerEntry<DataType>(source, createDataTypeInstance());
@@ -112,13 +121,13 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,HabitatID unreachableSource) {
+    public void processDestinationUnreachable(Message message,NetUUID unreachableSource) {
         CMicroServicePeerEntry<DataType> peerEntry = getPeerEntry(unreachableSource);
         ICNodeCommandHandler<DataType,DataTypeElement> handle = this.handlers.get(message.getMessageType());
         handle.handleUnreachableMessage(message,unreachableSource,peerEntry,this);
     }
 
-    public void processMessage(Message cmd, HabitatID source, HabitatID destination){
+    public void processMessage(Message cmd, NetUUID source, NetUUID destination){
         if(cmd==arpID){
             sendARPBroadcast();
             return;
@@ -136,7 +145,7 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
         return this.localData;
     }
 
-    public void cleanJournalHistoryForSource(HabitatID source){
+    public void cleanJournalHistoryForSource(MicroServiceNetUUID source){
         //Remove any expected replys from this node as it is up.
         List<Message> finished = new LinkedList<Message>();
         for(Object meo:this.getJournalEntries()){
@@ -150,17 +159,17 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
             this.removeJournalEntry(m);
         }
         //Update this node change id it the source node
-        this.send(new Message(this.nextID-1,SET_CURRENT_PEER_ID,null), source);
+        this.send(new Message(this.getMicroServiceID().getMicroServiceID(),this.nextID-1,SET_CURRENT_PEER_ID,null), source);
     }
 
-    public void sendAcknowledge(Message Message,HabitatID source){
-        send(new Message(Message.getMessageID(),ACKNOWLEDGE, null), source);
+    public void sendAcknowledge(Message Message,MicroServiceNetUUID source){
+        send(new Message(getMicroServiceID().getMicroServiceID(),Message.getMessageID(),ACKNOWLEDGE, null), source);
     }
 
     public abstract DataType createDataTypeInstance();
     public abstract Collection<DataTypeElement> getDataTypeElementCollection(DataType data);
     public abstract void handleNodeOriginalData(DataTypeElement dataTypeElement);
-    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement,HabitatID source);
+    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement,NetUUID source);
     public abstract boolean isLocalPeerCopyContainData(DataType data);
 
     @Override
@@ -174,7 +183,7 @@ public abstract class CNode<DataType,DataTypeElement> extends MicroService {
     }
 
     public void log(String str){
-        StringBuffer buff = new StringBuffer("Node ").append(this.getMicroServiceID().getPort()).append(" - ");
+        StringBuffer buff = new StringBuffer("Node ").append(this.getMicroServiceID().getMicroServiceID()).append(" - ");
         buff.append(str);
         System.out.println(buff);
     }

@@ -15,17 +15,16 @@ import java.util.List;
 import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.network.HabitatID;
+import org.datasand.network.NetUUID;
 import org.datasand.network.Packet;
 import org.datasand.network.PriorityLinkedList;
-import org.datasand.network.habitat.HabitatsConnection;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public abstract class MicroService implements Runnable {
 
-    private final HabitatID microServiceID;
-    private final HabitatID microServiceGroup;
+    private final MicroServiceNetUUID microServiceID;
+    private final MicroServiceNetUUID microServiceGroup;
     private final MicroServicesManager microServiceManager;
     private final  PriorityLinkedList<Packet> queue = new PriorityLinkedList<Packet>();
     private boolean busy = false;
@@ -44,28 +43,28 @@ public abstract class MicroService implements Runnable {
 
     public MicroService(int microServiceGroup, MicroServicesManager manager) {
         this.microServiceManager = manager;
-        this.microServiceID = new HabitatID(microServiceManager.getHabitat().getLocalHost().getIPv4Address(),
-                microServiceManager.getHabitat().getLocalHost().getPort(),
+        this.microServiceID = new MicroServiceNetUUID(microServiceManager.getHabitat().getNetUUID().getA(),
+                microServiceManager.getHabitat().getNetUUID().getB(),
                 microServiceManager.getNextMicroServiceID());
-        this.microServiceGroup = new HabitatID(HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),microServiceGroup,microServiceGroup);
+        this.microServiceGroup = new MicroServiceNetUUID(0,microServiceGroup,0);
         this.microServiceManager.registerMicroService(this);
         this.microServiceManager.registerForMulticast(microServiceGroup,this);
         registerRepetitiveMessage(10000, 10000, 0, timeoutIdentifier);
     }
 
     public void multicast(int msgType){
-        this.send(new Message(msgType,null), this.microServiceGroup);
+        this.send(new Message(this.microServiceID.getMicroServiceID(),msgType,null), this.microServiceGroup);
     }
 
     public void multicast(Message msg){
         this.send(msg, this.microServiceGroup);
     }
 
-    public HabitatID getMicroServiceID() {
+    public MicroServiceNetUUID getMicroServiceID() {
         return this.microServiceID;
     }
 
-    public HabitatID getMicroServiceGroup(){
+    public MicroServiceNetUUID getMicroServiceGroup(){
         return this.microServiceGroup;
     }
 
@@ -94,7 +93,7 @@ public abstract class MicroService implements Runnable {
         if(currentFrame.getMessage()==timeoutIdentifier){
             this.checkForTimeoutMessages();
         }else
-        if(currentFrame.getSource().getServiceID()== HabitatsConnection.DESTINATION_UNREACHABLE){
+        if(currentFrame.getSource().equals(Packet.PROTOCOL_ID_UNREACHABLE)){
             processDestinationUnreachable((Message)currentFrame.getMessage(),currentFrame.getUnreachableOrigAddress());
         }else
         if (currentFrame.getMessage() instanceof ISideTask) {
@@ -109,14 +108,17 @@ public abstract class MicroService implements Runnable {
         }
     }
 
-    public abstract void processDestinationUnreachable(Message message,HabitatID unreachableSource);
-    public abstract void processMessage(Message message, HabitatID source, HabitatID destination);
+    public abstract void processDestinationUnreachable(Message message,NetUUID unreachableSource);
+    public abstract void processMessage(Message message, NetUUID source, NetUUID destination);
     public abstract void start();
     public abstract String getName();
 
-    public void send(Message obj, HabitatID destination) {
-        if(_ForTestOnly_pseudoSendEnabled) return;
-        if(this.getMicroServiceID().equals(destination)){
+    public void send(Message obj, MicroServiceNetUUID destination) {
+        if(_ForTestOnly_pseudoSendEnabled) {
+            return;
+        }
+
+        if(this.microServiceID.equals(destination)){
             processMessage(obj, destination, destination);
             return;
         }
@@ -125,7 +127,7 @@ public abstract class MicroService implements Runnable {
         microServiceManager.getHabitat().send(ba.getData(), this.microServiceID, destination);
     }
 
-    public void send(byte data[], HabitatID destination) {
+    public void send(byte data[], MicroServiceNetUUID destination) {
         microServiceManager.getHabitat().send(data, this.microServiceID, destination);
     }
 
@@ -177,14 +179,14 @@ public abstract class MicroService implements Runnable {
         for(Iterator<MessageEntry> iter=journal.values().iterator();iter.hasNext();){
             MessageEntry e = iter.next();
             if(e.hasTimedOut()){
-                for(HabitatID peer:e.getPeers()){
+                for(NetUUID peer:e.getPeers()){
                     handleTimedOutMessage(e.getMessage(),peer);
                 }
             }
         }
     }
 
-    public void handleTimedOutMessage(Message message,HabitatID peer){
+    public void handleTimedOutMessage(Message message,NetUUID peer){
 
     }
 
@@ -192,7 +194,7 @@ public abstract class MicroService implements Runnable {
         this.journal.put(entry.getMessage().getMessageID(), entry);
     }
 
-    public MessageEntry addUnicastJournal(Message m,HabitatID peer){
+    public MessageEntry addUnicastJournal(Message m,NetUUID peer){
         MessageEntry entry = new MessageEntry(m, peer, MessageEntry.DEFAULT_TIMEOUT);
         this.journal.put(m.getMessageID(), entry);
         return entry;
@@ -202,15 +204,15 @@ public abstract class MicroService implements Runnable {
         return this.microServicePeers.addARPJournal(message,includeSelf);
     }
 
-    public MicroServicePeerEntry getPeerEntry(HabitatID source){
+    public MicroServicePeerEntry getPeerEntry(NetUUID source){
         return this.microServicePeers.getPeerEntry(source);
     }
 
-    public void replacePeerEntry(HabitatID source, MicroServicePeerEntry entry){
+    public void replacePeerEntry(NetUUID source, MicroServicePeerEntry entry){
         this.microServicePeers.replacePeerEntry(source,entry);
     }
 
-    public void addPeerToARPJournal(Message m,HabitatID peer){
+    public void addPeerToARPJournal(Message m,NetUUID peer){
         MessageEntry entry = journal.get(m.getMessageID());
         entry.addPeer(peer);
     }
@@ -235,7 +237,7 @@ public abstract class MicroService implements Runnable {
         return this.queue.size();
     }
 
-    public HabitatID getAPeer(){
+    public NetUUID getAPeer(){
         return this.microServicePeers.getAPeer();
     }
 }
