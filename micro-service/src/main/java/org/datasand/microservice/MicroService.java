@@ -23,8 +23,8 @@ import org.datasand.network.PriorityLinkedList;
  */
 public abstract class MicroService implements Runnable {
 
-    private final MicroServiceNetUUID microServiceID;
-    private final MicroServiceNetUUID microServiceGroup;
+    private final int microServiceID;
+    private final NetUUID microServiceGroup;
     private final MicroServicesManager microServiceManager;
     private final  PriorityLinkedList<Packet> queue = new PriorityLinkedList<Packet>();
     private boolean busy = false;
@@ -32,39 +32,37 @@ public abstract class MicroService implements Runnable {
     private final List<RepetitiveFrameEntry> repetitiveTasks = new ArrayList<RepetitiveFrameEntry>();
     private long lastRepetitiveCheck = 0;
     private final Map<Long,MessageEntry> journal = new LinkedHashMap<Long, MessageEntry>();
-    private static final Message timeoutIdentifier = new Message();
+    private static final Message timeoutIdentifier = new Message(-1,-1,-1,-1,null);
     private final MicroServicePeers microServicePeers = new MicroServicePeers(this);
 
     public boolean _ForTestOnly_pseudoSendEnabled = false;
 
     static {
-        Encoder.registerSerializer(Message.class, new Message());
+        Encoder.registerSerializer(Message.class, new Message(-1,-1,-1,-1,null));
     }
 
     public MicroService(int microServiceGroup, MicroServicesManager manager) {
         this.microServiceManager = manager;
-        this.microServiceID = new MicroServiceNetUUID(microServiceManager.getHabitat().getNetUUID().getA(),
-                microServiceManager.getHabitat().getNetUUID().getB(),
-                microServiceManager.getNextMicroServiceID());
-        this.microServiceGroup = new MicroServiceNetUUID(0,microServiceGroup,0);
+        this.microServiceID = microServiceManager.getNextMicroServiceID();
+        this.microServiceGroup = new NetUUID(0,microServiceGroup);
         this.microServiceManager.registerMicroService(this);
         this.microServiceManager.registerForMulticast(microServiceGroup,this);
         registerRepetitiveMessage(10000, 10000, 0, timeoutIdentifier);
     }
 
     public void multicast(int msgType){
-        this.send(new Message(this.microServiceID.getMicroServiceID(),msgType,null), this.microServiceGroup);
+        this.send(new Message(this.microServiceID,(int)this.microServiceGroup.getB(),msgType,null), this.microServiceGroup);
     }
 
     public void multicast(Message msg){
         this.send(msg, this.microServiceGroup);
     }
 
-    public MicroServiceNetUUID getMicroServiceID() {
+    public int getMicroServiceID() {
         return this.microServiceID;
     }
 
-    public MicroServiceNetUUID getMicroServiceGroup(){
+    public NetUUID getMicroServiceGroup(){
         return this.microServiceGroup;
     }
 
@@ -108,31 +106,32 @@ public abstract class MicroService implements Runnable {
         }
     }
 
+    public NetUUID getNetUUID(){
+        return this.getMicroServiceManager().getHabitat().getNetUUID();
+    }
+
     public abstract void processDestinationUnreachable(Message message,NetUUID unreachableSource);
     public abstract void processMessage(Message message, NetUUID source, NetUUID destination);
     public abstract void start();
     public abstract String getName();
 
-    public void send(Message obj, MicroServiceNetUUID destination) {
+    public void send(Message msg, NetUUID destination) {
         if(_ForTestOnly_pseudoSendEnabled) {
             return;
         }
 
-        if(this.microServiceID.equals(destination)){
-            processMessage(obj, destination, destination);
+        if(destination.equals(getNetUUID())
+                && this.getMicroServiceID()==msg.getDestination()){
+            processMessage(msg, destination, destination);
             return;
         }
         BytesArray ba = new BytesArray(1024);
-        Encoder.encodeObject(obj, ba);
-        microServiceManager.getHabitat().send(ba.getData(), this.microServiceID, destination);
-    }
-
-    public void send(byte data[], MicroServiceNetUUID destination) {
-        microServiceManager.getHabitat().send(data, this.microServiceID, destination);
+        Encoder.encodeObject(msg, ba);
+        microServiceManager.getHabitat().send(ba.getData(), this.getNetUUID(), destination);
     }
 
     public void registerRepetitiveMessage(long interval,long intervalStart,int priority,Message message){
-        Packet p = new Packet(message,this.getMicroServiceID());
+        Packet p = new Packet(message,getNetUUID());
         RepetitiveFrameEntry entry = new RepetitiveFrameEntry(p, interval,intervalStart, priority);
         if(entry.shouldExecute()){
             queue.add(entry.frame, entry.priority);

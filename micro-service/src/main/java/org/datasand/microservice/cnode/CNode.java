@@ -16,7 +16,6 @@ import java.util.Map;
 import org.datasand.microservice.Message;
 import org.datasand.microservice.MessageEntry;
 import org.datasand.microservice.MicroService;
-import org.datasand.microservice.MicroServiceNetUUID;
 import org.datasand.microservice.MicroServicePeerEntry;
 import org.datasand.microservice.MicroServicesManager;
 import org.datasand.microservice.cnode.handlers.ARPMulticastHandler;

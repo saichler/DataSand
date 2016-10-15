@@ -21,11 +21,12 @@ import org.datasand.network.NetUUID;
  * Message is the vessel which is used to transfer data from one node to another.
  */
 public class ServiceInventory extends Message {
-    private Map<Long,List<NetUUID>> services = new HashMap<>();
-    private NetUUID netUUID = null;
+    private final Map<Long,List<NetUUID>> services = new HashMap<>();
+    private final NetUUID netUUID;
 
-    public void setNetUUID(NetUUID id){
-        this.netUUID = id;
+    public ServiceInventory(int source,int destination, NetUUID uuid){
+        super(source,destination,-1,null);
+        this.netUUID = uuid;
     }
 
     public void addService(long serviceGroup,NetUUID id){
@@ -54,19 +55,16 @@ public class ServiceInventory extends Message {
 
     @Override
     public Object decode(BytesArray ba) {
-        ServiceInventory serviceInventory = new ServiceInventory();
-        ServiceInventory si = (ServiceInventory)super.decode(ba);
-        si.netUUID = (NetUUID)Encoder.decodeObject(ba);
+        Message m = (Message)super.decode(ba);
+        ServiceInventory serviceInventory = new ServiceInventory(m.getSource(),m.getDestination(),(NetUUID)Encoder.decodeObject(ba));
         int size = Encoder.decodeInt16(ba);
         for(int i=0;i<size;i++){
             long group = Encoder.decodeInt64(ba);
             int groupSize = Encoder.decodeInt16(ba);
-            List<NetUUID> ids = new ArrayList<>(groupSize);
-            si.services.put(group,ids);
             for(int j=0;j<groupSize;j++){
-                ids.add((NetUUID)Encoder.decodeObject(ba));
+                serviceInventory.addService(group, (NetUUID)Encoder.decodeObject(ba));
             }
         }
-        return si;
+        return serviceInventory;
     }
 }
