@@ -114,12 +114,12 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     }
 
     public void addMicroService(MicroService h) {
-        this.id2MicroService.put(h.getMicroServiceID().getMicroServiceID(), h);
+        this.id2MicroService.put(h.getMicroServiceID(), h);
     }
 
     public void registerMicroService(MicroService h) {
-        id2MicroService.put(h.getMicroServiceID().getMicroServiceID(), h);
-        handlerNameToID.put(h.getName(), h.getMicroServiceID().getMicroServiceID());
+        id2MicroService.put(h.getMicroServiceID(), h);
+        handlerNameToID.put(h.getName(), h.getMicroServiceID());
         serviceInventory.addService(h.getMicroServiceGroup().getB(),h.getMicroServiceID());
     }
 
@@ -136,11 +136,15 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     }
 
     private int getMicroServiceIDFromFrame(Packet frame){
-        return Encoder.decodeInt32(frame.getData(),Packet.PACKET_DATA_LOCATION+16);
+        return Encoder.decodeInt16(frame.getData(),Packet.PACKET_DATA_LOCATION+16);
     }
 
     @Override
     public void process(Packet frame) {
+        if(frame.getDestination().equals(this.getHabitat().getNetUUID())){
+            //this is not for my services so ignore it.
+            return;
+        }
         int microServiceID = getMicroServiceIDFromFrame(frame);
         MicroService h = id2MicroService.get(microServiceID);
         if (h != null) {
@@ -171,7 +175,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     @Override
     public void processBroadcast(Packet frame) {
-        for (MicroService ms : habitatIDtoMicroService.values()) {
+        for (MicroService ms : id2MicroService.values()) {
             ms.addFrame(frame);
         }
         synchronized (servicesSeynchronizeObject) {
@@ -227,7 +231,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
                                                     this });
                             registerMicroService(newHandler);
                             newHandler.start();
-                            result.add(newHandler.getMicroServiceID());
+                            result.add(newHandler.getNetUUID());
                             cl.close();
                         } catch (Exception err) {
                             err.printStackTrace();

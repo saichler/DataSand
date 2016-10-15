@@ -21,11 +21,12 @@ import org.datasand.network.NetUUID;
  * Message is the vessel which is used to transfer data from one node to another.
  */
 public class ServiceInventory extends Message {
-    private Map<Long,List<NetUUID>> services = new HashMap<>();
-    private NetUUID netUUID = null;
+    private final Map<Long,List<NetUUID>> services = new HashMap<>();
+    private final NetUUID netUUID;
 
-    public void setNetUUID(NetUUID id){
-        this.netUUID = id;
+    public ServiceInventory(int source,int destination, NetUUID uuid, Object data){
+        super(source,destination,-1,data);
+        this.netUUID = uuid;
     }
 
     public void addService(long serviceGroup,NetUUID id){

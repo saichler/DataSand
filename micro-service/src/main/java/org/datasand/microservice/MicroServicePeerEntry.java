@@ -13,15 +13,18 @@ import org.datasand.network.NetUUID;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class MicroServicePeerEntry {
-    private NetUUID netUUID = null;
+    private final NetUUID netUUID;
+    private final int serviceID;
     private long lastReceivedPing = -1;
     private long lastID = 999;
     private boolean unreachable = false;
 
-    public MicroServicePeerEntry(NetUUID _netNetUUID){
-        this.netUUID = _netNetUUID;
+    public MicroServicePeerEntry(NetUUID netUUID,int serviceID){
+        this.netUUID = netUUID;
+        this.serviceID = serviceID;
         this.lastReceivedPing = System.currentTimeMillis();
     }
+
     public NetUUID getNetUUID() {
         return netUUID;
     }
