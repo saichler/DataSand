@@ -28,16 +28,16 @@ public class PacketProcessor extends ThreadNode {
     private LinkedList<BytesArray> incomingFrames = new LinkedList<BytesArray>();
     private Map<Packet, MultiPartContainer> multiparts = new HashMap<Packet, MultiPartContainer>();
     private final Packet serializer = new Packet((Object) null, null);
-    private final ServicesHabitat servicesHabitat;
+    private final Node node;
 
-    public PacketProcessor(ServicesHabitat servicesHabitat) {
-        super(servicesHabitat,servicesHabitat.getName()+" packet processor");
-        this.servicesHabitat = servicesHabitat;
+    public PacketProcessor(Node node) {
+        super(node, node.getName()+" packet processor");
+        this.node = node;
     }
 
     public void addPacket(BytesArray ba) {
         boolean multiPart = ba.getBytes()[Packet.PACKET_MULTIPART_AND_PRIORITY_LOCATION] % 2 == 1;
-        servicesHabitat.getServicesHabitatMetrics().addIncomingPacketCount();
+        node.getNetMetrics().addIncomingPacketCount();
 
         // The packet is a complete frame
         if (!multiPart) {
@@ -62,7 +62,7 @@ public class PacketProcessor extends ThreadNode {
     private void addFrame(BytesArray frame){
         synchronized (incomingFrames) {
             incomingFrames.add(frame);
-            servicesHabitat.getServicesHabitatMetrics().addIncomingFrameCount();
+            node.getNetMetrics().addIncomingFrameCount();
             incomingFrames.notifyAll();
         }
     }
@@ -86,33 +86,33 @@ public class PacketProcessor extends ThreadNode {
 
         if (frame != null) {
             Packet f = (Packet) serializer.decode(frame);
-            if (servicesHabitat.getFrameListener() != null) {
+            if (node.getFrameListener() != null) {
                 if (f.getSource().equals(Packet.PROTOCOL_ID_UNREACHABLE)) {
-                    servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
-                    servicesHabitat.getFrameListener().processDestinationUnreachable(f);
+                    node.getNetMetrics().addUnreachableFrameCount();
+                    node.getFrameListener().processDestinationUnreachable(f);
                 } else if (f.getDestination().equals(Packet.PROTOCOL_ID_BROADCAST)) {
-                    servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
-                    servicesHabitat.getFrameListener().processBroadcast(f);
+                    node.getNetMetrics().addBroadcastFrameCount();
+                    node.getFrameListener().processBroadcast(f);
                 } else if (f.getDestination().getUuidA()==0) {
-                    servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
-                    servicesHabitat.getFrameListener().processMulticast(f);
+                    node.getNetMetrics().addMulticastFrameCount();
+                    node.getFrameListener().processMulticast(f);
                 } else {
-                    servicesHabitat.getServicesHabitatMetrics().addRegularFrameCount();
-                    servicesHabitat.getFrameListener().process(f);
+                    node.getNetMetrics().addRegularFrameCount();
+                    node.getFrameListener().process(f);
                 }
             } else {
                 if (f.getSource().equals(Packet.PROTOCOL_ID_UNREACHABLE)) {
-                    servicesHabitat.getServicesHabitatMetrics().addUnreachableFrameCount();
-                    LOG.info(servicesHabitat.getNetUUID()+" No Frame Listener, Received Unreachable Frame"+f);
+                    node.getNetMetrics().addUnreachableFrameCount();
+                    LOG.info(node.getNID()+" No Frame Listener, Received Unreachable Frame"+f);
                 } else if (f.getDestination().equals(Packet.PROTOCOL_ID_BROADCAST)) {
-                    servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
-                    VLogger.info(servicesHabitat.getNetUUID()+" No Frame Listener, Received Broadcast Frame"+f);
+                    node.getNetMetrics().addBroadcastFrameCount();
+                    VLogger.info(node.getNID()+" No Frame Listener, Received Broadcast Frame"+f);
                 } else if (f.getDestination().getUuidA()==0) {
-                    servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
-                    VLogger.info(servicesHabitat.getNetUUID()+" No Frame Listener, Received Multicast Frame"+f);
+                    node.getNetMetrics().addMulticastFrameCount();
+                    VLogger.info(node.getNID()+" No Frame Listener, Received Multicast Frame"+f);
                 } else {
-                    servicesHabitat.getServicesHabitatMetrics().addRegularFrameCount();
-                    VLogger.info(servicesHabitat.getNetUUID()+" No Frame Listener, Received Regular Frame"+f);
+                    node.getNetMetrics().addRegularFrameCount();
+                    VLogger.info(node.getNID()+" No Frame Listener, Received Regular Frame"+f);
                 }
             }
         }

@@ -11,7 +11,7 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.cnode.CMicroServicePeerEntry;
 import org.datasand.microservice.cnode.CNode;
 import org.datasand.microservice.cnode.ICNodeCommandHandler;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -19,7 +19,7 @@ import org.datasand.network.NetUUID;
 public class NodeJoinHandler<DataType,DataTypeElement> implements ICNodeCommandHandler<DataType,DataTypeElement>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleMessage(Message cNodeCommand, NID source, NID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         node.log("Node Join, entering sync mode to sync "+source);
         node.setSynchronizing(true);
         node.send(new Message(-1,CNode.ENTER_SYNC_MODE,null),source);
@@ -49,6 +49,6 @@ public class NodeJoinHandler<DataType,DataTypeElement> implements ICNodeCommandH
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand, NetUUID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, NID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
     }
 }

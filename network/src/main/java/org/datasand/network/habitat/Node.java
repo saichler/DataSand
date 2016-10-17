@@ -25,35 +25,35 @@ import java.util.*;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscovery.AdjacentMachineListener{
+public class Node extends ThreadNode implements AdjacentMachineDiscovery.AdjacentMachineListener{
 
     public static final int SERVICE_NODE_SWITCH_PORT = 50000;
-    private static final Logger LOG = LoggerFactory.getLogger(ServicesHabitat.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Node.class);
     private final ServerSocket socket;
-    private final NetUUID netUUID;
+    private final NID NID;
     private final int servicePort;
 
-    private HabitatsConnection[] connections = new HabitatsConnection[0];
-    private HabitatsConnection[] clientConnections = new HabitatsConnection[0];
+    private NodeConnection[] connections = new NodeConnection[0];
+    private NodeConnection[] clientConnections = new NodeConnection[0];
 
     private final Map<ConnectionID,Integer> connIndex = new HashMap<>();
     private final PacketProcessor packetProcessor = new PacketProcessor(this);
     private IFrameListener frameListener = null;
     private boolean unicast = false;
-    private final ServicesHabitatMetrics servicesHabitatMetrics = new ServicesHabitatMetrics();
+    private final NetMetrics netMetrics = new NetMetrics();
     private final AdjacentMachineDiscovery discovery;
     private final RepetitiveTaskContainer repetitiveTaskContainer = new RepetitiveTaskContainer(this);
     private final RoutingTable routingTable = new RoutingTable();
 
-    public ServicesHabitat(IFrameListener _frameListener) {
+    public Node(IFrameListener _frameListener) {
         this(_frameListener,false);
     }
 
-    public ServicesHabitat(IFrameListener _frameListener, boolean unicastOnly) {
+    public Node(IFrameListener _frameListener, boolean unicastOnly) {
         super((ThreadNode)_frameListener,"");
         this.frameListener = _frameListener;
         this.unicast = unicastOnly;
-        synchronized(ServicesHabitat.class) {
+        synchronized(Node.class) {
             ServerSocket s = null;
             int selectedPort = -1;
             for (int i = SERVICE_NODE_SWITCH_PORT; i < SERVICE_NODE_SWITCH_PORT + 10000; i++) {
@@ -69,9 +69,9 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             }
             this.socket = s;
             this.servicePort = selectedPort;
-            this.netUUID = loadHabitatID();
+            this.NID = loadHabitatID();
             if(!this.unicast && this.servicePort ==SERVICE_NODE_SWITCH_PORT){
-                this.discovery = new AdjacentMachineDiscovery(this.netUUID,this);
+                this.discovery = new AdjacentMachineDiscovery(this.NID,this);
             }else{
                 this.discovery = null;
             }
@@ -82,9 +82,9 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
         }
     }
 
-    private NetUUID loadHabitatID() {
+    private NID loadHabitatID() {
         File habitatIdFile = new File("./data/ids/hid-"+this.servicePort +".txt");
-        NetUUID result = null;
+        NID result = null;
         if(habitatIdFile.exists()){
             try {
                 FileInputStream in = new FileInputStream(habitatIdFile);
@@ -95,7 +95,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 int n = Integer.parseInt(reader.readLine());
                 long a = Long.parseLong(reader.readLine());
                 long b = Long.parseLong(reader.readLine());
-                result = new NetUUID(n, a, b, 0);
+                result = new NID(n, a, b, 0);
             }catch(IOException e){
                 LOG.error("Failed to load habitat ID.",e);
             }
@@ -105,7 +105,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             }
             try {
                 UUID random = UUID.randomUUID();
-                result = new NetUUID(0,random.getMostSignificantBits(),random.getLeastSignificantBits(),0);
+                result = new NID(0,random.getMostSignificantBits(),random.getLeastSignificantBits(),0);
                 FileOutputStream out = new FileOutputStream(habitatIdFile);
                 String n = "0\n";
                 String a = ""+result.getUuidA()+"\n";
@@ -127,15 +127,15 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
 
     private void connectToSwitch(boolean unicast){
         try {
-            HabitatsConnection conn = new HabitatsConnection(this, InetAddress.getByName(Encoder.getLocalIPAddress()), SERVICE_NODE_SWITCH_PORT,unicast);
+            NodeConnection conn = new NodeConnection(this, InetAddress.getByName(Encoder.getLocalIPAddress()), SERVICE_NODE_SWITCH_PORT,unicast);
             addConnection(conn);
         }catch(UnknownHostException e){
             LOG.error("Error opening connection to switch",e);
         }
     }
 
-    public ServicesHabitatMetrics getServicesHabitatMetrics(){
-        return this.servicesHabitatMetrics;
+    public NetMetrics getNetMetrics(){
+        return this.netMetrics;
     }
 
     protected IFrameListener getFrameListener(){
@@ -150,7 +150,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
         }
     }
 
-    private void addConnection(HabitatsConnection c) throws UnknownHostException {
+    private void addConnection(NodeConnection c) throws UnknownHostException {
         c.start();
         synchronized (this.connections){
             if(c.isUnicast()){
@@ -162,7 +162,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                     }
                 }
                 if(!foundSpace){
-                    HabitatsConnection tmp[] = new HabitatsConnection[this.clientConnections.length+1];
+                    NodeConnection tmp[] = new NodeConnection[this.clientConnections.length+1];
                     System.arraycopy(this.clientConnections,0,tmp,0,this.clientConnections.length);
                     tmp[this.clientConnections.length]=c;
                     this.clientConnections=tmp;
@@ -199,14 +199,14 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 connIndex.put(c.getConnectionID(),nullPosition);
                 connections[nullPosition] = c;
             }else{
-                HabitatsConnection temp[] = new HabitatsConnection[connections.length+1];
+                NodeConnection temp[] = new NodeConnection[connections.length+1];
                 System.arraycopy(connections,0,temp,0,connections.length);
                 connIndex.put(c.getConnectionID(),connections.length);
                 temp[connections.length] = c;
                 connections = temp;
             }
-            this.routingTable.add(c.getConnectionID().getAdjacentNetUUID(this.netUUID),c.getConnectionID());
-            LOG.info(this.netUUID+" added Connection for "+c.getConnectionID());
+            this.routingTable.add(c.getConnectionID().getAdjacentNetUUID(this.NID),c.getConnectionID());
+            LOG.info(this.NID +" added Connection for "+c.getConnectionID());
         }
     }
 
@@ -223,10 +223,10 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
 
     public void execute() throws Exception{
         Socket s = socket.accept();
-        addConnection(new HabitatsConnection(this, s));
+        addConnection(new NodeConnection(this, s));
     }
 
-    public void send(byte data[], NetUUID source, NetUUID dest) {
+    public void send(byte data[], NID source, NID dest) {
         if (data.length < Packet.MAX_DATA_IN_ONE_PACKET) {
             Packet p = new Packet(source, dest, data);
             send(p);
@@ -264,13 +264,13 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 LOG.error("failed to send unicast packet",e);
             }
         }else if(this.connections.length==0 && this.clientConnections.length==0){
-            LOG.error("No Connections Exist for "+this.netUUID);
+            LOG.error("No Connections Exist for "+this.NID);
             return;
         } else {
             //This is the switch and it is a Multicast/Broadcast packet
             if(m.getDestination().getUuidA()==0){
-                HabitatsConnection sourceCon = getNodeConnection(m.getSource(),false);
-                for(HabitatsConnection con:this.connections){
+                NodeConnection sourceCon = getNodeConnection(m.getSource(),false);
+                for(NodeConnection con:this.connections){
                     if(con==null){
                         continue;
                     }
@@ -278,7 +278,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                     try {
                         BytesArray unreachable = con.sendPacket(ba);
                         if(unreachable!=null){
-                            unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable,con.getConnectionID().getAdjacentNetUUID(this.netUUID));
+                            unreachable = NodeConnection.addUnreachableAddressForMulticast(unreachable,con.getConnectionID().getAdjacentNetUUID(this.NID));
                             if(sourceCon!=null){
                                 sourceCon.sendPacket(unreachable);
                             }else{
@@ -292,7 +292,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 m.encode(m, ba);
                 this.receivedPacket(ba);
             }else{
-                HabitatsConnection c = this.getNodeConnection(m.getDestination(),true);
+                NodeConnection c = this.getNodeConnection(m.getDestination(),true);
                 if (c != null) {
                     try {
                         m.encode(m, ba);
@@ -306,26 +306,26 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                     }
                 } else {
                     m.encode(m,ba);
-                    BytesArray unreachable = HabitatsConnection.markAsUnreachable(ba);
+                    BytesArray unreachable = Packet.markAsUnreachable(ba);
                     this.receivedPacket(unreachable);
                 }
             }
         }
     }
 
-    public NetUUID getNetUUID() {
-        return this.netUUID;
+    public NID getNID() {
+        return this.NID;
     }
 
-    public void unregisterNetworkNodeConnection(NetUUID source){
+    public void unregisterNetworkNodeConnection(NID source){
         synchronized (this.connections) {
             LOG.info("Unregister "+source);
             for(int i=0;i<this.connections.length;i++){
-                if(this.connections[i].getConnectionID().getAdjacentNetUUID(this.netUUID).equals(source)){
+                if(this.connections[i].getConnectionID().getAdjacentNetUUID(this.NID).equals(source)){
                     this.connIndex.remove(this.connections[i].getConnectionID());
                     this.connections[i].shutdown();
                     this.connections[i] = null;
-                    HabitatsConnection temp[] = new HabitatsConnection[this.connections.length-1];
+                    NodeConnection temp[] = new NodeConnection[this.connections.length-1];
                     System.arraycopy(this.connections,0,temp,0,i);
                     System.arraycopy(this.connections,i+1,temp,i,this.connections.length-i-1);
                     this.connections = temp;
@@ -336,14 +336,14 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
     }
 
     public void broadcast(BytesArray ba) {
-        NetUUID source = new NetUUID(
+        NID source = new NID(
                 Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION),
                 Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+2),
                 Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+10),0);
 
-        HabitatsConnection sourceCon = getNodeConnection(source,false);
-        List<NetUUID> unreachableDest = new LinkedList<NetUUID>();
-        for(HabitatsConnection connection:this.connections){
+        NodeConnection sourceCon = getNodeConnection(source,false);
+        List<NID> unreachableDest = new LinkedList<NID>();
+        for(NodeConnection connection:this.connections){
             BytesArray unreachable = null;
             try {
                 unreachable = connection.sendPacket(ba);
@@ -352,9 +352,9 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             }
 
             if(unreachable!=null){
-                NetUUID nid = connection.getConnectionID().getAdjacentNetUUID(this.netUUID);
+                NID nid = connection.getConnectionID().getAdjacentNetUUID(this.NID);
                 unreachableDest.add(nid);
-                unreachable = HabitatsConnection.addUnreachableAddressForMulticast(unreachable,nid);
+                unreachable = NodeConnection.addUnreachableAddressForMulticast(unreachable,nid);
                 if(sourceCon!=null){
                     try{
                         sourceCon.sendPacket(unreachable);
@@ -367,7 +367,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             }
         }
         if(!unreachableDest.isEmpty()){
-            for(NetUUID unreach:unreachableDest){
+            for(NID unreach:unreachableDest){
                 unregisterNetworkNodeConnection(unreach);
             }
         }
@@ -378,7 +378,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
         packetProcessor.addPacket(ba);
     }
 
-    public HabitatsConnection getNodeConnection(NetUUID dest, boolean includeUnicastOnlyNodes) {
+    public NodeConnection getNodeConnection(NID dest, boolean includeUnicastOnlyNodes) {
         if(this.servicePort==SERVICE_NODE_SWITCH_PORT) {
             ConnectionID connID = this.routingTable.get(dest);
             if (connID == null) {
@@ -390,7 +390,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             }
 
             if (includeUnicastOnlyNodes) {
-                for (HabitatsConnection c : this.clientConnections) {
+                for (NodeConnection c : this.clientConnections) {
                     if (c.getConnectionID().equals(connID)) {
                         return c;
                     }
@@ -408,7 +408,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             return;
         }
         try {
-            new HabitatsConnection(this, InetAddress.getByName(host), 50000,true);
+            new NodeConnection(this, InetAddress.getByName(host), 50000,true);
         } catch (Exception e) {
             LOG.error("Failed to join network",e);
         }
@@ -420,15 +420,15 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             return;
         }
         try {
-            new HabitatsConnection(this, InetAddress.getByName(host), 50000);
+            new NodeConnection(this, InetAddress.getByName(host), 50000);
         } catch (Exception err) {
             err.printStackTrace();
         }
     }
 
     @Override
-    public void notifyAdjacentDiscovered(NetUUID adjacentID,String host) {
-        HabitatsConnection existingConnection = getNodeConnection(adjacentID,true);
+    public void notifyAdjacentDiscovered(NID adjacentID, String host) {
+        NodeConnection existingConnection = getNodeConnection(adjacentID,true);
         if(existingConnection==null || !existingConnection.isAlive()){
             joinNetwork(host);
         }

@@ -8,12 +8,12 @@
 package org.datasand.microservice.cnode;
 
 import org.datasand.microservice.Message;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public interface ICNodeCommandHandler<DataType,DataTypeElement> {
-    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
-    public void handleUnreachableMessage(Message cNodeCommand, NetUUID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
+    public void handleMessage(Message cNodeCommand, NID source, NID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
+    public void handleUnreachableMessage(Message cNodeCommand, NID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
 }

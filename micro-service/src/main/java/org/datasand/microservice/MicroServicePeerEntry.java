@@ -7,24 +7,24 @@
  */
 package org.datasand.microservice;
 
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class MicroServicePeerEntry {
-    private final NetUUID netUUID;
+    private final NID NID;
     private long lastReceivedPing = -1;
     private long lastID = 999;
     private boolean unreachable = false;
 
-    public MicroServicePeerEntry(NetUUID netUUID){
-        this.netUUID = netUUID;
+    public MicroServicePeerEntry(NID NID){
+        this.NID = NID;
         this.lastReceivedPing = System.currentTimeMillis();
     }
 
-    public NetUUID getNetUUID() {
-        return netUUID;
+    public NID getNID() {
+        return NID;
     }
     public long getLastReceivedPing() {
         return lastReceivedPing;

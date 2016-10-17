@@ -20,8 +20,8 @@ public class RepetitiveTaskContainer extends ThreadNode{
 
     private final List<RepetitiveTask> tasks = new ArrayList<>();
 
-    public RepetitiveTaskContainer(ServicesHabitat servicesHabitat){
-        super(servicesHabitat,servicesHabitat.getName()+" Pulse");
+    public RepetitiveTaskContainer(Node node){
+        super(node, node.getName()+" Pulse");
     }
 
     @Override

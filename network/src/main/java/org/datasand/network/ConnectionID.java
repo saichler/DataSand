@@ -11,31 +11,31 @@ package org.datasand.network;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class ConnectionID {
-    private final NetUUID aSide;
-    private final NetUUID zSide;
+    private final NID aSide;
+    private final NID zSide;
 
     public ConnectionID(int n, long a, long b, int n1, long a1, long b1) {
 
         if (n < n1) {
-            aSide = new NetUUID(n, a, b, 0);
-            zSide = new NetUUID(n1, a1, b1, 0);
+            aSide = new NID(n, a, b, 0);
+            zSide = new NID(n1, a1, b1, 0);
         } else if (n > n1) {
-            aSide = new NetUUID(n1, a1, b1, 0);
-            zSide = new NetUUID(n, a, b, 0);
+            aSide = new NID(n1, a1, b1, 0);
+            zSide = new NID(n, a, b, 0);
         } else {
             if (a < a1) {
-                aSide = new NetUUID(n, a, b, 0);
-                zSide = new NetUUID(n1, a1, b1, 0);
+                aSide = new NID(n, a, b, 0);
+                zSide = new NID(n1, a1, b1, 0);
             } else if (a > a1) {
-                aSide = new NetUUID(n1, a1, b1, 0);
-                zSide = new NetUUID(n, a, b, 0);
+                aSide = new NID(n1, a1, b1, 0);
+                zSide = new NID(n, a, b, 0);
             } else {
                 if (b < b1) {
-                    aSide = new NetUUID(n, a, b, 0);
-                    zSide = new NetUUID(n1, a1, b1, 0);
+                    aSide = new NID(n, a, b, 0);
+                    zSide = new NID(n1, a1, b1, 0);
                 } else if (b > b1) {
-                    aSide = new NetUUID(n1, a1, b1, 0);
-                    zSide = new NetUUID(n, a, b, 0);
+                    aSide = new NID(n1, a1, b1, 0);
+                    zSide = new NID(n, a, b, 0);
                 } else {
                     throw new IllegalArgumentException("Connection ID cannot have same aside & zside");
                 }
@@ -43,13 +43,13 @@ public class ConnectionID {
         }
     }
 
-    public NetUUID getAdjacentNetUUID(NetUUID me) {
+    public NID getAdjacentNetUUID(NID me) {
         if (this.aSide.equals(me)) {
             return this.zSide;
         } else if (this.zSide.equals(me)) {
             return this.aSide;
         } else {
-            throw new IllegalArgumentException("This connectionID does not contain this NetUUID");
+            throw new IllegalArgumentException("This connectionID does not contain this NID");
         }
     }
 
@@ -65,11 +65,11 @@ public class ConnectionID {
         return false;
     }
 
-    public NetUUID getzSide() {
+    public NID getzSide() {
         return zSide;
     }
 
-    public NetUUID getaSide() {
+    public NID getaSide() {
         return aSide;
     }
 

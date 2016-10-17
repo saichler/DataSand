@@ -30,13 +30,13 @@ public class Packet implements ISerializer {
     public static final int DESTINATION_UNREACHABLE = 9998;
     public static final int DESTINATION_BROADCAST = 10;
 
-    public static final NetUUID PROTOCOL_ID_UNREACHABLE = new NetUUID(0, 0, DESTINATION_UNREACHABLE, 0);
-    public static final NetUUID PROTOCOL_ID_BROADCAST = new NetUUID(0, 0, DESTINATION_BROADCAST, 0);
+    public static final NID PROTOCOL_ID_UNREACHABLE = new NID(0, 0, DESTINATION_UNREACHABLE, 0);
+    public static final NID PROTOCOL_ID_BROADCAST = new NID(0, 0, DESTINATION_BROADCAST, 0);
 
 
-    private NetUUID source = null;
-    private NetUUID destination = null;
-    private NetUUID originalAddress = null;
+    private NID source = null;
+    private NID destination = null;
+    private NID originalAddress = null;
 
     private int packetID = -1;
     private boolean multiPart = false;
@@ -54,15 +54,15 @@ public class Packet implements ISerializer {
     private Packet() {
     }
 
-    public Packet(NetUUID _source, NetUUID _dest) {
-        this(_source, _dest, (byte[]) null);
+    public Packet(NID _source, NID _dest) {
+        this(_source, _dest, null);
     }
 
-    public Packet(NetUUID _source, NetUUID _destination, byte[] _data) {
+    public Packet(NID _source, NID _destination, byte[] _data) {
         this(_source, _destination, _data, -1, false);
     }
 
-    public Packet(NetUUID _source, NetUUID _destination, byte[] _data,
+    public Packet(NID _source, NID _destination, byte[] _data,
                   int _id, boolean _multiPart) {
         if (_id == -1) {
             synchronized (Packet.class) {
@@ -81,29 +81,29 @@ public class Packet implements ISerializer {
         }
     }
 
-    public Packet(Object message, NetUUID source) {
+    public Packet(Object message, NID source) {
         this.source = source;
         this.destination = source;
         this.message = message;
     }
 
-    public void setSource(NetUUID s){
+    public void setSource(NID s){
         this.source = s;
     }
 
-    public NetUUID getSource() {
+    public NID getSource() {
         return source;
     }
 
-    public void setDestination(NetUUID dest){
+    public void setDestination(NID dest){
         this.destination = dest;
     }
 
-    public NetUUID getDestination() {
+    public NID getDestination() {
         return destination;
     }
 
-    public NetUUID getOriginalAddress(){
+    public NID getOriginalAddress(){
         return this.originalAddress;
     }
 
@@ -121,10 +121,6 @@ public class Packet implements ISerializer {
 
     public void setData(byte d[]){
         this.data = d;
-    }
-
-    public void setUnreachableReply(){
-        this.isUnreachableReply = true;
     }
 
     public int getPriority() {
@@ -167,16 +163,16 @@ public class Packet implements ISerializer {
     public Object decode(BytesArray ba) {
         Packet m = new Packet();
         ba.resetLocation();
-        ISerializer serializer = Encoder.getSerializerByClass(NetUUID.class);
-        m.source = (NetUUID) serializer.decode(ba);
-        m.destination = (NetUUID) serializer.decode(ba);
+        ISerializer serializer = Encoder.getSerializerByClass(NID.class);
+        m.source = (NID) serializer.decode(ba);
+        m.destination = (NID) serializer.decode(ba);
         m.packetID = Encoder.decodeInt16(ba);
         m.priority = ((int) ba.getBytes()[ba.getLocation()]) / 2;
         m.multiPart = ba.getBytes()[ba.getLocation()] % 2 == 1;
         ba.advance(1);
         if (ba.getBytes().length > Packet.PACKET_DATA_LOCATION) {
             if (isUnreachable(m.source)) {
-                m.originalAddress = (NetUUID) serializer.decode(ba);
+                m.originalAddress = (NID) serializer.decode(ba);
                 m.data = Encoder.decodeByteArray(ba);
             } else {
                 try {
@@ -211,30 +207,45 @@ public class Packet implements ISerializer {
         return buff.toString();
     }
 
-    /*
-    public NetUUID getUnreachableOrigAddress() {
-        int n = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION);
-        long a = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION + 2);
-        long b = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION + 10);
-        int s = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION + 18);
-        if (a == 0) {
-            n = Encoder.decodeInt16(this.getData(), this.getData().length - 20);
-            a = Encoder.decodeInt64(this.getData(), this.getData().length - 18);
-            b = Encoder.decodeInt64(this.getData(), this.getData().length - 10);
-            s = Encoder.decodeInt16(this.getData(), this.getData().length - 2);
-        }
-        return new NetUUID(n, a, b, s);
-    }*/
-
     public Object getMessage() {
         return this.message;
     }
 
-    public static final boolean isUnreachable(NetUUID id) {
+    public void markAsUnreachable(){
+        BytesArray ba = new BytesArray(1024);
+        this.getDestination().encode(this.getDestination(),ba);
+        Encoder.encodeByteArray(this.getData(),ba);
+        this.setData(ba.getData());
+        this.setDestination(this.getSource());
+        this.setSource(Packet.PROTOCOL_ID_UNREACHABLE);
+        this.isUnreachableReply = true;
+
+    }
+
+    public static final BytesArray markAsUnreachable(BytesArray ba) {
+        byte[] origData = ba.getBytes();
+        byte[] mark = new byte[ba.getBytes().length+Packet.PACKET_SOURCE_LENGHT];
+        //copy packet header
+        System.arraycopy(origData,0,mark,0,Packet.PACKET_DATA_LOCATION);
+        //replace destination with source
+        System.arraycopy(origData, Packet.PACKET_SOURCE_LOCATION,mark, Packet.PACKET_DEST_LOCATION,Packet.PACKET_SOURCE_LENGHT);
+        //replace source as unreachable
+        byte[] unreachable = new byte[Packet.PACKET_DEST_LENGTH];
+        Packet.PROTOCOL_ID_UNREACHABLE.encode(Packet.PROTOCOL_ID_UNREACHABLE,unreachable,0);
+        System.arraycopy(unreachable,0,mark,Packet.PACKET_SOURCE_LOCATION,Packet.PACKET_SOURCE_LENGHT);
+        //copy original address to data location
+        System.arraycopy(origData,Packet.PACKET_DEST_LOCATION,mark,Packet.PACKET_DATA_LOCATION,Packet.PACKET_DEST_LENGTH);
+        //copy original data to data+dest.lenth
+        System.arraycopy(origData,Packet.PACKET_DATA_LOCATION,mark,Packet.PACKET_DATA_LOCATION+Packet.PACKET_DEST_LENGTH,origData.length-Packet.PACKET_DATA_LOCATION);
+        return new BytesArray(mark);
+    }
+
+    public static final boolean isUnreachable(NID id) {
         return id.equals(PROTOCOL_ID_UNREACHABLE);
     }
 
-    public static final boolean isBroadcast(NetUUID id) {
+    public static final boolean isBroadcast(NID id) {
         return id.equals(PROTOCOL_ID_BROADCAST);
     }
+
 }

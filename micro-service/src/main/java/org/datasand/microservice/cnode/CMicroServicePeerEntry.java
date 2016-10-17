@@ -8,15 +8,16 @@
 package org.datasand.microservice.cnode;
 
 import org.datasand.microservice.MicroServicePeerEntry;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
+
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class CMicroServicePeerEntry<DataType> extends MicroServicePeerEntry {
     private DataType peerData;
 
-    public CMicroServicePeerEntry(NetUUID _netNetUUID, DataType _peerData){
-        super(_netNetUUID);
+    public CMicroServicePeerEntry(NID _netNID, DataType _peerData){
+        super(_netNID);
         this.peerData = _peerData;
     }
 

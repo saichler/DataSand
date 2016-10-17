@@ -7,43 +7,47 @@
  */
 package org.datasand.network.habitat;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.SocketException;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.ConnectionID;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.datasand.network.Packet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.SocketException;
-
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class HabitatsConnection extends ThreadNode {
+public class NodeConnection extends ThreadNode {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HabitatsConnection.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NodeConnection.class);
     private final Socket socket;
     private final DataInputStream in;
     private final DataOutputStream out;
-    private final ServicesHabitat servicesHabitat;
+    private final Node node;
     private final boolean unicast;
-    private final HabitatConnectionSwitch hcSwitch;
+    private final Switch hcSwitch;
     private final ConnectionID connectionID;
 
-    public HabitatsConnection(ServicesHabitat servicesHabitat, InetAddress addr, int port, boolean unicastOnly) {
-        super(servicesHabitat,servicesHabitat.getName()+" Connection");
-        this.servicesHabitat = servicesHabitat;
+    public NodeConnection(Node node, InetAddress addr, int port, boolean unicastOnly) {
+        super(node, node.getName()+" Connection");
+        this.node = node;
         Socket tmpSocket = null;
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
         BytesArray myData = new BytesArray(20);
         BytesArray otherData = new BytesArray(20);
-        NetUUID id = this.servicesHabitat.getNetUUID();
+        NID id = this.node.getNID();
         id.encode(id,myData);
         try {
             tmpSocket = new Socket(addr, port);
@@ -62,30 +66,30 @@ public class HabitatsConnection extends ThreadNode {
         }
 
         this.socket = tmpSocket;
-        NetUUID oID = (NetUUID)id.decode(otherData);
+        NID oID = (NID)id.decode(otherData);
         this.connectionID = new ConnectionID(id.getNetwork(),id.getUuidA(),id.getUuidB(),oID.getNetwork(),oID.getUuidA(),oID.getUuidB());
         this.in = tmpIn;
         this.out = tmpOut;
         this.unicast = unicastOnly;
-        this.setName(this.servicesHabitat.getServicePort()+" connection "+this.connectionID);
-        hcSwitch = new HabitatConnectionSwitch(this);
+        this.setName(this.node.getServicePort()+" connection "+this.connectionID);
+        hcSwitch = new Switch(this);
     }
 
-    public HabitatsConnection(ServicesHabitat servicesHabitat, InetAddress addr, int port) {
-        this(servicesHabitat,addr,port,false);
+    public NodeConnection(Node node, InetAddress addr, int port) {
+        this(node,addr,port,false);
     }
 
-    public HabitatsConnection(ServicesHabitat servicesHabitat, Socket socket) {
-        super(servicesHabitat,servicesHabitat.getName()+" Connection");
+    public NodeConnection(Node node, Socket socket) {
+        super(node, node.getName()+" Connection");
         this.socket = socket;
-        this.servicesHabitat = servicesHabitat;
+        this.node = node;
         this.setDaemon(true);
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
         int unicastOnly = 0;
         BytesArray myData = new BytesArray(20);
         BytesArray otherData = new BytesArray(20);
-        NetUUID id = this.servicesHabitat.getNetUUID();
+        NID id = this.node.getNID();
         id.encode(id,myData);
         try {
             tmpIn = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
@@ -99,7 +103,7 @@ public class HabitatsConnection extends ThreadNode {
         }
         this.in = tmpIn;
         this.out = tmpOut;
-        NetUUID oID = (NetUUID)id.decode(otherData);
+        NID oID = (NID)id.decode(otherData);
         this.connectionID = new ConnectionID(id.getNetwork(),id.getUuidA(),id.getUuidB(),oID.getNetwork(),oID.getUuidA(),oID.getUuidB());
 
         if(unicastOnly==1){
@@ -107,20 +111,20 @@ public class HabitatsConnection extends ThreadNode {
         }else{
             this.unicast = false;
         }
-        this.setName(this.servicesHabitat.getServicePort()+" connection "+this.connectionID);
-        this.hcSwitch = new HabitatConnectionSwitch(this);
+        this.setName(this.node.getServicePort()+" connection "+this.connectionID);
+        this.hcSwitch = new Switch(this);
     }
 
     public boolean isUnicast(){
         return this.unicast;
     }
 
-    protected ServicesHabitat getServicesHabitat(){
-        return this.servicesHabitat;
+    protected Node getNode(){
+        return this.node;
     }
 
     public boolean isASide(){
-        if(this.connectionID.getaSide().equals(this.servicesHabitat.getNetUUID())){
+        if(this.connectionID.getaSide().equals(this.node.getNID())){
             return true;
         }
         return false;
@@ -142,10 +146,10 @@ public class HabitatsConnection extends ThreadNode {
                 }catch(SocketException serr){
                     VLogger.info("Connection was probably terminated for "+socket.getInetAddress().getHostName()+":"+socket.getPort());
                     this.shutdown();
-                    return markAsUnreachable(ba);
+                    return Packet.markAsUnreachable(ba);
                 }
             }else{
-                return markAsUnreachable(ba);
+                return Packet.markAsUnreachable(ba);
             }
         }
     }
@@ -177,26 +181,7 @@ public class HabitatsConnection extends ThreadNode {
         }
     }
 
-    public static final BytesArray markAsUnreachable(BytesArray ba) {
-        byte[] origData = ba.getBytes();
-        byte[] mark = new byte[ba.getBytes().length+Packet.PACKET_SOURCE_LENGHT];
-        //copy packet header
-        System.arraycopy(origData,0,mark,0,Packet.PACKET_DATA_LOCATION);
-        //replace destination with source
-        System.arraycopy(origData, Packet.PACKET_SOURCE_LOCATION,mark, Packet.PACKET_DEST_LOCATION,Packet.PACKET_SOURCE_LENGHT);
-        //replace source as unreachable
-        byte[] unreachable = new byte[Packet.PACKET_DEST_LENGTH];
-        Packet.PROTOCOL_ID_UNREACHABLE.encode(Packet.PROTOCOL_ID_UNREACHABLE,unreachable,0);
-        System.arraycopy(unreachable,0,mark,Packet.PACKET_SOURCE_LOCATION,Packet.PACKET_SOURCE_LENGHT);
-        //copy original address to data location
-        System.arraycopy(origData,Packet.PACKET_DEST_LOCATION,mark,Packet.PACKET_DATA_LOCATION,Packet.PACKET_DEST_LENGTH);
-        //copy original data to data+dest.lenth
-        System.arraycopy(origData,Packet.PACKET_DATA_LOCATION,mark,Packet.PACKET_DATA_LOCATION+Packet.PACKET_DEST_LENGTH,origData.length-Packet.PACKET_DATA_LOCATION);
-        return new BytesArray(mark);
-    }
-
-
-    public static final BytesArray addUnreachableAddressForMulticast(BytesArray ba, NetUUID destination){
+    public static final BytesArray addUnreachableAddressForMulticast(BytesArray ba, NID destination){
         byte[] data = ba.getBytes();
         byte[] _unreachable = new byte[data.length+Packet.PACKET_SOURCE_LENGHT];
         System.arraycopy(data, 0, _unreachable,0, data.length);

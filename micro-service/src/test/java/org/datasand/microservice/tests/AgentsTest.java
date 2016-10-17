@@ -11,9 +11,9 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
 import org.datasand.microservice.cmap.CMap;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.datasand.network.Packet;
-import org.datasand.network.habitat.ServicesHabitat;
+import org.datasand.network.habitat.Node;
 import org.junit.*;
 
 import java.io.File;
@@ -34,13 +34,13 @@ public class AgentsTest {
 
     @Test
     public void testBroadcastToNodes() throws InterruptedException {
-        ServicesHabitat nodes[] = new ServicesHabitat[10];
+        Node nodes[] = new Node[10];
         boolean allStarted = false;
         while(!allStarted){
             allStarted=true;
             for (int i = 0; i < 10; i++) {
                 if (nodes[i] == null) {
-                    nodes[i] = new ServicesHabitat(null);
+                    nodes[i] = new Node(null);
                 }
                 if(!nodes[i].isRunning()){
                     allStarted = false;
@@ -49,9 +49,9 @@ public class AgentsTest {
             Thread.sleep(200);
         }
         System.out.println("Ready");
-        nodes[3].send(new byte[5], nodes[3].getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
-        NetUUID unreach = new NetUUID(0,123,123,0);
-        nodes[3].send(new byte[5], nodes[3].getNetUUID(), unreach);
+        nodes[3].send(new byte[5], nodes[3].getNID(), Packet.PROTOCOL_ID_BROADCAST);
+        NID unreach = new NID(0,123,123,0);
+        nodes[3].send(new byte[5], nodes[3].getNID(), unreach);
         try {
             Thread.sleep(1000);
         } catch (Exception err) {
@@ -60,8 +60,8 @@ public class AgentsTest {
         int broascastCount = 0;
         int unreachableCount = 0;
         for (int i = 0; i < nodes.length; i++) {
-            broascastCount+=nodes[i].getServicesHabitatMetrics().getBroadcastFrameCount();
-            unreachableCount+=nodes[i].getServicesHabitatMetrics().getUnreachableFrameCount();
+            broascastCount+=nodes[i].getNetMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getNetMetrics().getUnreachableFrameCount();
             nodes[i].shutdown();
         }
 
@@ -99,9 +99,9 @@ public class AgentsTest {
         int unreachableCount = 0;
         int regularCount = 0;
         for (int i = 0; i < nodes.length; i++) {
-            broascastCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getBroadcastFrameCount();
-            unreachableCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
-            regularCount += nodes[i].getHabitat().getServicesHabitatMetrics().getRegularFrameCount();
+            broascastCount+=nodes[i].getHabitat().getNetMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getHabitat().getNetMetrics().getUnreachableFrameCount();
+            regularCount += nodes[i].getHabitat().getNetMetrics().getRegularFrameCount();
             nodes[i].shutdown();
         }
 
@@ -120,7 +120,7 @@ public class AgentsTest {
         // Arbitrary number greater than 10 and not equal to 9999 (which is the
         // destination unreachable code)
         int MULTICAST_GROUP = 27;
-        NetUUID multiCast = new NetUUID(0,0, MULTICAST_GROUP, 0);
+        NID multiCast = new NID(0,0, MULTICAST_GROUP, 0);
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
             agent[i] = new TestAgent(nodes[i]);
@@ -143,10 +143,10 @@ public class AgentsTest {
         int regularCount = 0;
         int multicastCount = 0;
         for (int i = 0; i < nodes.length; i++) {
-            broascastCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getBroadcastFrameCount();
-            unreachableCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
-            regularCount += nodes[i].getHabitat().getServicesHabitatMetrics().getRegularFrameCount();
-            multicastCount += nodes[i].getHabitat().getServicesHabitatMetrics().getMulticastFrameCount();
+            broascastCount+=nodes[i].getHabitat().getNetMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getHabitat().getNetMetrics().getUnreachableFrameCount();
+            regularCount += nodes[i].getHabitat().getNetMetrics().getRegularFrameCount();
+            multicastCount += nodes[i].getHabitat().getNetMetrics().getMulticastFrameCount();
             nodes[i].shutdown();
         }
 
@@ -161,7 +161,7 @@ public class AgentsTest {
     public void testUnicast() {
         MicroServicesManager nodes[] = new MicroServicesManager[10];
         MicroService agent[] = new MicroService[nodes.length];
-        NetUUID destination = null;
+        NID destination = null;
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
             agent[i] = new TestAgent(nodes[i]);
@@ -182,10 +182,10 @@ public class AgentsTest {
         int regularCount = 0;
         int multicastCount = 0;
         for (int i = 0; i < nodes.length; i++) {
-            broascastCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getBroadcastFrameCount();
-            unreachableCount+=nodes[i].getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
-            regularCount += nodes[i].getHabitat().getServicesHabitatMetrics().getRegularFrameCount();
-            multicastCount += nodes[i].getHabitat().getServicesHabitatMetrics().getMulticastFrameCount();
+            broascastCount+=nodes[i].getHabitat().getNetMetrics().getBroadcastFrameCount();
+            unreachableCount+=nodes[i].getHabitat().getNetMetrics().getUnreachableFrameCount();
+            regularCount += nodes[i].getHabitat().getNetMetrics().getRegularFrameCount();
+            multicastCount += nodes[i].getHabitat().getNetMetrics().getMulticastFrameCount();
             nodes[i].shutdown();
         }
 
@@ -280,13 +280,13 @@ public class AgentsTest {
         MicroServicesManager m1 = new MicroServicesManager();
         TestAgent ta = new TestAgent(m1);
         MicroServicesManager m2 = new MicroServicesManager();
-        NetUUID unreach = new NetUUID(0,m2.getHabitat().getNetUUID().getUuidA(),m2.getHabitat().getNetUUID().getUuidB(),5);
+        NID unreach = new NID(0,m2.getHabitat().getNID().getUuidA(),m2.getHabitat().getNID().getUuidB(),5);
         Message msg = new Message(1,null);
         ta.send(msg,unreach);
 
         Thread.sleep(2000);
 
-        long unreachCount = m1.getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
+        long unreachCount = m1.getHabitat().getNetMetrics().getUnreachableFrameCount();
         Assert.assertEquals(1,unreachCount);
 
         m2.shutdown();
@@ -299,13 +299,13 @@ public class AgentsTest {
         MicroServicesManager m2 = new MicroServicesManager();
         MicroServicesManager m3 = new MicroServicesManager();
         TestAgent ta = new TestAgent(m2);
-        NetUUID unreach = new NetUUID(0,m3.getHabitat().getNetUUID().getUuidA(),m3.getHabitat().getNetUUID().getUuidB(),5);
+        NID unreach = new NID(0,m3.getHabitat().getNID().getUuidA(),m3.getHabitat().getNID().getUuidB(),5);
         Message msg = new Message(1,null);
         ta.send(msg,unreach);
 
         Thread.sleep(2000);
 
-        long unreachCount = m2.getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
+        long unreachCount = m2.getHabitat().getNetMetrics().getUnreachableFrameCount();
         Assert.assertEquals(1,unreachCount);
 
         m2.shutdown();

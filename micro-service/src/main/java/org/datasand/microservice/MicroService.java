@@ -9,9 +9,9 @@ package org.datasand.microservice;
 
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.datasand.network.Packet;
-import org.datasand.network.PriorityLinkedList;
+import org.datasand.network.Queue;
 
 import java.util.*;
 
@@ -22,11 +22,11 @@ public abstract class MicroService implements Runnable {
 
     private static final Message timeoutIdentifier = new Message(-1, -1, null);
 
-    private final NetUUID microServiceID;
+    private final NID microServiceID;
     private final String microServiceTypeName;
-    private final NetUUID microServiceTypeID;
+    private final NID microServiceTypeID;
     private final MicroServicesManager microServiceManager;
-    private final PriorityLinkedList<Packet> queue = new PriorityLinkedList<Packet>();
+    private final Queue<Packet> queue = new Queue<Packet>();
     private boolean busy = false;
     private Packet currentFrame = null;
     private final List<RepetitiveFrameEntry> repetitiveTasks = new ArrayList<RepetitiveFrameEntry>();
@@ -48,7 +48,7 @@ public abstract class MicroService implements Runnable {
             typeData[i] = (byte) this.microServiceTypeName.charAt(i);
         }
         long typeID = Encoder.decodeInt32(typeData, 0);
-        this.microServiceTypeID = new NetUUID(0,0,typeID,0);
+        this.microServiceTypeID = new NID(0,0,typeID,0);
         this.microServiceManager.registerMicroService(this);
         this.microServiceManager.registerForMulticast(this.microServiceTypeID.getUuidB(), this);
         registerRepetitiveMessage(10000, 10000, 0, timeoutIdentifier);
@@ -62,11 +62,11 @@ public abstract class MicroService implements Runnable {
         this.send(msg, this.microServiceTypeID);
     }
 
-    public NetUUID getMicroServiceID() {
+    public NID getMicroServiceID() {
         return this.microServiceID;
     }
 
-    public NetUUID getMicroServiceTypeID() {
+    public NID getMicroServiceTypeID() {
         return this.microServiceTypeID;
     }
 
@@ -108,15 +108,15 @@ public abstract class MicroService implements Runnable {
         }
     }
 
-    public abstract void processDestinationUnreachable(Message message, NetUUID unreachableSource);
+    public abstract void processDestinationUnreachable(Message message, NID unreachableSource);
 
-    public abstract void processMessage(Message message, NetUUID source, NetUUID destination);
+    public abstract void processMessage(Message message, NID source, NID destination);
 
     public abstract void start();
 
     public abstract String getName();
 
-    public void send(Message msg, NetUUID destination) {
+    public void send(Message msg, NID destination) {
         if (_ForTestOnly_pseudoSendEnabled) {
             return;
         }
@@ -178,14 +178,14 @@ public abstract class MicroService implements Runnable {
         for (Iterator<MessageEntry> iter = journal.values().iterator(); iter.hasNext(); ) {
             MessageEntry e = iter.next();
             if (e.hasTimedOut()) {
-                for (NetUUID peer : e.getPeers()) {
+                for (NID peer : e.getPeers()) {
                     handleTimedOutMessage(e.getMessage(), peer);
                 }
             }
         }
     }
 
-    public void handleTimedOutMessage(Message message, NetUUID peer) {
+    public void handleTimedOutMessage(Message message, NID peer) {
 
     }
 
@@ -193,7 +193,7 @@ public abstract class MicroService implements Runnable {
         this.journal.put(entry.getMessage().getMessageID(), entry);
     }
 
-    public MessageEntry addUnicastJournal(Message m, NetUUID peer) {
+    public MessageEntry addUnicastJournal(Message m, NID peer) {
         MessageEntry entry = new MessageEntry(m, peer, MessageEntry.DEFAULT_TIMEOUT);
         this.journal.put(m.getMessageID(), entry);
         return entry;
@@ -203,15 +203,15 @@ public abstract class MicroService implements Runnable {
         return this.microServicePeers.addARPJournal(message, includeSelf);
     }
 
-    public MicroServicePeerEntry getPeerEntry(NetUUID source) {
+    public MicroServicePeerEntry getPeerEntry(NID source) {
         return this.microServicePeers.getPeerEntry(source);
     }
 
-    public void replacePeerEntry(NetUUID source, MicroServicePeerEntry entry) {
+    public void replacePeerEntry(NID source, MicroServicePeerEntry entry) {
         this.microServicePeers.replacePeerEntry(source, entry);
     }
 
-    public void addPeerToARPJournal(Message m, NetUUID peer) {
+    public void addPeerToARPJournal(Message m, NID peer) {
         MessageEntry entry = journal.get(m.getMessageID());
         entry.addPeer(peer);
     }
@@ -236,7 +236,7 @@ public abstract class MicroService implements Runnable {
         return this.queue.size();
     }
 
-    public NetUUID getAPeer() {
+    public NID getAPeer() {
         return this.microServicePeers.getAPeer();
     }
 }

@@ -16,10 +16,10 @@ import java.util.Objects;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class NetUUID implements ISerializer {
+public class NID implements ISerializer {
 
     static {
-        Encoder.registerSerializer(NetUUID.class, new NetUUID(-1,-1,-1,-1));
+        Encoder.registerSerializer(NID.class, new NID(-1,-1,-1,-1));
     }
 
     private final int network;
@@ -27,7 +27,7 @@ public class NetUUID implements ISerializer {
     private final long uuidB;
     private final int serviceID;
 
-    public NetUUID(int network, long uuidA, long uuidB, int serviceID) {
+    public NID(int network, long uuidA, long uuidB, int serviceID) {
         this.network = network;
         this.uuidA = uuidA;
         this.uuidB = uuidB;
@@ -61,7 +61,7 @@ public class NetUUID implements ISerializer {
 
     @Override
     public boolean equals(Object obj) {
-        NetUUID other = (NetUUID) obj;
+        NID other = (NID) obj;
         if (this.network == other.network &&
                 this.uuidA == other.uuidA &&
                 this.uuidB == other.uuidB &&
@@ -73,7 +73,7 @@ public class NetUUID implements ISerializer {
 
     @Override
     public void encode(Object value, BytesArray ba) {
-        NetUUID id = (NetUUID) value;
+        NID id = (NID) value;
         Encoder.encodeInt16(id.network, ba);
         Encoder.encodeInt64(id.uuidA, ba);
         Encoder.encodeInt64(id.uuidB, ba);
@@ -81,7 +81,7 @@ public class NetUUID implements ISerializer {
     }
 
     public void encode(Object value, byte[] data,int location) {
-        NetUUID id = (NetUUID) value;
+        NID id = (NID) value;
         Encoder.encodeInt16(id.network, data,location);
         Encoder.encodeInt64(id.uuidA, data,location+2);
         Encoder.encodeInt64(id.uuidB, data,location+10);
@@ -94,14 +94,14 @@ public class NetUUID implements ISerializer {
         long a = Encoder.decodeInt64(ba);
         long b = Encoder.decodeInt64(ba);
         int serviceID = Encoder.decodeInt16(ba);
-        return new NetUUID(network, a, b, serviceID);
+        return new NID(network, a, b, serviceID);
     }
 
-    public NetUUID decode(byte[] data,int location) {
+    public NID decode(byte[] data, int location) {
         int network = Encoder.decodeInt16(data,location);
         long a = Encoder.decodeInt64(data,location+2);
         long b = Encoder.decodeInt64(data,location+10);
         int serviceID = Encoder.decodeInt16(data,location+18);
-        return new NetUUID(network, a, b, serviceID);
+        return new NID(network, a, b, serviceID);
     }
 }

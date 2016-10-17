@@ -8,7 +8,7 @@
 package org.datasand.store.jdbc;
 
 import org.datasand.codec.*;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.datasand.store.HObject;
 
 import java.io.InputStream;
@@ -54,7 +54,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
     private int collectedDataType = 0;
 
     public static class RSID{
-        private int address = NetUUID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
+        private int address = NID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
         private long time = System.currentTimeMillis();
         private int localID = -1;
         public RSID(){

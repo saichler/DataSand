@@ -10,7 +10,7 @@ package org.datasand.network.habitat;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class ServicesHabitatMetrics {
+public class NetMetrics {
     private long incomingPacketCount=0;
     private long outgoingPacketCount=0;
     private long incomingPacketQueue=0;

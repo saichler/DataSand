@@ -8,14 +8,12 @@
 package org.datasand.microservice;
 
 import org.datasand.codec.BytesArray;
-import org.datasand.codec.Encoder;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.codec.util.ThreadPool;
 import org.datasand.network.IFrameListener;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.datasand.network.Packet;
-import org.datasand.network.habitat.HabitatsConnection;
-import org.datasand.network.habitat.ServicesHabitat;
+import org.datasand.network.habitat.Node;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,7 +28,7 @@ import java.util.jar.JarInputStream;
  */
 public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
-    private final ServicesHabitat habitat;
+    private final Node habitat;
     private final Map<Integer, MicroService> id2MicroService = new HashMap<>();
     private final Map<String, Integer> handlerNameToID = new HashMap<>();
     private ThreadPool threadPool = new ThreadPool(20, "Handlers Threads", 2000);
@@ -46,19 +44,19 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     public MicroServicesManager(boolean unicastOnly) {
         super(null, "");
-        this.habitat = new ServicesHabitat(this, unicastOnly);
-        this.serviceInventory = new ServiceInventory(this.habitat.getNetUUID());
+        this.habitat = new Node(this, unicastOnly);
+        this.serviceInventory = new ServiceInventory(this.habitat.getNID());
         this.setName("Micro Service Manager - " + habitat.getName());
         this.start();
     }
 
-    public NetUUID getNextMicroServiceID() {
+    public NID getNextMicroServiceID() {
         synchronized (this) {
             try {
                 nextMicroServiceID++;
             } finally {
-                NetUUID hid = this.habitat.getNetUUID();
-                return new NetUUID(hid.getNetwork(), hid.getUuidA(), hid.getUuidB(), nextMicroServiceID);
+                NID hid = this.habitat.getNID();
+                return new NID(hid.getNetwork(), hid.getUuidA(), hid.getUuidB(), nextMicroServiceID);
             }
         }
     }
@@ -89,7 +87,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
             lastServiceInventoryBroadcast = System.currentTimeMillis();
             BytesArray ba = new BytesArray(1024);
             serviceInventory.encode(serviceInventory, ba);
-            //this.getHabitat().send(ba.getData(), this.habitat.getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
+            //this.getHabitat().send(ba.getData(), this.habitat.getNID(), Packet.PROTOCOL_ID_BROADCAST);
         }
         if (!addedTask) {
             synchronized (servicesSeynchronizeObject) {
@@ -102,7 +100,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
         }
     }
 
-    public ServicesHabitat getHabitat() {
+    public Node getHabitat() {
         return this.habitat;
     }
 
@@ -141,13 +139,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
                 servicesSeynchronizeObject.notifyAll();
             }
         } else {
-            BytesArray ba = new BytesArray(1024);
-            frame.getDestination().encode(frame.getDestination(),ba);
-            Encoder.encodeByteArray(frame.getData(),ba);
-            frame.setData(ba.getData());
-            frame.setDestination(frame.getSource());
-            frame.setSource(Packet.PROTOCOL_ID_UNREACHABLE);
-            frame.setUnreachableReply();
+            frame.markAsUnreachable();
             getHabitat().send(frame);
         }
     }
@@ -199,9 +191,9 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
         return result.substring(0, index);
     }
 
-    public List<NetUUID> installJar(String jarFileName) {
+    public List<NID> installJar(String jarFileName) {
 
-        List<NetUUID> result = new ArrayList<NetUUID>();
+        List<NID> result = new ArrayList<NID>();
 
         File f = new File(jarFileName);
         if (f.exists()) {
@@ -219,11 +211,11 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
                              */
                             // ModelClassLoaders.getInstance().addClassLoader(cl);
                             Class<?> handlerClass = cl.loadClass(className);
-                            MicroService newHandler = (MicroService) handlerClass.getConstructor(new Class[]{NetUUID.class, MicroServicesManager.class})
+                            MicroService newHandler = (MicroService) handlerClass.getConstructor(new Class[]{NID.class, MicroServicesManager.class})
                                     .newInstance(
                                             new Object[]{
                                                     this.habitat
-                                                            .getNetUUID(),
+                                                            .getNID(),
                                                     this});
                             registerMicroService(newHandler);
                             newHandler.start();

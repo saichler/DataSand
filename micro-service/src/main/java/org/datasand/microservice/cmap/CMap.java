@@ -20,7 +20,7 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.cnode.CNode;
 import org.datasand.microservice.cnode.CMicroServicePeerEntry;
 import org.datasand.codec.Encoder;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -75,7 +75,7 @@ public class CMap<K,V> extends CNode<Map<K,V>,CMapEntry<K,V>> implements Map<K,V
     }
 
     @Override
-    public void handlePeerSyncData(CMapEntry<K,V> ce,NetUUID source) {
+    public void handlePeerSyncData(CMapEntry<K,V> ce,NID source) {
         CMicroServicePeerEntry<Map<K, V>> peerEntry = getPeerEntry(source);
         if(!this.containsKey(ce.getKey())){
             increaseSize();
@@ -113,7 +113,7 @@ public class CMap<K,V> extends CNode<Map<K,V>,CMapEntry<K,V>> implements Map<K,V
 
     @Override
     public V get(Object key) {
-        for(NetUUID id: getSortedNetUUIDs()){
+        for(NID id: getSortedNIDs()){
             CMicroServicePeerEntry<Map<K, V>> entry = getPeerEntry(id);
             if(entry!=null){
                 V o = entry.getPeerData().get(key);
@@ -134,7 +134,7 @@ public class CMap<K,V> extends CNode<Map<K,V>,CMapEntry<K,V>> implements Map<K,V
     public boolean isEmpty() {
         if(!this.getLocalData().isEmpty())
             return false;
-        for(NetUUID id:this.getSortedNetUUIDs()){
+        for(NID id:this.getSortedNIDs()){
             CMicroServicePeerEntry<Map<K,V>> peerEntry = getPeerEntry(id);
             if(!peerEntry.getPeerData().isEmpty())
                 return false;
@@ -146,7 +146,7 @@ public class CMap<K,V> extends CNode<Map<K,V>,CMapEntry<K,V>> implements Map<K,V
     public Set<K> keySet() {
         Set<K> result = new HashSet<K>();
         result.addAll(this.getLocalData().keySet());
-        for(NetUUID id:this.getSortedNetUUIDs()){
+        for(NID id:this.getSortedNIDs()){
             CMicroServicePeerEntry<Map<K,V>> peerEntry = getPeerEntry(id);
             if(peerEntry!=null){
                 result.addAll(peerEntry.getPeerData().keySet());

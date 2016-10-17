@@ -13,7 +13,7 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.cnode.CNode;
 import org.datasand.microservice.cnode.CMicroServicePeerEntry;
 import org.datasand.microservice.cnode.ICNodeCommandHandler;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -21,7 +21,7 @@ import org.datasand.network.NetUUID;
 public class RemoveHandler<K,V> implements ICNodeCommandHandler<Map<K,V>,CMapEntry<K,V>>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
+    public void handleMessage(Message cNodeCommand, NID source, NID destination, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
         CMap<K, V> cmap = (CMap<K, V>)node;
         Object o = peerEntry.getPeerData().remove(((CMapEntry<K,V>)cNodeCommand.getMessageData()).getKey());
         if(o!=null && !cmap.containsKey(((CMapEntry<K,V>)cNodeCommand.getMessageData()).getKey())){
@@ -36,6 +36,6 @@ public class RemoveHandler<K,V> implements ICNodeCommandHandler<Map<K,V>,CMapEnt
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand, NetUUID unreachableSource, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, NID unreachableSource, CMicroServicePeerEntry<Map<K, V>> peerEntry, CNode<Map<K, V>, CMapEntry<K, V>> node) {
     }
 }

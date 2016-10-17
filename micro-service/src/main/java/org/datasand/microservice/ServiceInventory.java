@@ -10,7 +10,7 @@ package org.datasand.microservice;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.serialize.ISerializer;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,10 +25,10 @@ import java.util.Map;
 public class ServiceInventory implements ISerializer {
 
     private final Map<Long, List<Integer>> services = new HashMap<>();
-    private final NetUUID netUUID;
+    private final NID NID;
 
-    public ServiceInventory(NetUUID uuid) {
-        this.netUUID = uuid;
+    public ServiceInventory(NID uuid) {
+        this.NID = uuid;
     }
 
     public void addService(long serviceType, int id) {
@@ -43,7 +43,7 @@ public class ServiceInventory implements ISerializer {
     @Override
     public void encode(Object value, BytesArray ba) {
         ServiceInventory si = (ServiceInventory) value;
-        Encoder.encodeObject(si.netUUID, ba);
+        Encoder.encodeObject(si.NID, ba);
         Encoder.encodeInt16(si.services.size(), ba);
         for (Map.Entry<Long, List<Integer>> entry : si.services.entrySet()) {
             Encoder.encodeInt64(entry.getKey(), ba);
@@ -56,7 +56,7 @@ public class ServiceInventory implements ISerializer {
 
     @Override
     public Object decode(BytesArray ba) {
-        ServiceInventory serviceInventory = new ServiceInventory((NetUUID) Encoder.decodeObject(ba));
+        ServiceInventory serviceInventory = new ServiceInventory((NID) Encoder.decodeObject(ba));
         int size = Encoder.decodeInt16(ba);
         for (int i = 0; i < size; i++) {
             long serviceType = Encoder.decodeInt64(ba);

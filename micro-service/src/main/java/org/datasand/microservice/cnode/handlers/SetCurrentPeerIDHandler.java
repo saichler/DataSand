@@ -11,7 +11,7 @@ import org.datasand.microservice.Message;
 import org.datasand.microservice.cnode.CNode;
 import org.datasand.microservice.cnode.CMicroServicePeerEntry;
 import org.datasand.microservice.cnode.ICNodeCommandHandler;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -19,7 +19,7 @@ import org.datasand.network.NetUUID;
 public class SetCurrentPeerIDHandler <DataType, DataTypeElement> implements ICNodeCommandHandler<DataType, DataTypeElement>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleMessage(Message cNodeCommand, NID source, NID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         peerEntry.setLastID(cNodeCommand.getMessageID());
         if(node.getNextID()==1000)
             node.incrementID();
@@ -32,6 +32,6 @@ public class SetCurrentPeerIDHandler <DataType, DataTypeElement> implements ICNo
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand, NetUUID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, NID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
     }
 }

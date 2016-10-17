@@ -9,22 +9,22 @@ package org.datasand.network.habitat;
 
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.util.ThreadNode;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.datasand.network.Packet;
-import org.datasand.network.PriorityLinkedList;
+import org.datasand.network.Queue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class HabitatConnectionSwitch extends ThreadNode {
+public class Switch extends ThreadNode {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HabitatConnectionSwitch.class);
-    private final HabitatsConnection connection;
-    private final PriorityLinkedList<byte[]> incoming = new PriorityLinkedList<byte[]>();
+    private static final Logger LOG = LoggerFactory.getLogger(Switch.class);
+    private final NodeConnection connection;
+    private final Queue<byte[]> incoming = new Queue<byte[]>();
 
-    public HabitatConnectionSwitch(HabitatsConnection con) {
+    public Switch(NodeConnection con) {
         super(con, con.getName() + " Switch");
         this.connection = con;
     }
@@ -58,27 +58,27 @@ public class HabitatConnectionSwitch extends ThreadNode {
 
         if (packetData != null && packetData.length > 0) {
             BytesArray ba = new BytesArray(packetData);
-            NetUUID dest = Packet.PROTOCOL_ID_BROADCAST.decode(ba.getBytes(), Packet.PACKET_DEST_LOCATION);
+            NID dest = Packet.PROTOCOL_ID_BROADCAST.decode(ba.getBytes(), Packet.PACKET_DEST_LOCATION);
 
             if (dest.getUuidA() == 0) {
-                if (connection.getServicesHabitat().getServicePort() != ServicesHabitat.SERVICE_NODE_SWITCH_PORT) {
-                    connection.getServicesHabitat().receivedPacket(ba);
+                if (connection.getNode().getServicePort() != Node.SERVICE_NODE_SWITCH_PORT) {
+                    connection.getNode().receivedPacket(ba);
                 } else {
-                    connection.getServicesHabitat().broadcast(ba);
+                    connection.getNode().broadcast(ba);
                 }
             } else if (isTargetThis(dest)) {
-                connection.getServicesHabitat().receivedPacket(ba);
-            } else if (connection.getServicesHabitat().getServicePort() == ServicesHabitat.SERVICE_NODE_SWITCH_PORT) {
-                HabitatsConnection other = connection.getServicesHabitat().getNodeConnection(dest, true);
+                connection.getNode().receivedPacket(ba);
+            } else if (connection.getNode().getServicePort() == Node.SERVICE_NODE_SWITCH_PORT) {
+                NodeConnection other = connection.getNode().getNodeConnection(dest, true);
                 if (other != null) {
                     other.sendPacket(ba);
                 } else {
-                    ba = this.connection.markAsUnreachable(ba);
+                    ba = Packet.markAsUnreachable(ba);
                     //mark unreachable has switch the source & the destination,
                     // hence we re-decode the destination (which is the source)
                     dest = Packet.PROTOCOL_ID_BROADCAST.decode(ba.getBytes(), Packet.PACKET_DEST_LOCATION);
 
-                    HabitatsConnection sourceConnection = connection.getServicesHabitat().getNodeConnection(dest, true);
+                    NodeConnection sourceConnection = connection.getNode().getNodeConnection(dest, true);
                     if (sourceConnection != null) {
                         sourceConnection.sendPacket(ba);
                     } else {
@@ -89,10 +89,10 @@ public class HabitatConnectionSwitch extends ThreadNode {
         }
     }
 
-    private boolean isTargetThis(NetUUID addr){
-        if(this.connection.getServicesHabitat().getNetUUID().getNetwork() == addr.getNetwork() &&
-                this.connection.getServicesHabitat().getNetUUID().getUuidA() == addr.getUuidA() &&
-                this.connection.getServicesHabitat().getNetUUID().getUuidB() == addr.getUuidB())
+    private boolean isTargetThis(NID addr){
+        if(this.connection.getNode().getNID().getNetwork() == addr.getNetwork() &&
+                this.connection.getNode().getNID().getUuidA() == addr.getUuidA() &&
+                this.connection.getNode().getNID().getUuidB() == addr.getUuidB())
             return true;
         return false;
     }

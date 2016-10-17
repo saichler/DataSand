@@ -15,7 +15,7 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -23,15 +23,15 @@ import org.datasand.network.NetUUID;
 public class AdjacentMachineDiscovery extends ThreadNode{
     private final DatagramSocket datagramSocket;
     private final AdjacentMachineListener listener;
-    private final NetUUID netUUID;
+    private final NID NID;
 
     public  interface AdjacentMachineListener {
-        void notifyAdjacentDiscovered(NetUUID adjacentID,String host);
+        void notifyAdjacentDiscovered(NID adjacentID, String host);
     }
 
-    public AdjacentMachineDiscovery(NetUUID netUUID, AdjacentMachineListener listener){
+    public AdjacentMachineDiscovery(NID NID, AdjacentMachineListener listener){
         super((ThreadNode)listener,"Adjacent Machine Discovery Listener");
-        this.netUUID = netUUID;
+        this.NID = NID;
         this.listener = listener;
         DatagramSocket socket=null;
         try {
@@ -62,17 +62,17 @@ public class AdjacentMachineDiscovery extends ThreadNode{
 
     private void processIncomingPacket(DatagramPacket p){
         BytesArray ba = new BytesArray(p.getData());
-        NetUUID id = (NetUUID) Encoder.getSerializerByClass(NetUUID.class).decode(ba);
-        if(!id.equals(netUUID)){
+        NID id = (NID) Encoder.getSerializerByClass(NID.class).decode(ba);
+        if(!id.equals(NID)){
             listener.notifyAdjacentDiscovered(id,p.getAddress().getHostName());
         }
     }
 
     private static class AdjacentMachineDiscoveryPulse extends ThreadNode{
 
-        private final NetUUID localHost;
+        private final NID localHost;
 
-        private AdjacentMachineDiscoveryPulse(ThreadNode th,NetUUID localHost){
+        private AdjacentMachineDiscoveryPulse(ThreadNode th,NID localHost){
             super(th,"Discovery Pluse");
             this.localHost = localHost;
         }
@@ -82,7 +82,7 @@ public class AdjacentMachineDiscovery extends ThreadNode{
 
         public void execute() throws Exception{
             BytesArray ba = new BytesArray(new byte[8]);
-            Encoder.getSerializerByClass(NetUUID.class).encode(localHost, ba);
+            Encoder.getSerializerByClass(NID.class).encode(localHost, ba);
             byte data[] = ba.getData();
             DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName("255.255.255.255"), 49999);
             DatagramSocket s = new DatagramSocket();

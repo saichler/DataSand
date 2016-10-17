@@ -11,11 +11,11 @@ import java.util.LinkedList;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class PriorityLinkedList<E> {
+public class Queue<E> {
     private LinkedList<E> queues[] = new LinkedList[6];
     private int count = 0;
 
-    public PriorityLinkedList() {
+    public Queue() {
         for (int i = 0; i < queues.length; i++) {
             queues[i] = new LinkedList<E>();
         }

@@ -16,28 +16,28 @@ import java.util.Map;
 public class RoutingTable {
     private final Map<Integer,Map<Long,Map<Long,ConnectionID>>> routingTree = new HashMap<>();
 
-    public void add(NetUUID netUUID,ConnectionID connID){
-        Map<Long,Map<Long,ConnectionID>> network = routingTree.get(netUUID.getNetwork());
+    public void add(NID NID, ConnectionID connID){
+        Map<Long,Map<Long,ConnectionID>> network = routingTree.get(NID.getNetwork());
         if(network==null){
             network = new HashMap<>();
-            routingTree.put(netUUID.getNetwork(),network);
+            routingTree.put(NID.getNetwork(),network);
         }
 
-        Map<Long,ConnectionID> uuidAMap = network.get(netUUID.getUuidA());
+        Map<Long,ConnectionID> uuidAMap = network.get(NID.getUuidA());
         if(uuidAMap==null){
             uuidAMap = new HashMap<>();
-            network.put(netUUID.getUuidA(),uuidAMap);
+            network.put(NID.getUuidA(),uuidAMap);
         }
 
-        uuidAMap.put(netUUID.getUuidB(),connID);
+        uuidAMap.put(NID.getUuidB(),connID);
     }
 
-    public ConnectionID get(NetUUID netUUID) {
-        Map<Long,Map<Long,ConnectionID>> network = routingTree.get(netUUID.getNetwork());
+    public ConnectionID get(NID NID) {
+        Map<Long,Map<Long,ConnectionID>> network = routingTree.get(NID.getNetwork());
         if(network!=null){
-            Map<Long,ConnectionID> uuidAMap = network.get(netUUID.getUuidA());
+            Map<Long,ConnectionID> uuidAMap = network.get(NID.getUuidA());
             if(uuidAMap!=null){
-                return uuidAMap.get(netUUID.getUuidB());
+                return uuidAMap.get(NID.getUuidB());
             }
         }
         return null;

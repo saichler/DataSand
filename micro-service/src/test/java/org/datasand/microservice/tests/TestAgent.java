@@ -10,7 +10,7 @@ package org.datasand.microservice.tests;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
 import org.datasand.microservice.Message;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.junit.Assert;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -25,11 +25,11 @@ public class TestAgent extends MicroService {
     }
 
     @Override
-    public void processDestinationUnreachable(Message message,NetUUID unreachableSource) {
+    public void processDestinationUnreachable(Message message,NID unreachableSource) {
     }
 
     @Override
-    public void processMessage(Message message, NetUUID source, NetUUID destination) {
+    public void processMessage(Message message, NID source, NID destination) {
         if (message == null) {
             System.out.println("Received a currapted frame");
         } else {

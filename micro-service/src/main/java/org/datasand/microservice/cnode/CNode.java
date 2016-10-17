@@ -9,7 +9,7 @@ package org.datasand.microservice.cnode;
 
 import org.datasand.microservice.*;
 import org.datasand.microservice.cnode.handlers.*;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 import java.util.*;
 
@@ -33,7 +33,7 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
     private DataType localData = createDataTypeInstance();
     private Map<Integer, ICNodeCommandHandler<DataType, DataTypeElement>> handlers = new HashMap<Integer, ICNodeCommandHandler<DataType, DataTypeElement>>();
     private boolean synchronizing = false;
-    private NetUUID sortedNetUUIDs[] = new NetUUID[0];
+    private NID sortedNIDs[] = new NID[0];
 
     public CNode(String clusterName, MicroServicesManager m) {
         super(clusterName, m);
@@ -58,16 +58,16 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
         return result;
     }
 
-    private void addToSortedNetworkIDs(NetUUID neid) {
-        NetUUID temp[] = new NetUUID[this.sortedNetUUIDs.length + 1];
-        System.arraycopy(this.sortedNetUUIDs, 0, temp, 0, sortedNetUUIDs.length);
-        temp[this.sortedNetUUIDs.length] = neid;
+    private void addToSortedNetworkIDs(NID neid) {
+        NID temp[] = new NID[this.sortedNIDs.length + 1];
+        System.arraycopy(this.sortedNIDs, 0, temp, 0, sortedNIDs.length);
+        temp[this.sortedNIDs.length] = neid;
         Arrays.sort(temp, new NetworkIDComparator());
-        this.sortedNetUUIDs = temp;
+        this.sortedNIDs = temp;
     }
 
-    public NetUUID[] getSortedNetUUIDs() {
-        return this.sortedNetUUIDs;
+    public NID[] getSortedNIDs() {
+        return this.sortedNIDs;
     }
 
     public void registerHandler(Integer pType, ICNodeCommandHandler<DataType, DataTypeElement> handler) {
@@ -90,7 +90,7 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
         multicast(new Message(this.nextID - 1, ARP_MULTICAST, null));
     }
 
-    public CMicroServicePeerEntry<DataType> getPeerEntry(NetUUID source) {
+    public CMicroServicePeerEntry<DataType> getPeerEntry(NID source) {
         MicroServicePeerEntry pEntry = super.getPeerEntry(source);
         if (pEntry != null && !(pEntry instanceof CMicroServicePeerEntry)) {
             pEntry = new CMicroServicePeerEntry<DataType>(source, createDataTypeInstance());
@@ -101,13 +101,13 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
     }
 
     @Override
-    public void processDestinationUnreachable(Message message, NetUUID unreachableSource) {
+    public void processDestinationUnreachable(Message message, NID unreachableSource) {
         CMicroServicePeerEntry<DataType> peerEntry = getPeerEntry(unreachableSource);
         ICNodeCommandHandler<DataType, DataTypeElement> handle = this.handlers.get(message.getMessageType());
         handle.handleUnreachableMessage(message, unreachableSource, peerEntry, this);
     }
 
-    public void processMessage(Message cmd, NetUUID source, NetUUID destination) {
+    public void processMessage(Message cmd, NID source, NID destination) {
         if (cmd == arpID) {
             sendARPBroadcast();
             return;
@@ -125,7 +125,7 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
         return this.localData;
     }
 
-    public void cleanJournalHistoryForSource(NetUUID source) {
+    public void cleanJournalHistoryForSource(NID source) {
         //Remove any expected replys from this node as it is up.
         List<Message> finished = new LinkedList<Message>();
         for (Object meo : this.getJournalEntries()) {
@@ -142,7 +142,7 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
         this.send(new Message(this.nextID - 1, SET_CURRENT_PEER_ID, null), source);
     }
 
-    public void sendAcknowledge(Message Message, NetUUID source) {
+    public void sendAcknowledge(Message Message, NID source) {
         send(new Message(Message.getMessageID(), ACKNOWLEDGE, null), source);
     }
 
@@ -152,7 +152,7 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
 
     public abstract void handleNodeOriginalData(DataTypeElement dataTypeElement);
 
-    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement, NetUUID source);
+    public abstract void handlePeerSyncData(DataTypeElement dataTypeElement, NID source);
 
     public abstract boolean isLocalPeerCopyContainData(DataType data);
 

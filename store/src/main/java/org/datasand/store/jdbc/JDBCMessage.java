@@ -10,7 +10,7 @@ package org.datasand.store.jdbc;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.microservice.Message;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 import org.datasand.store.jdbc.ResultSet.RSID;
 
 import java.util.List;
@@ -91,19 +91,19 @@ public class JDBCMessage extends Message {
         super(TYPE_METADATA,new JDBCDataContainer(null,null));
     }
 
-    public JDBCMessage(NetUUID netID, RSID rsID){
+    public JDBCMessage(NID netID, RSID rsID){
         super(TYPE_DELEGATE_WAITING,new JDBCDataContainer(netID,rsID));
     }
 
-    public JDBCMessage(NetUUID netID, RSID rsID, int temp){
+    public JDBCMessage(NID netID, RSID rsID, int temp){
         super(TYPE_NODE_WAITING_MARK,new JDBCDataContainer(netID,rsID));
     }
 
-    public JDBCMessage(NetUUID netID, RSID rsID, int temp, int temp1){
+    public JDBCMessage(NID netID, RSID rsID, int temp, int temp1){
         super(TYPE_NODE_WAITING_MARK_REPLY,new JDBCDataContainer(netID,rsID));
     }
 
-    public JDBCMessage(NetUUID netID, RSID rsID, int temp, int temp1, int temp2){
+    public JDBCMessage(NID netID, RSID rsID, int temp, int temp1, int temp2){
         super(TYPE_DELEGATE_CONTINUE,new JDBCDataContainer(netID,rsID));
     }
 
@@ -141,8 +141,8 @@ public class JDBCMessage extends Message {
     public MetaData getMetaData(){
         return (MetaData)((JDBCDataContainer)this.getMessageData()).getData();
     }
-    public NetUUID getWaiting(){
-        return (NetUUID) ((JDBCDataContainer)this.getMessageData()).getData();
+    public NID getWaiting(){
+        return (NID) ((JDBCDataContainer)this.getMessageData()).getData();
     }
     @Override
     public void encode(Object value, BytesArray edc) {

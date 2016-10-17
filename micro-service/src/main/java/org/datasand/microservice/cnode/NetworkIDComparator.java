@@ -9,14 +9,14 @@ package org.datasand.microservice.cnode;
 
 import java.util.Comparator;
 
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class NetworkIDComparator implements Comparator<NetUUID>{
+public class NetworkIDComparator implements Comparator<NID>{
     @Override
-    public int compare(NetUUID o1, NetUUID o2) {
+    public int compare(NID o1, NID o2) {
         if(o1==null && o2==null)
             return 0;
 

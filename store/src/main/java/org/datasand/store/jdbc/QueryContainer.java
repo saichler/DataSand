@@ -11,17 +11,17 @@ import java.util.HashMap;
 import java.util.Map;
 import org.datasand.codec.VLogger;
 import org.datasand.microservice.Message;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class QueryContainer {
-    private final Map<NetUUID,Boolean> destToFinish = new HashMap<NetUUID,Boolean>();
-    private final NetUUID source;
+    private final Map<NID,Boolean> destToFinish = new HashMap<NID,Boolean>();
+    private final NID source;
     private final Message msg;
     private final Connection connection;
-    public QueryContainer(Connection connection, NetUUID _source, ResultSet _rs){
+    public QueryContainer(Connection connection, NID _source, ResultSet _rs){
         if(_source==null){
             VLogger.error("Source Cannot be null",null);
         }
@@ -32,7 +32,7 @@ public class QueryContainer {
         connection.addARPJournal(msg,true);
     }
 
-    public NetUUID getSource() {
+    public NID getSource() {
         return source;
     }
 

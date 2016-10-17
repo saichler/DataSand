@@ -12,7 +12,7 @@ import org.datasand.microservice.MessageEntry;
 import org.datasand.microservice.cnode.CNode;
 import org.datasand.microservice.cnode.CMicroServicePeerEntry;
 import org.datasand.microservice.cnode.ICNodeCommandHandler;
-import org.datasand.network.NetUUID;
+import org.datasand.network.NID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -20,7 +20,7 @@ import org.datasand.network.NetUUID;
 public class ARPMulticastHandler<DataType, DataTypeElement> implements ICNodeCommandHandler<DataType, DataTypeElement>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleMessage(Message cNodeCommand, NID source, NID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         //update peer data
         peerEntry.timeStamp();
         if(peerEntry.getLastID()>cNodeCommand.getMessageID() && cNodeCommand.getMessageID()!=999){
@@ -44,6 +44,6 @@ public class ARPMulticastHandler<DataType, DataTypeElement> implements ICNodeCom
     }
 
     @Override
-    public void handleUnreachableMessage(Message cNodeCommand, NetUUID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleUnreachableMessage(Message cNodeCommand, NID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
     }
 }
