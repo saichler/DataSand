@@ -14,14 +14,12 @@ import org.datasand.network.NetUUID;
  */
 public class MicroServicePeerEntry {
     private final NetUUID netUUID;
-    private final int serviceID;
     private long lastReceivedPing = -1;
     private long lastID = 999;
     private boolean unreachable = false;
 
-    public MicroServicePeerEntry(NetUUID netUUID,int serviceID){
+    public MicroServicePeerEntry(NetUUID netUUID){
         this.netUUID = netUUID;
-        this.serviceID = serviceID;
         this.lastReceivedPing = System.currentTimeMillis();
     }
 

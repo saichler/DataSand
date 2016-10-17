@@ -7,17 +7,7 @@
  */
 package org.datasand.network.habitat;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.SocketException;
 import org.datasand.codec.BytesArray;
-import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.ConnectionID;
@@ -25,6 +15,11 @@ import org.datasand.network.NetUUID;
 import org.datasand.network.Packet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -46,31 +41,29 @@ public class HabitatsConnection extends ThreadNode {
         Socket tmpSocket = null;
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
-        byte otherData[] = new byte[16];
-        byte myData[] = new byte[16];
-        this.servicesHabitat.getNetUUID().encode(this.servicesHabitat.getNetUUID(),myData,0);
+        BytesArray myData = new BytesArray(20);
+        BytesArray otherData = new BytesArray(20);
+        NetUUID id = this.servicesHabitat.getNetUUID();
+        id.encode(id,myData);
         try {
             tmpSocket = new Socket(addr, port);
             tmpIn = new DataInputStream(new BufferedInputStream(tmpSocket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(tmpSocket.getOutputStream()));
-            tmpOut.write(myData);
+            tmpOut.write(myData.getData());
             if(unicastOnly){
                 tmpOut.writeInt(1);
             }else{
                 tmpOut.writeInt(0);
             }
             tmpOut.flush();
-            tmpIn.read(otherData);
+            tmpIn.read(otherData.getBytes());
         } catch(IOException e){
             LOG.error("Failed to open socket",e);
         }
 
         this.socket = tmpSocket;
-        long a = Encoder.decodeInt64(myData,0);
-        long b = Encoder.decodeInt64(myData,8);
-        long a1 = Encoder.decodeInt64(otherData,0);
-        long b1 = Encoder.decodeInt64(otherData,8);
-        this.connectionID = new ConnectionID(a,b,a1,b1);
+        NetUUID oID = (NetUUID)id.decode(otherData);
+        this.connectionID = new ConnectionID(id.getNetwork(),id.getUuidA(),id.getUuidB(),oID.getNetwork(),oID.getUuidA(),oID.getUuidB());
         this.in = tmpIn;
         this.out = tmpOut;
         this.unicast = unicastOnly;
@@ -90,26 +83,24 @@ public class HabitatsConnection extends ThreadNode {
         DataInputStream tmpIn=null;
         DataOutputStream tmpOut = null;
         int unicastOnly = 0;
-        byte otherData[] = new byte[16];
-        byte myData[] = new byte[16];
-        this.servicesHabitat.getNetUUID().encode(this.servicesHabitat.getNetUUID(),myData,0);
+        BytesArray myData = new BytesArray(20);
+        BytesArray otherData = new BytesArray(20);
+        NetUUID id = this.servicesHabitat.getNetUUID();
+        id.encode(id,myData);
         try {
             tmpIn = new DataInputStream(new BufferedInputStream(this.socket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(this.socket.getOutputStream()));
-            tmpIn.read(otherData);
+            tmpIn.read(otherData.getBytes());
             unicastOnly = tmpIn.readInt();
-            tmpOut.write(myData);
+            tmpOut.write(myData.getData());
             tmpOut.flush();
         } catch (Exception e) {
             LOG.error("Failed to use input/output of socket",e);
         }
         this.in = tmpIn;
         this.out = tmpOut;
-        long a = Encoder.decodeInt64(myData,0);
-        long b = Encoder.decodeInt64(myData,8);
-        long a1 = Encoder.decodeInt64(otherData,0);
-        long b1 = Encoder.decodeInt64(otherData,8);
-        this.connectionID = new ConnectionID(a,b,a1,b1);
+        NetUUID oID = (NetUUID)id.decode(otherData);
+        this.connectionID = new ConnectionID(id.getNetwork(),id.getUuidA(),id.getUuidB(),oID.getNetwork(),oID.getUuidA(),oID.getUuidB());
 
         if(unicastOnly==1){
             this.unicast = true;
@@ -187,28 +178,29 @@ public class HabitatsConnection extends ThreadNode {
     }
 
     public static final BytesArray markAsUnreachable(BytesArray ba) {
+        byte[] origData = ba.getBytes();
         byte[] mark = new byte[ba.getBytes().length+Packet.PACKET_SOURCE_LENGHT];
-        //copy all bytes
-        System.arraycopy(ba.getBytes(), 0, mark, 0, ba.getBytes().length);
-        //copy data to +8
-        System.arraycopy(ba.getBytes(),Packet.PACKET_DATA_LOCATION,mark,Packet.PACKET_DATA_LOCATION+Packet.PACKET_SOURCE_LENGHT,
-                ba.getBytes().length-Packet.PACKET_DATA_LOCATION);
-        //copy destionation to begin of data
-        System.arraycopy(ba.getBytes(),Packet.PACKET_DEST_LOCATION,mark,Packet.PACKET_DATA_LOCATION,Packet.PACKET_DEST_LENGTH);
-        //copy source to destination
-        System.arraycopy(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION,mark,Packet.PACKET_DEST_LOCATION,Packet.PACKET_SOURCE_LENGHT);
-        //mark source as unreachable
-        Packet.PROTOCOL_ID_UNREACHABLE.encode(Packet.PROTOCOL_ID_UNREACHABLE, mark,Packet.PACKET_SOURCE_LOCATION);
+        //copy packet header
+        System.arraycopy(origData,0,mark,0,Packet.PACKET_DATA_LOCATION);
+        //replace destination with source
+        System.arraycopy(origData, Packet.PACKET_SOURCE_LOCATION,mark, Packet.PACKET_DEST_LOCATION,Packet.PACKET_SOURCE_LENGHT);
+        //replace source as unreachable
+        byte[] unreachable = new byte[Packet.PACKET_DEST_LENGTH];
+        Packet.PROTOCOL_ID_UNREACHABLE.encode(Packet.PROTOCOL_ID_UNREACHABLE,unreachable,0);
+        System.arraycopy(unreachable,0,mark,Packet.PACKET_SOURCE_LOCATION,Packet.PACKET_SOURCE_LENGHT);
+        //copy original address to data location
+        System.arraycopy(origData,Packet.PACKET_DEST_LOCATION,mark,Packet.PACKET_DATA_LOCATION,Packet.PACKET_DEST_LENGTH);
+        //copy original data to data+dest.lenth
+        System.arraycopy(origData,Packet.PACKET_DATA_LOCATION,mark,Packet.PACKET_DATA_LOCATION+Packet.PACKET_DEST_LENGTH,origData.length-Packet.PACKET_DATA_LOCATION);
         return new BytesArray(mark);
     }
 
 
     public static final BytesArray addUnreachableAddressForMulticast(BytesArray ba, NetUUID destination){
         byte[] data = ba.getBytes();
-        byte[] _unreachable = new byte[data.length+16];
+        byte[] _unreachable = new byte[data.length+Packet.PACKET_SOURCE_LENGHT];
         System.arraycopy(data, 0, _unreachable,0, data.length);
-        Encoder.encodeInt64(destination.getA(), _unreachable, data.length);
-        Encoder.encodeInt64(destination.getB(), _unreachable, data.length+8);
+        Packet.PROTOCOL_ID_UNREACHABLE.encode(destination,_unreachable,data.length);
         return new BytesArray(_unreachable);
     }
 }

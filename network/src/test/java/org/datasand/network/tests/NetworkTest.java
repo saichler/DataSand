@@ -43,7 +43,8 @@ public class NetworkTest {
     public void testBroadcastToNodes() throws InterruptedException {
 
         nodes[3].send(new byte[5], nodes[3].getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
-        NetUUID unreach = new NetUUID(UUID.randomUUID());
+        UUID r = UUID.randomUUID();
+        NetUUID unreach = new NetUUID(0,r.getMostSignificantBits(),r.getLeastSignificantBits(),0);
         nodes[3].send(new byte[5], nodes[3].getNetUUID(), unreach);
         try {
             Thread.sleep(1000);

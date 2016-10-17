@@ -35,8 +35,8 @@ public class CMap<K,V> extends CNode<Map<K,V>,CMapEntry<K,V>> implements Map<K,V
     static{
         Encoder.registerSerializer(CMapEntry.class, new CMapEntry());
     }
-    public CMap(int subSystemID, MicroServicesManager m, int multicastGroupID, ICMapListener<K, V> _listener){
-        super(subSystemID,m,multicastGroupID);
+    public CMap(String clusterMapName, MicroServicesManager m, ICMapListener<K, V> _listener){
+        super(clusterMapName,m);
         this.listener = _listener;
         registerHandler(PUT, new PutHandler<K,V>());
         registerHandler(REMOVE, new RemoveHandler<K,V>());

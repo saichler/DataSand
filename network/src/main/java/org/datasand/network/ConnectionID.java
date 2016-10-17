@@ -14,28 +14,37 @@ public class ConnectionID {
     private final NetUUID aSide;
     private final NetUUID zSide;
 
-    public ConnectionID(long a, long b, long a1, long b1) {
-        if (a < a1) {
-            aSide = new NetUUID(a, b);
-            zSide = new NetUUID(a1, b1);
-        } else if (a > a1) {
-            aSide = new NetUUID(a1, b1);
-            zSide = new NetUUID(a, b);
+    public ConnectionID(int n, long a, long b, int n1, long a1, long b1) {
+
+        if (n < n1) {
+            aSide = new NetUUID(n, a, b, 0);
+            zSide = new NetUUID(n1, a1, b1, 0);
+        } else if (n > n1) {
+            aSide = new NetUUID(n1, a1, b1, 0);
+            zSide = new NetUUID(n, a, b, 0);
         } else {
-            if (b < b1) {
-                aSide = new NetUUID(a, b);
-                zSide = new NetUUID(a1, b1);
-            } else if (b > b1) {
-                aSide = new NetUUID(a1, b1);
-                zSide = new NetUUID(a, b);
+            if (a < a1) {
+                aSide = new NetUUID(n, a, b, 0);
+                zSide = new NetUUID(n1, a1, b1, 0);
+            } else if (a > a1) {
+                aSide = new NetUUID(n1, a1, b1, 0);
+                zSide = new NetUUID(n, a, b, 0);
             } else {
-                throw new IllegalArgumentException("Connection ID cannot have same aside & zside");
+                if (b < b1) {
+                    aSide = new NetUUID(n, a, b, 0);
+                    zSide = new NetUUID(n1, a1, b1, 0);
+                } else if (b > b1) {
+                    aSide = new NetUUID(n1, a1, b1, 0);
+                    zSide = new NetUUID(n, a, b, 0);
+                } else {
+                    throw new IllegalArgumentException("Connection ID cannot have same aside & zside");
+                }
             }
         }
     }
 
-    public NetUUID getAdjacentNetUUID(NetUUID me){
-        if(this.aSide.equals(me)){
+    public NetUUID getAdjacentNetUUID(NetUUID me) {
+        if (this.aSide.equals(me)) {
             return this.zSide;
         } else if (this.zSide.equals(me)) {
             return this.aSide;

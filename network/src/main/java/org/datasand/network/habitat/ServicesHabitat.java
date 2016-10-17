@@ -7,30 +7,20 @@
  */
 package org.datasand.network.habitat;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
-import org.datasand.network.ConnectionID;
-import org.datasand.network.IFrameListener;
-import org.datasand.network.NetUUID;
-import org.datasand.network.Packet;
-import org.datasand.network.RoutingTable;
+import org.datasand.network.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.*;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -101,7 +91,11 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 byte data[] = new byte[(int)habitatIdFile.length()];
                 in.read(data);
                 in.close();
-                result = new NetUUID(UUID.fromString(new String(data)));
+                BufferedReader reader = new BufferedReader(new StringReader(new String(data)));
+                int n = Integer.parseInt(reader.readLine());
+                long a = Long.parseLong(reader.readLine());
+                long b = Long.parseLong(reader.readLine());
+                result = new NetUUID(n, a, b, 0);
             }catch(IOException e){
                 LOG.error("Failed to load habitat ID.",e);
             }
@@ -110,9 +104,15 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
                 habitatIdFile.getParentFile().mkdirs();
             }
             try {
+                UUID random = UUID.randomUUID();
+                result = new NetUUID(0,random.getMostSignificantBits(),random.getLeastSignificantBits(),0);
                 FileOutputStream out = new FileOutputStream(habitatIdFile);
-                result = new NetUUID(UUID.randomUUID());
-                out.write(result.toString().getBytes());
+                String n = "0\n";
+                String a = ""+result.getUuidA()+"\n";
+                String b = ""+result.getUuidB()+"\n";
+                out.write(n.getBytes());
+                out.write(a.getBytes());
+                out.write(b.getBytes());
                 out.close();
             }catch(IOException e){
                 LOG.error("Failed to write Habitat ID",e);
@@ -268,7 +268,7 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
             return;
         } else {
             //This is the switch and it is a Multicast/Broadcast packet
-            if(m.getDestination().getA()==0){
+            if(m.getDestination().getUuidA()==0){
                 HabitatsConnection sourceCon = getNodeConnection(m.getSource(),false);
                 for(HabitatsConnection con:this.connections){
                     if(con==null){
@@ -336,8 +336,10 @@ public class ServicesHabitat extends ThreadNode implements AdjacentMachineDiscov
     }
 
     public void broadcast(BytesArray ba) {
-        NetUUID source = new NetUUID(Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION),
-                Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+8));
+        NetUUID source = new NetUUID(
+                Encoder.decodeInt16(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION),
+                Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+2),
+                Encoder.decodeInt64(ba.getBytes(),Packet.PACKET_SOURCE_LOCATION+10),0);
 
         HabitatsConnection sourceCon = getNodeConnection(source,false);
         List<NetUUID> unreachableDest = new LinkedList<NetUUID>();

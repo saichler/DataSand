@@ -7,24 +7,23 @@
  */
 package org.datasand.microservice.tests;
 
-import java.io.File;
 import org.datasand.microservice.Message;
 import org.datasand.microservice.MicroService;
 import org.datasand.microservice.MicroServicesManager;
 import org.datasand.microservice.cmap.CMap;
 import org.datasand.network.NetUUID;
-import org.datasand.network.habitat.HabitatsConnection;
+import org.datasand.network.Packet;
 import org.datasand.network.habitat.ServicesHabitat;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
+
+import java.io.File;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class AgentsTest {
 
+    public static final String MAP_NAME = "CMapTest";
+    
     @Before
     public void before() {
     }
@@ -50,9 +49,9 @@ public class AgentsTest {
             Thread.sleep(200);
         }
         System.out.println("Ready");
-        nodes[3].send(new byte[5], nodes[3].getLocalHost(), HabitatsConnection.PROTOCOL_ID_BROADCAST);
-        NetUUID unreach = new NetUUID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
-        nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);
+        nodes[3].send(new byte[5], nodes[3].getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
+        NetUUID unreach = new NetUUID(0,123,123,0);
+        nodes[3].send(new byte[5], nodes[3].getNetUUID(), unreach);
         try {
             Thread.sleep(1000);
         } catch (Exception err) {
@@ -80,7 +79,7 @@ public class AgentsTest {
         MicroService agent[] = new MicroService[nodes.length];
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
-            agent[i] = new TestAgent(nodes[i].getHabitat().getLocalHost(),nodes[i]);
+            agent[i] = new TestAgent(nodes[i]);
         }
 
         try {
@@ -89,7 +88,7 @@ public class AgentsTest {
         }
 
         System.out.println("Ready!");
-        agent[4].send(new Message(0,createTestObject()), HabitatsConnection.PROTOCOL_ID_BROADCAST);
+        agent[4].send(new Message(0,createTestObject()), Packet.PROTOCOL_ID_BROADCAST);
 
         try {
             Thread.sleep(1000);
@@ -121,13 +120,10 @@ public class AgentsTest {
         // Arbitrary number greater than 10 and not equal to 9999 (which is the
         // destination unreachable code)
         int MULTICAST_GROUP = 27;
-        NetUUID multiCast = new NetUUID(
-                HabitatsConnection.PROTOCOL_ID_BROADCAST.getIPv4Address(),
-                MULTICAST_GROUP, MULTICAST_GROUP);
+        NetUUID multiCast = new NetUUID(0,0, MULTICAST_GROUP, 0);
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
-            agent[i] = new TestAgent(nodes[i].getHabitat().getLocalHost(),
-                    nodes[i]);
+            agent[i] = new TestAgent(nodes[i]);
             // only 5 microservice are registered for this multicast
             if (i % 2 == 0) {
                 nodes[i].registerForMulticast(MULTICAST_GROUP, agent[i]);
@@ -168,8 +164,7 @@ public class AgentsTest {
         NetUUID destination = null;
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
-            agent[i] = new TestAgent(nodes[i].getHabitat().getLocalHost(),
-                    nodes[i]);
+            agent[i] = new TestAgent(nodes[i]);
             if (i == 7)
                 destination = agent[i].getMicroServiceID();
         }
@@ -205,8 +200,8 @@ public class AgentsTest {
     public void testCMapString() {
         MicroServicesManager m1 = new MicroServicesManager();
         MicroServicesManager m2 = new MicroServicesManager();
-        CMap<String, String> map1 = new CMap<String,String>(125, m1,252,null);
-        CMap<String, String> map2 = new CMap<String,String>(125, m2,252,null);
+        CMap<String, String> map1 = new CMap<String,String>(MAP_NAME, m1,null);
+        CMap<String, String> map2 = new CMap<String,String>(MAP_NAME, m2,null);
 
         map1.put("TestKey1", "Value1");
         map1.put("TestKey2", "Value2");
@@ -232,10 +227,11 @@ public class AgentsTest {
 
     @Test
     public void testCMapTestObject() {
+
         MicroServicesManager m1 = new MicroServicesManager();
         MicroServicesManager m2 = new MicroServicesManager();
-        CMap<String, TestObject> map1 = new CMap<String, TestObject>(125, m1,252,null);
-        CMap<String, TestObject> map2 = new CMap<String, TestObject>(125, m2,252,null);
+        CMap<String, TestObject> map1 = new CMap<String, TestObject>(MAP_NAME, m1,null);
+        CMap<String, TestObject> map2 = new CMap<String, TestObject>(MAP_NAME, m2,null);
 
         map1.put("TestKey1", createTestObject());
         map1.put("TestKey2", createTestObject());
@@ -280,21 +276,59 @@ public class AgentsTest {
     }
 
     @Test
+    public void testUnreachableService() throws InterruptedException {
+        MicroServicesManager m1 = new MicroServicesManager();
+        TestAgent ta = new TestAgent(m1);
+        MicroServicesManager m2 = new MicroServicesManager();
+        NetUUID unreach = new NetUUID(0,m2.getHabitat().getNetUUID().getUuidA(),m2.getHabitat().getNetUUID().getUuidB(),5);
+        Message msg = new Message(1,null);
+        ta.send(msg,unreach);
+
+        Thread.sleep(2000);
+
+        long unreachCount = m1.getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
+        Assert.assertEquals(1,unreachCount);
+
+        m2.shutdown();
+        m1.shutdown();
+    }
+
+    @Test
+    public void testUnreachableService2() throws InterruptedException {
+        MicroServicesManager m1 = new MicroServicesManager();
+        MicroServicesManager m2 = new MicroServicesManager();
+        MicroServicesManager m3 = new MicroServicesManager();
+        TestAgent ta = new TestAgent(m2);
+        NetUUID unreach = new NetUUID(0,m3.getHabitat().getNetUUID().getUuidA(),m3.getHabitat().getNetUUID().getUuidB(),5);
+        Message msg = new Message(1,null);
+        ta.send(msg,unreach);
+
+        Thread.sleep(2000);
+
+        long unreachCount = m2.getHabitat().getServicesHabitatMetrics().getUnreachableFrameCount();
+        Assert.assertEquals(1,unreachCount);
+
+        m2.shutdown();
+        m1.shutdown();
+    }
+
+    @Test
     public void testUnreachable() throws InterruptedException {
+
         MicroServicesManager m1 = new MicroServicesManager();
         Thread.sleep(3000);
-        CMap<String, TestObject> map1 = new CMap<String, TestObject>(125, m1,252,null);
+        CMap<String, TestObject> map1 = new CMap<String, TestObject>(MAP_NAME, m1,null);
 
         map1.put("TestKey1", createTestObject());
         map1.put("TestKey2", createTestObject());
 
         MicroServicesManager m2 = new MicroServicesManager();
-        CMap<String, TestObject> map2 = new CMap<String, TestObject>(125, m2,252,null);
+        CMap<String, TestObject> map2 = new CMap<String, TestObject>(MAP_NAME, m2,null);
         map2.put("TestKey7", createTestObject());
         map1.remove("TestKey1");
 
         MicroServicesManager m3 = new MicroServicesManager();
-        CMap<String, TestObject> map3 = new CMap<String, TestObject>(125, m3,252,null);
+        CMap<String, TestObject> map3 = new CMap<String, TestObject>(MAP_NAME, m3,null);
 
         map1.put("TestKey1", createTestObject());
         map2.put("TestKey3", createTestObject());
@@ -313,7 +347,7 @@ public class AgentsTest {
         Assert.assertEquals(map1.get("TestKey4"), map2.get("TestKey4"));
 
         MicroServicesManager m4 = new MicroServicesManager();
-        CMap<String, TestObject> map4 = new CMap<String, TestObject>(125, m4,252,null);
+        CMap<String, TestObject> map4 = new CMap<String, TestObject>(MAP_NAME, m4,null);
         map4.put("TestKey11", createTestObject());
 
         try{Thread.sleep(2000);}catch(Exception err){}
@@ -347,7 +381,7 @@ public class AgentsTest {
         map2.sendARPBroadcast();
 
         m4 = new MicroServicesManager();
-        map4 = new CMap<String, TestObject>(125, m4,252,null);
+        map4 = new CMap<String, TestObject>(MAP_NAME, m4,null);
 
         try {
             System.out.println("Sleeping 5 seconds to allow node 4 to load and sync");

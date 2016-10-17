@@ -7,18 +7,6 @@
  */
 package org.datasand.microservice;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.util.ThreadNode;
@@ -26,7 +14,16 @@ import org.datasand.codec.util.ThreadPool;
 import org.datasand.network.IFrameListener;
 import org.datasand.network.NetUUID;
 import org.datasand.network.Packet;
+import org.datasand.network.habitat.HabitatsConnection;
 import org.datasand.network.habitat.ServicesHabitat;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -38,9 +35,9 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     private final Map<String, Integer> handlerNameToID = new HashMap<>();
     private ThreadPool threadPool = new ThreadPool(20, "Handlers Threads", 2000);
     private final Object servicesSeynchronizeObject = new Object();
-    private Map<Integer, Set<MicroService>> multicasts = new HashMap<Integer, Set<MicroService>>();
+    private Map<Long, Set<MicroService>> multicasts = new HashMap<>();
     private int nextMicroServiceID = 1000;
-    private final ServiceInventory serviceInventory = new ServiceInventory();
+    private final ServiceInventory serviceInventory;
     private long lastServiceInventoryBroadcast = 0;
 
     public MicroServicesManager() {
@@ -48,23 +45,20 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     }
 
     public MicroServicesManager(boolean unicastOnly) {
-        super(null,"");
-        this.habitat = new ServicesHabitat(this,unicastOnly);
+        super(null, "");
+        this.habitat = new ServicesHabitat(this, unicastOnly);
+        this.serviceInventory = new ServiceInventory(this.habitat.getNetUUID());
         this.setName("Micro Service Manager - " + habitat.getName());
         this.start();
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
-    public int getNextMicroServiceID(){
-        synchronized (this){
-            try{
+    public NetUUID getNextMicroServiceID() {
+        synchronized (this) {
+            try {
                 nextMicroServiceID++;
-            }finally {
-                return nextMicroServiceID;
+            } finally {
+                NetUUID hid = this.habitat.getNetUUID();
+                return new NetUUID(hid.getNetwork(), hid.getUuidA(), hid.getUuidB(), nextMicroServiceID);
             }
         }
     }
@@ -73,8 +67,11 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
         return this.servicesSeynchronizeObject;
     }
 
-    public void initialize(){}
-    public void distruct(){}
+    public void initialize() {
+    }
+
+    public void distruct() {
+    }
 
     public void execute() throws Exception {
         boolean addedTask = false;
@@ -88,11 +85,11 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
                 }
             }
         }
-        if(System.currentTimeMillis()-lastServiceInventoryBroadcast>5000){
+        if (System.currentTimeMillis() - lastServiceInventoryBroadcast > 5000) {
             lastServiceInventoryBroadcast = System.currentTimeMillis();
             BytesArray ba = new BytesArray(1024);
-            serviceInventory.encode(serviceInventory,ba);
-            this.getHabitat().send(ba.getData(),this.habitat.getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
+            serviceInventory.encode(serviceInventory, ba);
+            //this.getHabitat().send(ba.getData(), this.habitat.getNetUUID(), Packet.PROTOCOL_ID_BROADCAST);
         }
         if (!addedTask) {
             synchronized (servicesSeynchronizeObject) {
@@ -114,13 +111,13 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
     }
 
     public void addMicroService(MicroService h) {
-        this.id2MicroService.put(h.getMicroServiceID(), h);
+        this.id2MicroService.put(h.getMicroServiceID().getServiceID(), h);
     }
 
     public void registerMicroService(MicroService h) {
-        id2MicroService.put(h.getMicroServiceID(), h);
-        handlerNameToID.put(h.getName(), h.getMicroServiceID());
-        serviceInventory.addService(h.getMicroServiceGroup().getB(),h.getMicroServiceID());
+        id2MicroService.put(h.getMicroServiceID().getServiceID(), h);
+        handlerNameToID.put(h.getName(), h.getMicroServiceID().getServiceID());
+        serviceInventory.addService(h.getMicroServiceTypeID().getUuidB(), h.getMicroServiceID().getServiceID());
     }
 
     public MicroService getHandlerByID(int id) {
@@ -135,27 +132,27 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
         return null;
     }
 
-    private int getMicroServiceIDFromFrame(Packet frame){
-        return Encoder.decodeInt16(frame.getData(),Packet.PACKET_DATA_LOCATION+16);
-    }
-
     @Override
     public void process(Packet frame) {
-        if(frame.getDestination().equals(this.getHabitat().getNetUUID())){
-            //this is not for my services so ignore it.
-            return;
-        }
-        int microServiceID = getMicroServiceIDFromFrame(frame);
-        MicroService h = id2MicroService.get(microServiceID);
+        MicroService h = id2MicroService.get(frame.getDestination().getServiceID());
         if (h != null) {
             h.addFrame(frame);
             synchronized (servicesSeynchronizeObject) {
                 servicesSeynchronizeObject.notifyAll();
             }
+        } else {
+            BytesArray ba = new BytesArray(1024);
+            frame.getDestination().encode(frame.getDestination(),ba);
+            Encoder.encodeByteArray(frame.getData(),ba);
+            frame.setData(ba.getData());
+            frame.setDestination(frame.getSource());
+            frame.setSource(Packet.PROTOCOL_ID_UNREACHABLE);
+            frame.setUnreachableReply();
+            getHabitat().send(frame);
         }
     }
 
-    public void messageWasEnqueued(){
+    public void messageWasEnqueued() {
         synchronized (servicesSeynchronizeObject) {
             servicesSeynchronizeObject.notifyAll();
         }
@@ -163,8 +160,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     @Override
     public void processDestinationUnreachable(Packet frame) {
-        int microServiceID = getMicroServiceIDFromFrame(frame);
-        MicroService h = id2MicroService.get(microServiceID);
+        MicroService h = id2MicroService.get(frame.getDestination().getServiceID());
         if (h != null) {
             h.addFrame(frame);
             synchronized (servicesSeynchronizeObject) {
@@ -185,7 +181,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
 
     @Override
     public void processMulticast(Packet frame) {
-        long multicastGroupID = frame.getDestination().getB();
+        long multicastGroupID = frame.getDestination().getUuidB();
         Set<MicroService> handlers = this.multicasts.get(multicastGroupID);
         if (handlers != null) {
             for (MicroService h : handlers) {
@@ -217,21 +213,21 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
                         String className = getClassNameFromEntryName(e.getName());
                         try {
                             @SuppressWarnings("deprecation")
-                            URLClassLoader cl = new URLClassLoader(new URL[] { f.toURL() }, this.getClass().getClassLoader());
+                            URLClassLoader cl = new URLClassLoader(new URL[]{f.toURL()}, this.getClass().getClassLoader());
                             /*
                              * @TODO ClassLoaders
                              */
                             // ModelClassLoaders.getInstance().addClassLoader(cl);
                             Class<?> handlerClass = cl.loadClass(className);
-                            MicroService newHandler = (MicroService) handlerClass.getConstructor(new Class[] {NetUUID.class,MicroServicesManager.class })
+                            MicroService newHandler = (MicroService) handlerClass.getConstructor(new Class[]{NetUUID.class, MicroServicesManager.class})
                                     .newInstance(
-                                            new Object[] {
+                                            new Object[]{
                                                     this.habitat
                                                             .getNetUUID(),
-                                                    this });
+                                                    this});
                             registerMicroService(newHandler);
                             newHandler.start();
-                            result.add(newHandler.getNetUUID());
+                            result.add(newHandler.getMicroServiceID());
                             cl.close();
                         } catch (Exception err) {
                             err.printStackTrace();
@@ -247,11 +243,11 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
         return null;
     }
 
-    public void registerForMulticast(int multicastGroup, MicroService h) {
-        Set<MicroService> handlers = this.multicasts.get(multicastGroup);
+    public void registerForMulticast(long serviceType, MicroService h) {
+        Set<MicroService> handlers = this.multicasts.get(serviceType);
         if (handlers == null) {
-            handlers = new HashSet<MicroService>();
-            this.multicasts.put(multicastGroup, handlers);
+            handlers = new HashSet<>();
+            this.multicasts.put(serviceType, handlers);
         }
         handlers.add(h);
     }

@@ -20,7 +20,7 @@ import org.datasand.network.NetUUID;
 public class ARPMulticastHandler<DataType, DataTypeElement> implements ICNodeCommandHandler<DataType, DataTypeElement>{
 
     @Override
-    public void handleMessage(Message cNodeCommand, MicroServiceNetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
+    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         //update peer data
         peerEntry.timeStamp();
         if(peerEntry.getLastID()>cNodeCommand.getMessageID() && cNodeCommand.getMessageID()!=999){
@@ -30,7 +30,7 @@ public class ARPMulticastHandler<DataType, DataTypeElement> implements ICNodeCom
             if(peerEntry.getLastID()!=cNodeCommand.getMessageID()){
                 node.log("Detected unsync with "+source);
                 node.setSynchronizing(true);
-                node.send(new Message(node.getMicroServiceID().getMicroServiceID(),-1,CNode.REQUEST_JOURNAL_DATA,null),source);
+                node.send(new Message(CNode.REQUEST_JOURNAL_DATA,null),source);
                 for(MessageEntry e:node.getJournalEntries()){
                     if(e.containPeer(source)){
                         node.send(e.getMessage(), source);

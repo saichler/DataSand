@@ -93,7 +93,7 @@ public class PacketProcessor extends ThreadNode {
                 } else if (f.getDestination().equals(Packet.PROTOCOL_ID_BROADCAST)) {
                     servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
                     servicesHabitat.getFrameListener().processBroadcast(f);
-                } else if (f.getDestination().getA()==0 && f.getDestination().getB() > Packet.DESTINATION_BROADCAST) {
+                } else if (f.getDestination().getUuidA()==0) {
                     servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
                     servicesHabitat.getFrameListener().processMulticast(f);
                 } else {
@@ -107,7 +107,7 @@ public class PacketProcessor extends ThreadNode {
                 } else if (f.getDestination().equals(Packet.PROTOCOL_ID_BROADCAST)) {
                     servicesHabitat.getServicesHabitatMetrics().addBroadcastFrameCount();
                     VLogger.info(servicesHabitat.getNetUUID()+" No Frame Listener, Received Broadcast Frame"+f);
-                } else if (f.getDestination().getA()==0 && f.getDestination().getB() > Packet.DESTINATION_BROADCAST) {
+                } else if (f.getDestination().getUuidA()==0) {
                     servicesHabitat.getServicesHabitatMetrics().addMulticastFrameCount();
                     VLogger.info(servicesHabitat.getNetUUID()+" No Frame Listener, Received Multicast Frame"+f);
                 } else {

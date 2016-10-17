@@ -19,8 +19,8 @@ public class TestAgent extends MicroService {
 
     private TestObject testObject = AgentsTest.createTestObject();
 
-    public TestAgent(NetUUID localHost, MicroServicesManager m) {
-        super(19, m);
+    public TestAgent(MicroServicesManager m) {
+        super("TestSrvs", m);
         TestObject o = new TestObject();
     }
 

@@ -14,13 +14,32 @@ import java.util.Map;
  * Created by saichler on 10/13/16.
  */
 public class RoutingTable {
-    private final Map<NetUUID,ConnectionID> netUUID2ConnectionID = new HashMap<>();
+    private final Map<Integer,Map<Long,Map<Long,ConnectionID>>> routingTree = new HashMap<>();
 
-    public void add(NetUUID uuid,ConnectionID connID){
-        this.netUUID2ConnectionID.put(uuid,connID);
+    public void add(NetUUID netUUID,ConnectionID connID){
+        Map<Long,Map<Long,ConnectionID>> network = routingTree.get(netUUID.getNetwork());
+        if(network==null){
+            network = new HashMap<>();
+            routingTree.put(netUUID.getNetwork(),network);
+        }
+
+        Map<Long,ConnectionID> uuidAMap = network.get(netUUID.getUuidA());
+        if(uuidAMap==null){
+            uuidAMap = new HashMap<>();
+            network.put(netUUID.getUuidA(),uuidAMap);
+        }
+
+        uuidAMap.put(netUUID.getUuidB(),connID);
     }
 
-    public ConnectionID get(NetUUID netUUID){
-        return this.netUUID2ConnectionID.get(netUUID);
+    public ConnectionID get(NetUUID netUUID) {
+        Map<Long,Map<Long,ConnectionID>> network = routingTree.get(netUUID.getNetwork());
+        if(network!=null){
+            Map<Long,ConnectionID> uuidAMap = network.get(netUUID.getUuidA());
+            if(uuidAMap!=null){
+                return uuidAMap.get(netUUID.getUuidB());
+            }
+        }
+        return null;
     }
 }

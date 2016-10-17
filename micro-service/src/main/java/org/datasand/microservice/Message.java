@@ -7,11 +7,12 @@
  */
 package org.datasand.microservice;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.serialize.ISerializer;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -20,40 +21,32 @@ import org.datasand.codec.serialize.ISerializer;
  */
 public class Message implements ISerializer {
 
-    private final int source;
-    private final int destination;
-    private final long messageID;
-    private final int messageType;
-    private Object messageData = null;
-    private static long nextMessageID = 1000;
     public static final Map<Integer, Integer> passThroughIncomingMessage = new ConcurrentHashMap<Integer, Integer>();
     public static final Map<Integer, Integer> passThroughOutgoingMessage = new ConcurrentHashMap<Integer, Integer>();
 
-    public Message(int source, int destination, long messageID, int messageType, Object messageData) {
-        this.source = source;
-        this.destination = destination;
+    static {
+        Encoder.registerSerializer(Message.class, new Message(-1, -1, null));
+    }
+
+    private static long nextMessageID = 1000;
+
+    private final long messageID;
+    private final int messageType;
+    private Object messageData = null;
+
+    public Message(long messageID, int messageType, Object messageData) {
         this.messageID = messageID;
         this.messageType = messageType;
         this.messageData = messageData;
     }
 
-    public Message(int source, int destination, int messageType, Object messageData) {
+    public Message(int messageType, Object messageData) {
         synchronized (Message.class) {
             this.messageID = nextMessageID;
             nextMessageID++;
         }
-        this.source = source;
-        this.destination = destination;
         this.messageType = messageType;
         this.messageData = messageData;
-    }
-
-    public int getSource() {
-        return source;
-    }
-
-    public int getDestination() {
-        return destination;
     }
 
     public long getMessageID() {
@@ -71,20 +64,16 @@ public class Message implements ISerializer {
     @Override
     public void encode(Object value, BytesArray ba) {
         Message m = (Message) value;
-        Encoder.encodeInt16(m.getSource(), ba);
-        Encoder.encodeInt16(m.getDestination(), ba);
         Encoder.encodeInt16(m.getMessageType(), ba);
         Encoder.encodeInt64(m.messageID, ba);
         if (passThroughOutgoingMessage.containsKey(m.getMessageType()) && m.getMessageData() instanceof BytesArray) {
             //this is a passthrough message
             //copy the data bytes from the other container to this message
-            //2 - for the source
-            //2 - for the destination
             //2 - for the message class type
             //4 - for the message type
             //8 - for the message id
-            // == 16
-            ba.insert((BytesArray) m.getMessageData(), 18);
+            // == 14
+            ba.insert((BytesArray) m.getMessageData(), 14);
         } else
             Encoder.encodeObject(m.messageData, ba);
     }
@@ -92,8 +81,6 @@ public class Message implements ISerializer {
     @Override
     public Object decode(BytesArray ba) {
 
-        int source = Encoder.decodeInt16(ba);
-        int destination = Encoder.decodeByte(ba);
         int type = Encoder.decodeInt16(ba);
         long id = Encoder.decodeInt64(ba);
         Object data = null;
@@ -103,7 +90,7 @@ public class Message implements ISerializer {
             data = Encoder.decodeObject(ba);
         }
 
-        Message m = new Message(source, destination, id, type, data);
+        Message m = new Message(id, type, data);
         return m;
     }
 }

@@ -17,9 +17,9 @@ import org.datasand.codec.serialize.ISerializer;
 public class Packet implements ISerializer {
 
     public static final int PACKET_SOURCE_LOCATION = 0;
-    public static final int PACKET_SOURCE_LENGHT = 16;
+    public static final int PACKET_SOURCE_LENGHT = 20;
     public static final int PACKET_DEST_LOCATION = PACKET_SOURCE_LOCATION + PACKET_SOURCE_LENGHT;
-    public static final int PACKET_DEST_LENGTH = 16;
+    public static final int PACKET_DEST_LENGTH = 20;
     public static final int PACKET_ID_LOCATION = PACKET_DEST_LOCATION + PACKET_DEST_LENGTH;
     public static final int PACKET_ID_LENGTH = 2;
     public static final int PACKET_MULTIPART_AND_PRIORITY_LOCATION = PACKET_ID_LOCATION + PACKET_ID_LENGTH;
@@ -30,8 +30,8 @@ public class Packet implements ISerializer {
     public static final int DESTINATION_UNREACHABLE = 9998;
     public static final int DESTINATION_BROADCAST = 10;
 
-    public static final NetUUID PROTOCOL_ID_UNREACHABLE = new NetUUID(0, DESTINATION_UNREACHABLE);
-    public static final NetUUID PROTOCOL_ID_BROADCAST = new NetUUID(0, DESTINATION_BROADCAST);
+    public static final NetUUID PROTOCOL_ID_UNREACHABLE = new NetUUID(0, 0, DESTINATION_UNREACHABLE, 0);
+    public static final NetUUID PROTOCOL_ID_BROADCAST = new NetUUID(0, 0, DESTINATION_BROADCAST, 0);
 
 
     private NetUUID source = null;
@@ -43,6 +43,7 @@ public class Packet implements ISerializer {
     private int priority = 2;
     private byte[] data = null;
     private Object message = null;
+    private boolean isUnreachableReply = false;
 
     private static int nextPacketID = 1000;
 
@@ -86,12 +87,24 @@ public class Packet implements ISerializer {
         this.message = message;
     }
 
+    public void setSource(NetUUID s){
+        this.source = s;
+    }
+
     public NetUUID getSource() {
         return source;
     }
 
+    public void setDestination(NetUUID dest){
+        this.destination = dest;
+    }
+
     public NetUUID getDestination() {
         return destination;
+    }
+
+    public NetUUID getOriginalAddress(){
+        return this.originalAddress;
     }
 
     public int getPacketID() {
@@ -104,6 +117,14 @@ public class Packet implements ISerializer {
 
     public byte[] getData() {
         return this.data;
+    }
+
+    public void setData(byte d[]){
+        this.data = d;
+    }
+
+    public void setUnreachableReply(){
+        this.isUnreachableReply = true;
     }
 
     public int getPriority() {
@@ -125,7 +146,11 @@ public class Packet implements ISerializer {
             byte m_p = (byte) (p.priority * 2);
             Encoder.encodeByte(m_p, ba);
         }
-        Encoder.encodeByteArray(p.data, ba);
+        if(p.isUnreachableReply){
+            ba.insert(p.data);
+        }else {
+            Encoder.encodeByteArray(p.data, ba);
+        }
     }
 
     public Object decode() {
@@ -151,7 +176,7 @@ public class Packet implements ISerializer {
         ba.advance(1);
         if (ba.getBytes().length > Packet.PACKET_DATA_LOCATION) {
             if (isUnreachable(m.source)) {
-                this.originalAddress = (NetUUID) serializer.decode(ba);
+                m.originalAddress = (NetUUID) serializer.decode(ba);
                 m.data = Encoder.decodeByteArray(ba);
             } else {
                 try {
@@ -186,15 +211,20 @@ public class Packet implements ISerializer {
         return buff.toString();
     }
 
+    /*
     public NetUUID getUnreachableOrigAddress() {
-        long a = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION);
-        long b = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION + 8);
+        int n = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION);
+        long a = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION + 2);
+        long b = Encoder.decodeInt64(this.getData(), PACKET_DEST_LOCATION + 10);
+        int s = Encoder.decodeInt16(this.getData(), PACKET_DEST_LOCATION + 18);
         if (a == 0) {
-            a = Encoder.decodeInt64(this.getData(), this.getData().length - 16);
-            b = Encoder.decodeInt64(this.getData(), this.getData().length - 8);
+            n = Encoder.decodeInt16(this.getData(), this.getData().length - 20);
+            a = Encoder.decodeInt64(this.getData(), this.getData().length - 18);
+            b = Encoder.decodeInt64(this.getData(), this.getData().length - 10);
+            s = Encoder.decodeInt16(this.getData(), this.getData().length - 2);
         }
-        return new NetUUID(a, b);
-    }
+        return new NetUUID(n, a, b, s);
+    }*/
 
     public Object getMessage() {
         return this.message;

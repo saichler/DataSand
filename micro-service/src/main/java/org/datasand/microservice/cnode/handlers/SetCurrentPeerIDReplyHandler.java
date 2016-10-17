@@ -22,7 +22,7 @@ public class SetCurrentPeerIDReplyHandler <DataType, DataTypeElement> implements
     public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
         peerEntry.setLastID(cNodeCommand.getMessageID());
         synchronized(node){
-            node.log("Finished Synchronizing with "+source.getPort());
+            node.log("Finished Synchronizing with "+source);
             node.setSynchronizing(false);
             node.notifyAll();
         }

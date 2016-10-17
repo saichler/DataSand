@@ -7,62 +7,62 @@
  */
 package org.datasand.microservice;
 
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.serialize.ISerializer;
+import org.datasand.network.NetUUID;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.datasand.codec.BytesArray;
-import org.datasand.codec.Encoder;
-import org.datasand.network.NetUUID;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
- *
- * Message is the vessel which is used to transfer data from one node to another.
+ *         <p>
+ *         Message is the vessel which is used to transfer data from one node to another.
  */
-public class ServiceInventory extends Message {
-    private final Map<Long,List<NetUUID>> services = new HashMap<>();
+public class ServiceInventory implements ISerializer {
+
+    private final Map<Long, List<Integer>> services = new HashMap<>();
     private final NetUUID netUUID;
 
-    public ServiceInventory(int source,int destination, NetUUID uuid){
-        super(source,destination,-1,null);
+    public ServiceInventory(NetUUID uuid) {
         this.netUUID = uuid;
     }
 
-    public void addService(long serviceGroup,NetUUID id){
-        List<NetUUID> serviceList = services.get(serviceGroup);
-        if(serviceList==null){
+    public void addService(long serviceType, int id) {
+        List<Integer> serviceList = services.get(serviceType);
+        if (serviceList == null) {
             serviceList = new ArrayList<>();
-            services.put(serviceGroup,serviceList);
+            services.put(serviceType, serviceList);
         }
         serviceList.add(id);
     }
 
     @Override
     public void encode(Object value, BytesArray ba) {
-        super.encode(value,ba);
-        ServiceInventory si = (ServiceInventory)value;
-        Encoder.encodeObject(si.netUUID,ba);
-        Encoder.encodeInt16(si.services.size(),ba);
-        for(Map.Entry<Long,List<NetUUID>> entry:si.services.entrySet()){
-            Encoder.encodeInt64(entry.getKey(),ba);
-            Encoder.encodeInt16(entry.getValue().size(),ba);
-            for(NetUUID id:entry.getValue()){
-                Encoder.encodeObject(id,ba);
+        ServiceInventory si = (ServiceInventory) value;
+        Encoder.encodeObject(si.netUUID, ba);
+        Encoder.encodeInt16(si.services.size(), ba);
+        for (Map.Entry<Long, List<Integer>> entry : si.services.entrySet()) {
+            Encoder.encodeInt64(entry.getKey(), ba);
+            Encoder.encodeInt16(entry.getValue().size(), ba);
+            for (Integer id : entry.getValue()) {
+                Encoder.encodeInt32(id, ba);
             }
         }
     }
 
     @Override
     public Object decode(BytesArray ba) {
-        Message m = (Message)super.decode(ba);
-        ServiceInventory serviceInventory = new ServiceInventory(m.getSource(),m.getDestination(),(NetUUID)Encoder.decodeObject(ba));
+        ServiceInventory serviceInventory = new ServiceInventory((NetUUID) Encoder.decodeObject(ba));
         int size = Encoder.decodeInt16(ba);
-        for(int i=0;i<size;i++){
-            long group = Encoder.decodeInt64(ba);
+        for (int i = 0; i < size; i++) {
+            long serviceType = Encoder.decodeInt64(ba);
             int groupSize = Encoder.decodeInt16(ba);
-            for(int j=0;j<groupSize;j++){
-                serviceInventory.addService(group, (NetUUID)Encoder.decodeObject(ba));
+            for (int j = 0; j < groupSize; j++) {
+                serviceInventory.addService(serviceType, Encoder.decodeInt32(ba));
             }
         }
         return serviceInventory;

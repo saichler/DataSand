@@ -19,25 +19,31 @@ public class NetworkIDComparator implements Comparator<NetUUID>{
     public int compare(NetUUID o1, NetUUID o2) {
         if(o1==null && o2==null)
             return 0;
+
         if(o1==null && o2!=null)
             return 1;
+
         if(o1!=null && o2==null)
             return -1;
-        if(o1.getIPv4Address()<o2.getIPv4Address())
+
+        if(o1.getUuidA()<o2.getUuidA())
             return -1;
-        else
-        if(o1.getIPv4Address()>o2.getIPv4Address())
+
+        if(o1.getUuidA()>o2.getUuidA())
             return 1;
-        if(o1.getPort()<o2.getPort())
+
+        if(o1.getUuidB()<o2.getUuidB())
             return -1;
-        else
-        if(o1.getPort()>o2.getPort())
+
+        if(o1.getUuidB()>o2.getUuidB())
             return 1;
+
         if(o1.getServiceID()<o2.getServiceID())
             return -1;
-        else
+
         if(o1.getServiceID()>o2.getServiceID())
             return 1;
+
         return 0;
     }
 }

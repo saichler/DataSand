@@ -21,7 +21,7 @@ public class RequestJournalDataHandler<DataType, DataTypeElement> implements ICN
 
     @Override
     public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType, DataTypeElement> node) {
-        node.log("Requested Journal Data from "+source.getPort());
+        node.log("Requested Journal Data from "+source);
         node.setSynchronizing(true);
         for(MessageEntry e:node.getJournalEntries()){
             if(e.containPeer(source)){

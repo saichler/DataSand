@@ -25,7 +25,7 @@ public class SetCurrentPeerIDHandler <DataType, DataTypeElement> implements ICNo
             node.incrementID();
         node.send(new Message(node.getNextID()-1,CNode.SET_CURRENT_PEER_ID_REPLY,null), source);
         synchronized(node){
-            node.log("Finished Synchronizing with "+source.getPort());
+            node.log("Finished Synchronizing with "+source);
             node.setSynchronizing(false);
             node.notifyAll();
         }

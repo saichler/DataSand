@@ -14,6 +14,6 @@ import org.datasand.network.NetUUID;
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public interface ICNodeCommandHandler<DataType,DataTypeElement> {
-    public void handleMessage(Message cNodeCommand, MicroServiceNetUUID source, MicroServiceNetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
+    public void handleMessage(Message cNodeCommand, NetUUID source, NetUUID destination, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
     public void handleUnreachableMessage(Message cNodeCommand, NetUUID unreachableSource, CMicroServicePeerEntry<DataType> peerEntry, CNode<DataType,DataTypeElement> node);
 }
