@@ -66,17 +66,6 @@ public class NetworkTest {
 
     }
 
-    public static int countSubstring(String substr, String output) {
-        System.out.println(output);
-        int index = output.indexOf(substr);
-        int count = 0;
-        while (index != -1) {
-            count++;
-            index = output.indexOf(substr, index + 1);
-        }
-        return count;
-    }
-
     @AfterClass
     public static void clean(){
         File f = new File("./node1");
@@ -108,7 +97,6 @@ public class NetworkTest {
             Thread.sleep(1000);
         } catch (Exception err) {
         }
-        System.out.println("Ready");
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), NodeConnection.PROTOCOL_ID_BROADCAST);
         NID unreach = new NID(nodes[3].getLocalHost().getIPv4Address(), 56565, 0);
         nodes[3].send(new byte[5], nodes[3].getLocalHost(), unreach);

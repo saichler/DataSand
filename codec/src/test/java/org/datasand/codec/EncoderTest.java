@@ -76,7 +76,6 @@ public class EncoderTest {
         i = Encoder.decodeInt32(ba);
         Assert.assertEquals(0,i);
         long ll = Encoder.decodeInt32(new byte[]{1,1,1,1},0);
-        System.out.println(ll);
     }
 
     @Test
@@ -93,7 +92,6 @@ public class EncoderTest {
         i = Encoder.decodeInt64(ba);
         Assert.assertEquals(0,i);
         long ll = Encoder.decodeInt64(new byte[]{0,0,1,1,1,1,1,1},0);
-        System.out.println(ll);
     }
 
     @Test

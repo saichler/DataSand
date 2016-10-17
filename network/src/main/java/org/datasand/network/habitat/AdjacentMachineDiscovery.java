@@ -13,74 +13,80 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.NID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class AdjacentMachineDiscovery extends ThreadNode{
+public class AdjacentMachineDiscovery extends ThreadNode {
+    private static final Logger LOG = LoggerFactory.getLogger(AdjacentMachineDiscovery.class);
     private final DatagramSocket datagramSocket;
     private final AdjacentMachineListener listener;
     private final NID NID;
 
-    public  interface AdjacentMachineListener {
+    public interface AdjacentMachineListener {
         void notifyAdjacentDiscovered(NID adjacentID, String host);
     }
 
-    public AdjacentMachineDiscovery(NID NID, AdjacentMachineListener listener){
-        super((ThreadNode)listener,"Adjacent Machine Discovery Listener");
+    public AdjacentMachineDiscovery(NID NID, AdjacentMachineListener listener) {
+        super((ThreadNode) listener, "Adjacent Machine Discovery Listener");
         this.NID = NID;
         this.listener = listener;
-        DatagramSocket socket=null;
+        DatagramSocket socket = null;
         try {
             socket = new DatagramSocket(49999);
         } catch (SocketException e) {
-            VLogger.error("Failed to open socket for discovery",e);
+            LOG.error("Failed to open socket for discovery", e);
         }
         this.datagramSocket = socket;
     }
 
-    public void shutdown(){
+    public void shutdown() {
         super.shutdown();
         this.datagramSocket.close();
     }
 
-    public void initialize(){}
+    public void initialize() {
+    }
 
-    public void distruct(){
+    public void distruct() {
         this.datagramSocket.close();
     }
 
-    public void execute() throws Exception{
+    public void execute() throws Exception {
         byte data[] = new byte[8];
         DatagramPacket packet = new DatagramPacket(data, data.length);
         this.datagramSocket.receive(packet);
         processIncomingPacket(packet);
     }
 
-    private void processIncomingPacket(DatagramPacket p){
+    private void processIncomingPacket(DatagramPacket p) {
         BytesArray ba = new BytesArray(p.getData());
         NID id = (NID) Encoder.getSerializerByClass(NID.class).decode(ba);
-        if(!id.equals(NID)){
-            listener.notifyAdjacentDiscovered(id,p.getAddress().getHostName());
+        if (!id.equals(NID)) {
+            listener.notifyAdjacentDiscovered(id, p.getAddress().getHostName());
         }
     }
 
-    private static class AdjacentMachineDiscoveryPulse extends ThreadNode{
+    private static class AdjacentMachineDiscoveryPulse extends ThreadNode {
 
         private final NID localHost;
 
-        private AdjacentMachineDiscoveryPulse(ThreadNode th,NID localHost){
-            super(th,"Discovery Pluse");
+        private AdjacentMachineDiscoveryPulse(ThreadNode th, NID localHost) {
+            super(th, "Discovery Pluse");
             this.localHost = localHost;
         }
 
-        public void initialize(){}
-        public void distruct(){}
+        public void initialize() {
+        }
 
-        public void execute() throws Exception{
+        public void distruct() {
+        }
+
+        public void execute() throws Exception {
             BytesArray ba = new BytesArray(new byte[8]);
             Encoder.getSerializerByClass(NID.class).encode(localHost, ba);
             byte data[] = ba.getData();

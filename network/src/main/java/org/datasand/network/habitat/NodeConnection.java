@@ -17,7 +17,6 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import org.datasand.codec.BytesArray;
-import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.ConnectionID;
 import org.datasand.network.NID;
@@ -144,7 +143,7 @@ public class NodeConnection extends ThreadNode {
                     out.flush();
                     return null;
                 }catch(SocketException serr){
-                    VLogger.info("Connection was probably terminated for "+socket.getInetAddress().getHostName()+":"+socket.getPort());
+                    LOG.info("Connection was probably terminated for "+socket.getInetAddress().getHostName()+":"+socket.getPort());
                     this.shutdown();
                     return Packet.markAsUnreachable(ba);
                 }
@@ -178,6 +177,7 @@ public class NodeConnection extends ThreadNode {
             hcSwitch.addPacket(data);
         }catch(EOFException e){
             LOG.info("Connection "+this.getName()+"was closed");
+            this.shutdown();
         }
     }
 

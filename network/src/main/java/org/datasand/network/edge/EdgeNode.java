@@ -15,7 +15,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.UUID;
-import org.datasand.codec.VLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -23,6 +24,7 @@ import org.datasand.codec.VLogger;
  */
 public class EdgeNode extends Thread implements ResultContainerCallback {
 
+    private static final Logger LOG = LoggerFactory.getLogger(EdgeNode.class);
     private final DatagramSocket datagramSocket;
     private final Map<UUID, InetAddress> adjacentsEdgeNodes = new HashMap<>();
     private boolean running = true;
@@ -45,7 +47,7 @@ public class EdgeNode extends Thread implements ResultContainerCallback {
                 success = true;
             }catch(Exception err){}
             if(success){
-                VLogger.info("Opened socket on port "+socket.getLocalPort());
+                LOG.info("Opened socket on port "+socket.getLocalPort());
                 this.start();
                 break;
             }
@@ -114,7 +116,7 @@ public class EdgeNode extends Thread implements ResultContainerCallback {
                 enqueuePacket(packet);
             }catch(Exception err){
                 if(running)
-                    VLogger.error("Socket issue",err);
+                    LOG.error("Socket issue",err);
             }
         }
     }
@@ -145,7 +147,7 @@ public class EdgeNode extends Thread implements ResultContainerCallback {
                         try {
                             edgeNode.incomingDatagranPackets.wait(2000);
                         } catch (InterruptedException e) {
-                            VLogger.error("Interrupted",e);
+                            LOG.error("Interrupted",e);
                         }
                     }
                     if(!edgeNode.incomingDatagranPackets.isEmpty()){
@@ -187,7 +189,7 @@ public class EdgeNode extends Thread implements ResultContainerCallback {
         try{
             sendDatagramPacket(dp);
         }catch(IOException err){
-            VLogger.error(err.getMessage(),err);
+            LOG.error(err.getMessage(),err);
         }
     }
 

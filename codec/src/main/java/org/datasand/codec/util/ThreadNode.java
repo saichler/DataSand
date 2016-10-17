@@ -9,74 +9,81 @@ package org.datasand.codec.util;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.datasand.codec.VLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public abstract class ThreadNode extends Thread{
+public abstract class ThreadNode extends Thread {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ThreadNode.class);
     private boolean running = false;
     private final List<ThreadNode> children = new ArrayList<>();
 
-    public ThreadNode(ThreadNode parent,String name){
+    public ThreadNode(ThreadNode parent, String name) {
         this.setName(name);
-        if(parent!=null){
+        if (parent != null) {
             parent.children.add(this);
             this.setDaemon(true);
         }
     }
 
-    public void run(){
+    public void run() {
         initialize();
-        VLogger.info(this.getName()+" was started.");
+        LOG.info(this.getName() + " was started.");
         try {
             this.running = true;
             while (running) {
                 execute();
             }
-        }catch(Exception e){
-            if(running){
-                VLogger.error(this.getName()+" was unexpectly terminated",e);
+        } catch (Exception e) {
+            if (running) {
+                LOG.error(this.getName() + " was unexpectly terminated", e);
             }
         }
         distruct();
-        VLogger.info(this.getName()+" was shutdown.");
+        LOG.info(this.getName() + " was shutdown.");
     }
 
     public abstract void initialize();
+
     public abstract void execute() throws Exception;
+
     public abstract void distruct();
 
-    public void shutdown(){
+    public void shutdown() {
         this.running = false;
-        for(ThreadNode child:children){
+        for (ThreadNode child : children) {
             child.shutdown();
         }
     }
 
-    public void start(){
-        for (ThreadNode child:this.children){
+    public void start() {
+        for (ThreadNode child : this.children) {
             child.start();
         }
         boolean allstarted = false;
-        while(!allstarted){
+        while (!allstarted) {
             allstarted = true;
-            for (ThreadNode child:this.children){
-                if(!child.isRunning()){
+            for (ThreadNode child : this.children) {
+                if (!child.isRunning()) {
                     allstarted = false;
                     break;
                 }
             }
-            if(!allstarted){
-                try{Thread.sleep(100);}catch(InterruptedException e){}
+            if (!allstarted) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                }
             }
         }
 
         super.start();
     }
 
-    public boolean isRunning(){
+    public boolean isRunning() {
         return this.running;
     }
 }

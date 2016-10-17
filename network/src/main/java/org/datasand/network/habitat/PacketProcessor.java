@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
-import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.Packet;
 import org.slf4j.Logger;
@@ -106,13 +105,13 @@ public class PacketProcessor extends ThreadNode {
                     LOG.info(node.getNID()+" No Frame Listener, Received Unreachable Frame"+f);
                 } else if (f.getDestination().equals(Packet.PROTOCOL_ID_BROADCAST)) {
                     node.getNetMetrics().addBroadcastFrameCount();
-                    VLogger.info(node.getNID()+" No Frame Listener, Received Broadcast Frame"+f);
+                    LOG.info(node.getNID()+" No Frame Listener, Received Broadcast Frame"+f);
                 } else if (f.getDestination().getUuidA()==0) {
                     node.getNetMetrics().addMulticastFrameCount();
-                    VLogger.info(node.getNID()+" No Frame Listener, Received Multicast Frame"+f);
+                    LOG.info(node.getNID()+" No Frame Listener, Received Multicast Frame"+f);
                 } else {
                     node.getNetMetrics().addRegularFrameCount();
-                    VLogger.info(node.getNID()+" No Frame Listener, Received Regular Frame"+f);
+                    LOG.info(node.getNID()+" No Frame Listener, Received Regular Frame"+f);
                 }
             }
         }

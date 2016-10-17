@@ -7,17 +7,36 @@
  */
 package org.datasand.microservice.cnode;
 
-import org.datasand.microservice.*;
-import org.datasand.microservice.cnode.handlers.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import org.datasand.microservice.Message;
+import org.datasand.microservice.MessageEntry;
+import org.datasand.microservice.MicroService;
+import org.datasand.microservice.MicroServicePeerEntry;
+import org.datasand.microservice.MicroServicesManager;
+import org.datasand.microservice.cnode.handlers.ARPMulticastHandler;
+import org.datasand.microservice.cnode.handlers.AcknowledgeHandler;
+import org.datasand.microservice.cnode.handlers.EnterSyncModeHandler;
+import org.datasand.microservice.cnode.handlers.NodeJoinHandler;
+import org.datasand.microservice.cnode.handlers.NodeOriginalDataHandler;
+import org.datasand.microservice.cnode.handlers.PeerSyncDataHandler;
+import org.datasand.microservice.cnode.handlers.RequestJournalDataHandler;
+import org.datasand.microservice.cnode.handlers.SetCurrentPeerIDHandler;
+import org.datasand.microservice.cnode.handlers.SetCurrentPeerIDReplyHandler;
 import org.datasand.network.NID;
-
-import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public abstract class CNode<DataType, DataTypeElement> extends MicroService {
 
+    public static final Logger LOG = LoggerFactory.getLogger(CNode.class);
     public static final int NODE_JOIN = 100;
     public static final int ARP_MULTICAST = 110;
     public static final int ENTER_SYNC_MODE = 120;
@@ -169,6 +188,6 @@ public abstract class CNode<DataType, DataTypeElement> extends MicroService {
     public void log(String str) {
         StringBuffer buff = new StringBuffer("Node ").append(this.getMicroServiceID()).append(" - ");
         buff.append(str);
-        System.out.println(buff);
+        LOG.info(str);
     }
 }

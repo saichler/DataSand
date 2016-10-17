@@ -15,11 +15,11 @@ import org.junit.Assert;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class TestAgent extends MicroService {
+public class TestMicroService extends MicroService {
 
-    private TestObject testObject = AgentsTest.createTestObject();
+    private TestObject testObject = MicroServiceTest.createTestObject();
 
-    public TestAgent(MicroServicesManager m) {
+    public TestMicroService(MicroServicesManager m) {
         super("TestSrvs", m);
         TestObject o = new TestObject();
     }

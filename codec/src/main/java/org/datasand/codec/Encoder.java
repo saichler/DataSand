@@ -19,80 +19,82 @@ import org.datasand.codec.serialize.ISerializer;
 import org.datasand.codec.serialize.SerializerGenerator;
 import org.datasand.codec.serialize.SerializersManager;
 import org.datasand.codec.serialize.StringSerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class Encoder {
 
-    public static final byte[] NULL = new byte[] {'-','N','U','L','L','-'};
+    public static final byte[] NULL = new byte[]{'-', 'N', 'U', 'L', 'L', '-'};
     private static final SerializersManager serializersManager = new SerializersManager();
+    private static final Logger LOG = LoggerFactory.getLogger(Encoder.class);
 
     static {
         registerSerializer(String.class, new StringSerializer());
     }
 
-    public static final void registerSerializer(Class<?> cls,ISerializer serializer){
-        serializersManager.registerSerializer(cls,serializer);
+    public static final void registerSerializer(Class<?> cls, ISerializer serializer) {
+        serializersManager.registerSerializer(cls, serializer);
     }
 
-    public static final ISerializer getSerializerByClass(Class<?> cls){
-        ISerializer serializer =  serializersManager.getSerializerByClass(cls);
-        if(serializer==null){
+    public static final ISerializer getSerializerByClass(Class<?> cls) {
+        ISerializer serializer = serializersManager.getSerializerByClass(cls);
+        if (serializer == null) {
             VTable table = VSchema.instance.getVTable(cls);
-            if(table!=null){
+            if (table != null) {
                 try {
                     serializer = SerializerGenerator.generateSerializer(table);
-                    serializersManager.registerSerializer(cls,serializer);
+                    serializersManager.registerSerializer(cls, serializer);
                 } catch (IOException | IllegalAccessException | InstantiationException | ClassNotFoundException e) {
-                    VLogger.error("Failed to create a serializer to class "+cls.getName(),e);
+                    LOG.error("Failed to create a serializer to class " + cls.getName(), e);
                 }
             }
         }
         return serializer;
     }
 
-    public static final Class<?> getClassByMD5(MD5ID id){
+    public static final Class<?> getClassByMD5(MD5ID id) {
         return serializersManager.getClassByMD5(id);
     }
 
-    public static final MD5ID getMD5ByClass(Class<?> cls){
+    public static final MD5ID getMD5ByClass(Class<?> cls) {
         return serializersManager.getMD5ByClass(cls);
     }
 
     //Object
-    public static final void encodeObject(Object value,BytesArray ba){
-        if(ba instanceof HierarchyBytesArray && ba.getLocation()!=0){
-            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+    public static final void encodeObject(Object value, BytesArray ba) {
+        if (ba instanceof HierarchyBytesArray && ba.getLocation() != 0) {
+            HierarchyBytesArray hba = (HierarchyBytesArray) ba;
             ba = hba.addNewChild();
         }
-        if(value==null){
+        if (value == null) {
             encodeNULL(ba);
-        }else{
+        } else {
             ba.adjustSize(16);
             MD5ID id = serializersManager.getMD5ByObject(value);
-            encodeInt64(id.getMd5Long1(),ba);
-            encodeInt64(id.getMd5Long2(),ba);
-            if(ba instanceof HierarchyBytesArray){
-                ((HierarchyBytesArray)ba).setJavaTypeMD5(id);
+            encodeInt64(id.getMd5Long1(), ba);
+            encodeInt64(id.getMd5Long2(), ba);
+            if (ba instanceof HierarchyBytesArray) {
+                ((HierarchyBytesArray) ba).setJavaTypeMD5(id);
             }
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
-            serializer.encode(value,ba);
+            serializer.encode(value, ba);
         }
     }
 
-    public static final Object decodeObject(BytesArray ba){
-        if(ba==null){
+    public static final Object decodeObject(BytesArray ba) {
+        if (ba == null) {
             return null;
-        }else
-        if(ba instanceof HierarchyBytesArray && ba.getLocation()>0){
-            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+        } else if (ba instanceof HierarchyBytesArray && ba.getLocation() > 0) {
+            HierarchyBytesArray hba = (HierarchyBytesArray) ba;
             ba = hba.nextChild();
         }
-        if(isNULL(ba)){
+        if (isNULL(ba)) {
             return null;
-        }else{
-            if(ba.getBytes().length==0){
+        } else {
+            if (ba.getBytes().length == 0) {
                 return null;
             }
             try {
@@ -100,7 +102,7 @@ public class Encoder {
                 long b = decodeInt64(ba);
                 ISerializer serializer = serializersManager.getSerializerByLongs(a, b);
                 return serializer.decode(ba);
-            }catch (Exception err){
+            } catch (Exception err) {
                 err.printStackTrace();
                 return null;
             }
@@ -108,7 +110,7 @@ public class Encoder {
     }
 
     //INT16
-    public static final void encodeInt16(int value, byte[] byteArray,int location) {
+    public static final void encodeInt16(int value, byte[] byteArray, int location) {
         byteArray[location + 1] = (byte) (value >> 8);
         byteArray[location] = (byte) (value);
     }
@@ -142,7 +144,7 @@ public class Encoder {
     }
 
     //INT32
-    public static final void encodeInt32(int value, byte byteArray[],int location) {
+    public static final void encodeInt32(int value, byte byteArray[], int location) {
         byteArray[location] = (byte) ((value >> 24) & 0xff);
         byteArray[location + 1] = (byte) ((value >> 16) & 0xff);
         byteArray[location + 2] = (byte) ((value >> 8) & 0xff);
@@ -157,7 +159,7 @@ public class Encoder {
     }
 
     public static final void encodeInt32(Integer value, BytesArray ba) {
-        if(value==null) value = 0;
+        if (value == null) value = 0;
         ba.adjustSize(4);
         encodeInt32(value, ba.getBytes(), ba.getLocation());
         ba.advance(4);
@@ -170,7 +172,7 @@ public class Encoder {
     }
 
     //INT64 - long
-    public static final void encodeInt64(long value, byte[] byteArray,int location) {
+    public static final void encodeInt64(long value, byte[] byteArray, int location) {
         byteArray[location] = (byte) ((value >> 56) & 0xff);
         byteArray[location + 1] = (byte) ((value >> 48) & 0xff);
         byteArray[location + 2] = (byte) ((value >> 40) & 0xff);
@@ -193,7 +195,7 @@ public class Encoder {
     }
 
     public static final void encodeInt64(Long value, BytesArray ba) {
-        if(value==null)
+        if (value == null)
             value = 0L;
         ba.adjustSize(8);
         encodeInt64(value, ba.getBytes(), ba.getLocation());
@@ -209,16 +211,16 @@ public class Encoder {
     //NULL
     public static final void encodeNULL(BytesArray ba) {
         ba.adjustSize(NULL.length);
-        System.arraycopy(NULL,0,ba.getBytes(),ba.getLocation(),NULL.length);
+        System.arraycopy(NULL, 0, ba.getBytes(), ba.getLocation(), NULL.length);
         ba.advance(NULL.length);
     }
 
     public static final boolean isNULL(BytesArray ba) {
-        if(ba.getBytes().length<ba.getLocation()+NULL.length){
+        if (ba.getBytes().length < ba.getLocation() + NULL.length) {
             return false;
         }
-        for(int i=0;i<NULL.length;i++){
-            if(ba.getBytes()[ba.getLocation()+i]!=NULL[i]) {
+        for (int i = 0; i < NULL.length; i++) {
+            if (ba.getBytes()[ba.getLocation() + i] != NULL[i]) {
                 return false;
             }
         }
@@ -242,9 +244,9 @@ public class Encoder {
         if (value == null) {
             encodeNULL(ba);
         } else {
-            int size = value.getBytes().length+2;
+            int size = value.getBytes().length + 2;
             ba.adjustSize(size);
-            encodeString(value,ba.getBytes(),ba.getLocation());
+            encodeString(value, ba.getBytes(), ba.getLocation());
             ba.advance(size);
         }
     }
@@ -260,7 +262,7 @@ public class Encoder {
     }
 
     //Short
-    public static final void encodeShort(short value, byte[] byteArray,int location) {
+    public static final void encodeShort(short value, byte[] byteArray, int location) {
         byteArray[location + 1] = (byte) (value >> 8);
         byteArray[location] = (byte) (value);
     }
@@ -282,7 +284,7 @@ public class Encoder {
     }
 
     public static final void encodeShort(Short value, BytesArray ba) {
-        if(value==null) value = 0;
+        if (value == null) value = 0;
         ba.adjustSize(2);
         encodeShort(value, ba.getBytes(), ba.getLocation());
         ba.advance(2);
@@ -295,7 +297,7 @@ public class Encoder {
     }
 
     //Byte Array
-    public static final void encodeByteArray(byte[] value, byte byteArray[],int location) {
+    public static final void encodeByteArray(byte[] value, byte byteArray[], int location) {
         encodeInt32(value.length, byteArray, location);
         System.arraycopy(value, 0, byteArray, location + 4, value.length);
     }
@@ -327,7 +329,7 @@ public class Encoder {
     }
 
     //Boolean
-    public static final void encodeBoolean(boolean value, byte[] byteArray,int location) {
+    public static final void encodeBoolean(boolean value, byte[] byteArray, int location) {
         if (value)
             byteArray[location] = 1;
         else
@@ -342,7 +344,7 @@ public class Encoder {
     }
 
     public static final void encodeBoolean(Boolean value, BytesArray ba) {
-        if(value==null) value = false;
+        if (value == null) value = false;
         ba.adjustSize(1);
         encodeBoolean(value, ba.getBytes(), ba.getLocation());
         ba.advance(1);
@@ -356,15 +358,15 @@ public class Encoder {
 
     //Byte
     public static final void encodeByte(Byte value, BytesArray ba) {
-        if(value==null) value = (byte)0;
+        if (value == null) value = (byte) 0;
         ba.adjustSize(1);
         ba.getBytes()[ba.getLocation()] = value;
         ba.advance(1);
     }
 
-    public static final byte decodeByte(BytesArray ba){
+    public static final byte decodeByte(BytesArray ba) {
         ba.advance(1);
-        return ba.getBytes()[ba.getLocation()-1];
+        return ba.getBytes()[ba.getLocation() - 1];
     }
 
     //Int array
@@ -398,11 +400,11 @@ public class Encoder {
         } else {
             encodeInt32(value.length, ba);
             MD5ID id = serializersManager.getMD5ByClass(value.getClass().getComponentType());
-            encodeInt64(id.getMd5Long1(),ba);
-            encodeInt64(id.getMd5Long2(),ba);
+            encodeInt64(id.getMd5Long1(), ba);
+            encodeInt64(id.getMd5Long2(), ba);
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
             for (int i = 0; i < value.length; i++) {
-                serializer.encode(value[i],ba);
+                serializer.encode(value[i], ba);
             }
         }
     }
@@ -414,7 +416,7 @@ public class Encoder {
         int size = decodeInt32(ba);
         long a = decodeInt64(ba);
         long b = decodeInt64(ba);
-        MD5ID id = MD5ID.create(a,b);
+        MD5ID id = MD5ID.create(a, b);
         ISerializer serializer = serializersManager.getSerializerByMD5(id);
         Class cls = serializersManager.getClassByMD5(id);
         Object result[] = (Object[]) Array.newInstance(cls, size);
@@ -426,30 +428,30 @@ public class Encoder {
 
     //List
     public static final void encodeList(List<?> list, BytesArray ba) {
-        if(ba instanceof HierarchyBytesArray && ba.getLocation()!=0){
-            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+        if (ba instanceof HierarchyBytesArray && ba.getLocation() != 0) {
+            HierarchyBytesArray hba = (HierarchyBytesArray) ba;
             ba = hba.addNewChild();
         }
-        if (list == null || list.size()==0) {
+        if (list == null || list.size() == 0) {
             encodeNULL(ba);
         } else {
             encodeInt32(list.size(), ba);
             MD5ID id = serializersManager.getMD5ByClass(list.get(0).getClass());
-            encodeInt64(id.getMd5Long1(),ba);
-            encodeInt64(id.getMd5Long2(),ba);
-            if(ba instanceof HierarchyBytesArray){
-                ((HierarchyBytesArray)ba).setJavaTypeMD5(id);
+            encodeInt64(id.getMd5Long1(), ba);
+            encodeInt64(id.getMd5Long2(), ba);
+            if (ba instanceof HierarchyBytesArray) {
+                ((HierarchyBytesArray) ba).setJavaTypeMD5(id);
             }
             ISerializer serializer = serializersManager.getSerializerByMD5(id);
-            for (Object o: list) {
-                serializer.encode(o,ba);
+            for (Object o : list) {
+                serializer.encode(o, ba);
             }
         }
     }
 
     public static final List<?> decodeList(BytesArray ba) {
-        if(ba instanceof HierarchyBytesArray && ba.getLocation()>0){
-            HierarchyBytesArray hba = (HierarchyBytesArray)ba;
+        if (ba instanceof HierarchyBytesArray && ba.getLocation() > 0) {
+            HierarchyBytesArray hba = (HierarchyBytesArray) ba;
             ba = hba.nextChild();
         }
         if (isNULL(ba)) {
@@ -458,7 +460,7 @@ public class Encoder {
         int size = decodeInt32(ba);
         long a = decodeInt64(ba);
         long b = decodeInt64(ba);
-        MD5ID id = MD5ID.create(a,b);
+        MD5ID id = MD5ID.create(a, b);
         ISerializer serializer = serializersManager.getSerializerByMD5(id);
         List result = new ArrayList(size);
         for (int i = 0; i < size; i++) {

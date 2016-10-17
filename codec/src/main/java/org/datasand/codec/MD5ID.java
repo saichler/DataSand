@@ -15,11 +15,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 /**
  * This class encode the tsdr key into MD5 hash code to serve as a row key identifier for a single metric
  * so when pushing a sample we do not need to persist the whole tsdr string key but only two longs.
+ *
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class MD5ID {
 
-    private static final VLogger LOGGER = null;
     private static MessageDigest md = null;
     private static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private static final WriteLock writeLock = lock.writeLock();
@@ -46,13 +46,14 @@ public class MD5ID {
     }
 
     /**
-     This constructor is calculating two longs that represent the MD5 hashing of the input byte array.
-     @param byteArray - A byte array to be hashed or an already hashed byte array.
-     @param alreadyHashed - If the byte array is already hashed, don't hash it again.
+     * This constructor is calculating two longs that represent the MD5 hashing of the input byte array.
+     *
+     * @param byteArray     - A byte array to be hashed or an already hashed byte array.
+     * @param alreadyHashed - If the byte array is already hashed, don't hash it again.
      **/
-    private MD5ID(byte byteArray[],boolean alreadyHashed) {
+    private MD5ID(byte byteArray[], boolean alreadyHashed) {
 
-        if(!alreadyHashed) {
+        if (!alreadyHashed) {
             try {
                 writeLock.lock();
                 md.update(byteArray);
@@ -60,7 +61,7 @@ public class MD5ID {
             } finally {
                 writeLock.unlock();
             }
-        }else{
+        } else {
             hashByteArray = byteArray;
         }
 
@@ -107,17 +108,19 @@ public class MD5ID {
         return this.md5Long2;
     }
 
-    public byte[] toByteArray(){ return this.hashByteArray;}
-
-    public static final MD5ID create(String str){
-        return new MD5ID(str.getBytes(),false);
+    public byte[] toByteArray() {
+        return this.hashByteArray;
     }
 
-    public static final MD5ID create(long a,long b){
-        return new MD5ID(a,b);
+    public static final MD5ID create(String str) {
+        return new MD5ID(str.getBytes(), false);
     }
 
-    public static final MD5ID create(byte[] byteArray){
-        return new MD5ID(byteArray,false);
+    public static final MD5ID create(long a, long b) {
+        return new MD5ID(a, b);
+    }
+
+    public static final MD5ID create(byte[] byteArray) {
+        return new MD5ID(byteArray, false);
     }
 }

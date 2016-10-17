@@ -14,11 +14,14 @@ import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class VColumn {
+    private static final Logger LOG = LoggerFactory.getLogger(VColumn.class);
     public static boolean IS_SERVER_SIDE = false;
 
     private final String javaGetMethodName;
@@ -169,7 +172,7 @@ public class VColumn {
         try {
             return javaGetMethod.invoke(object, (Object[]) null);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            VLogger.error("Failed to extract value from object",e);
+            LOG.error("Failed to extract value from object",e);
         }
         return null;
     }
@@ -211,7 +214,7 @@ public class VColumn {
                 this.isbyte = true;
             }
         }catch(ClassNotFoundException | NoSuchMethodException e){
-            VLogger.error("Failed to init the java class & methods",e);
+            LOG.error("Failed to init the java class & methods",e);
         }
     }
 

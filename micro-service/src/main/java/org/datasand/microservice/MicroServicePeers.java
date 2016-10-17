@@ -7,16 +7,18 @@
  */
 package org.datasand.microservice;
 
-import org.datasand.network.NID;
-
 import java.util.HashMap;
 import java.util.Map;
+import org.datasand.network.NID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class MicroServicePeers {
 
+    private static final Logger LOG = LoggerFactory.getLogger(MicroServicePeers.class);
     private final Map<NID,MicroServicePeerEntry> peers = new HashMap<>();
     private final MicroService service;
 
@@ -58,7 +60,7 @@ public class MicroServicePeers {
         if(source.equals(this.service.getMicroServiceID())) return null;
         MicroServicePeerEntry microServicePeerEntry = peers.get(source);
         if(microServicePeerEntry ==null){
-            System.out.println("Add Source-"+source+" Count="+(peers.size()+1));
+            LOG.info("Add Source-"+source+" Count="+(peers.size()+1));
             microServicePeerEntry = new MicroServicePeerEntry(source);
             peers.put(source, microServicePeerEntry);
         }

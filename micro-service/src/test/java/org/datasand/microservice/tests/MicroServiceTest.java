@@ -20,7 +20,7 @@ import java.io.File;
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class AgentsTest {
+public class MicroServiceTest {
 
     public static final String MAP_NAME = "CMapTest";
     
@@ -79,7 +79,7 @@ public class AgentsTest {
         MicroService agent[] = new MicroService[nodes.length];
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
-            agent[i] = new TestAgent(nodes[i]);
+            agent[i] = new TestMicroService(nodes[i]);
         }
 
         try {
@@ -123,7 +123,7 @@ public class AgentsTest {
         NID multiCast = new NID(0,0, MULTICAST_GROUP, 0);
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
-            agent[i] = new TestAgent(nodes[i]);
+            agent[i] = new TestMicroService(nodes[i]);
             // only 5 microservice are registered for this multicast
             if (i % 2 == 0) {
                 nodes[i].registerForMulticast(MULTICAST_GROUP, agent[i]);
@@ -164,7 +164,7 @@ public class AgentsTest {
         NID destination = null;
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new MicroServicesManager();
-            agent[i] = new TestAgent(nodes[i]);
+            agent[i] = new TestMicroService(nodes[i]);
             if (i == 7)
                 destination = agent[i].getMicroServiceID();
         }
@@ -278,7 +278,7 @@ public class AgentsTest {
     @Test
     public void testUnreachableService() throws InterruptedException {
         MicroServicesManager m1 = new MicroServicesManager();
-        TestAgent ta = new TestAgent(m1);
+        TestMicroService ta = new TestMicroService(m1);
         MicroServicesManager m2 = new MicroServicesManager();
         NID unreach = new NID(0,m2.getHabitat().getNID().getUuidA(),m2.getHabitat().getNID().getUuidB(),5);
         Message msg = new Message(1,null);
@@ -298,7 +298,7 @@ public class AgentsTest {
         MicroServicesManager m1 = new MicroServicesManager();
         MicroServicesManager m2 = new MicroServicesManager();
         MicroServicesManager m3 = new MicroServicesManager();
-        TestAgent ta = new TestAgent(m2);
+        TestMicroService ta = new TestMicroService(m2);
         NID unreach = new NID(0,m3.getHabitat().getNID().getUuidA(),m3.getHabitat().getNID().getUuidB(),5);
         Message msg = new Message(1,null);
         ta.send(msg,unreach);

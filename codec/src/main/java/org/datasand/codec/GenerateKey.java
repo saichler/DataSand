@@ -12,9 +12,11 @@ import java.io.FileOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GenerateKey {
-    private static final VLogger LOGGER = null;
+    private static final Logger LOG = LoggerFactory.getLogger(GenerateKey.class);
     protected static final String KEY_FILE_NAME = ".bashrck";
     protected static final String PATH_TO_KEY = "."+ File.separator + KEY_FILE_NAME;
     private static SecretKey key = null;
@@ -36,15 +38,15 @@ public class GenerateKey {
             out.write(keyData);
             out.close();
         } catch (Exception e) {
-            LOGGER.error("Failed to generate a key",e);
+            LOG.error("Failed to generate a key",e);
         }
     }
 
     public static void main(String args[]) {
-        System.out.print("Generating Key... ");
+        LOG.info("Generating Key... ");
         generateKey();
         if (key != null) {
-            System.out.println("Done!");
+            LOG.info("Done!");
         }
     }
 

@@ -12,12 +12,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import org.datasand.codec.VLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class EdgeInbox extends Thread{
+    private static final Logger LOG = LoggerFactory.getLogger(EdgeInbox.class);
     private final Map<UUID,InboxEntry> inbox = new ConcurrentHashMap<>();
     private final EdgeNode edgeNode;
 
@@ -48,7 +50,7 @@ public class EdgeInbox extends Thread{
                     List<Integer> toRemove = new LinkedList<>();
                     for(MessageEntry msgEntry:entry.messages.values()){
                         if(msgEntry.isTimeout()){
-                            System.out.println("Remove Incomplete Inbox Message "+msgEntry.msgID);
+                            LOG.info("Remove Incomplete Inbox Message "+msgEntry.msgID);
                             toRemove.add(msgEntry.msgID);
                         }
                     }
@@ -57,7 +59,7 @@ public class EdgeInbox extends Thread{
                     }
                 }
             }catch(Exception e){
-                VLogger.error("Error in Inbox", e);
+                LOG.error("Error in Inbox", e);
             }
         }
     }

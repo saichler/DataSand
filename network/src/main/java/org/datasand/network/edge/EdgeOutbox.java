@@ -16,12 +16,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.datasand.codec.Encoder;
-import org.datasand.codec.VLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class EdgeOutbox extends Thread{
+    public static final Logger LOG = LoggerFactory.getLogger(EdgeOutbox.class);
     public static final long TIMEOUT = 10000;
     private final EdgeNode edgeNode;
     private volatile Map<Integer,ResultContainer> pending = new HashMap<>();
@@ -70,7 +72,7 @@ public class EdgeOutbox extends Thread{
                     try{
                         outputQueue.wait(2000);
                     }catch(InterruptedException e){
-                        VLogger.error("Interrupted!",e);
+                        LOG.error("Interrupted!",e);
                     }
                 if(!outputQueue.isEmpty())
                     frame = outputQueue.remove(0);
@@ -86,7 +88,7 @@ public class EdgeOutbox extends Thread{
                     }
                     SentEntry sentEntry = new SentEntry(frame);
                     if(frame.getDatagramPackets().length>100){
-                        VLogger.info(this.getName()+":Start Sending "+frame.getDatagramPackets().length+" packets of message:"+frame.getMessageID());
+                        LOG.info(this.getName()+":Start Sending "+frame.getDatagramPackets().length+" packets of message:"+frame.getMessageID());
                     }
 
                     for(DatagramPacket dp:frame.getDatagramPackets()){
@@ -95,11 +97,11 @@ public class EdgeOutbox extends Thread{
 
                     sentEntry.setTimeStamp();
                     if(frame.getDatagramPackets().length>100){
-                        VLogger.info(this.getName()+":Finished Sending "+frame.getDatagramPackets().length+" packets of message:"+frame.getMessageID());
+                        LOG.info(this.getName()+":Finished Sending "+frame.getDatagramPackets().length+" packets of message:"+frame.getMessageID());
                     }
                     sends.put(frame.getMessageID(), sentEntry);
                 }catch(Exception e){
-                    VLogger.error("Failed to send DatagramPacket", e);
+                    LOG.error("Failed to send DatagramPacket", e);
                 }
             }
             frame = null;
@@ -109,7 +111,7 @@ public class EdgeOutbox extends Thread{
     public void send(EdgeFrame frame){
         synchronized(this.outputQueue){
             if(frame.getDatagramPackets().length>100){
-                System.out.println("Sending message id:"+frame.getMessageID());
+                LOG.info("Sending message id:"+frame.getMessageID());
             }
             this.outputQueue.add(frame);
             this.outputQueue.notifyAll();
@@ -132,7 +134,7 @@ public class EdgeOutbox extends Thread{
                     sentEntry.setTimeStamp();
                     if(sentEntry.frame.getTotalFrameCount()==0){
                         if(sentEntry.frame.getDatagramPackets().length>100){
-                            System.out.println("Removing Message:"+messageID+" frame length:"+sentEntry.frame.getDatagramPackets().length);
+                            LOG.info("Removing Message:"+messageID+" frame length:"+sentEntry.frame.getDatagramPackets().length);
                         }
                         sends.remove(messageID);
                     }
@@ -212,7 +214,7 @@ public class EdgeOutbox extends Thread{
                                         try {
                                             outbox.edgeNode.sendDatagramPacket(sentEntry.frame.getDatagramPackets()[frameID]);
                                         } catch (IOException e) {
-                                            VLogger.error(e.getMessage(),e);
+                                            LOG.error(e.getMessage(),e);
                                         }
                                         shouldRemove = false;
                                     } else {

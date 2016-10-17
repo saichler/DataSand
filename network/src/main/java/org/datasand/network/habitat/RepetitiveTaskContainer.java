@@ -10,18 +10,20 @@ package org.datasand.network.habitat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.datasand.codec.VLogger;
 import org.datasand.codec.util.ThreadNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
-public class RepetitiveTaskContainer extends ThreadNode{
+public class RepetitiveTaskContainer extends ThreadNode {
 
+    private static final Logger LOG = LoggerFactory.getLogger(RepetitiveTaskContainer.class);
     private final List<RepetitiveTask> tasks = new ArrayList<>();
 
-    public RepetitiveTaskContainer(Node node){
-        super(node, node.getName()+" Pulse");
+    public RepetitiveTaskContainer(Node node) {
+        super(node, node.getName() + " Pulse");
     }
 
     @Override
@@ -31,7 +33,7 @@ public class RepetitiveTaskContainer extends ThreadNode{
 
     @Override
     public void execute() throws Exception {
-        synchronized(this) {
+        synchronized (this) {
             for (RepetitiveTask task : this.tasks) {
                 task.executeIfTime();
             }
@@ -44,25 +46,25 @@ public class RepetitiveTaskContainer extends ThreadNode{
 
     }
 
-    public synchronized void registerRepetitiveTask(RepetitiveTask task){
-        for(Iterator<RepetitiveTask> iter=tasks.iterator();iter.hasNext();){
-            if(iter.next()==task){
+    public synchronized void registerRepetitiveTask(RepetitiveTask task) {
+        for (Iterator<RepetitiveTask> iter = tasks.iterator(); iter.hasNext(); ) {
+            if (iter.next() == task) {
                 return;
             }
         }
         this.tasks.add(task);
     }
 
-    public synchronized void unregisterRepetitiveTask(RepetitiveTask task){
-        for(Iterator<RepetitiveTask> iter=tasks.iterator();iter.hasNext();){
-            if(iter.next()==task){
+    public synchronized void unregisterRepetitiveTask(RepetitiveTask task) {
+        for (Iterator<RepetitiveTask> iter = tasks.iterator(); iter.hasNext(); ) {
+            if (iter.next() == task) {
                 iter.remove();
                 break;
             }
         }
     }
 
-    public interface RepetitveTask{
+    public interface RepetitveTask {
         public void runTask(Object taskData);
     }
 
@@ -74,7 +76,7 @@ public class RepetitiveTaskContainer extends ThreadNode{
         private long lastExecuted = System.currentTimeMillis();
         private boolean started = false;
 
-        public RepetitiveTask(String name,long _interval,long _intervalStart, int _priority) {
+        public RepetitiveTask(String name, long _interval, long _intervalStart, int _priority) {
             this.name = name;
             this.interval = _interval;
             this.intervalStart = _intervalStart;
@@ -82,21 +84,20 @@ public class RepetitiveTaskContainer extends ThreadNode{
         }
 
         private void executeIfTime() {
-            if (System.currentTimeMillis() - lastExecuted > interval){
+            if (System.currentTimeMillis() - lastExecuted > interval) {
                 lastExecuted = System.currentTimeMillis();
-                try{
+                try {
                     execute();
-                }catch(Exception e){
-                    VLogger.error("Failed to execute repetitive task "+name,e);
+                } catch (Exception e) {
+                    LOG.error("Failed to execute repetitive task " + name, e);
                 }
-            }else
-            if (!started && (System.currentTimeMillis() - lastExecuted > intervalStart || intervalStart == 0)) {
+            } else if (!started && (System.currentTimeMillis() - lastExecuted > intervalStart || intervalStart == 0)) {
                 started = true;
                 lastExecuted = System.currentTimeMillis();
-                try{
+                try {
                     execute();
-                }catch(Exception e){
-                    VLogger.error("Failed to execute repetitive task "+name,e);
+                } catch (Exception e) {
+                    LOG.error("Failed to execute repetitive task " + name, e);
                 }
             }
         }
