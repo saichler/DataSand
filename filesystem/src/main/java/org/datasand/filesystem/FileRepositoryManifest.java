@@ -119,29 +119,29 @@ public class FileRepositoryManifest {
         size = Encoder.decodeInt32(ba);
         for (int i = 0; i < size; i++) {
             FileDescription fd = decodeFileDesc(ba);
-            rm.filesInRepository.put(fd.name, fd);
+            rm.filesInRepository.put(fd.getName(), fd);
         }
         return rm;
     }
 
     public static void encodeFileDesc(Object obj, BytesArray ba) {
         FileDescription fd = (FileDescription) obj;
-        Encoder.encodeString(fd.name, ba);
-        Encoder.encodeInt64(fd.lastChanged, ba);
-        Encoder.encodeInt64(fd.length, ba);
-        Encoder.encodeInt16(fd.version, ba);
-        Encoder.encodeInt64(fd.md5A, ba);
-        Encoder.encodeInt64(fd.md5B, ba);
+        Encoder.encodeString(fd.getName(), ba);
+        Encoder.encodeInt64(fd.getLastChanged(), ba);
+        Encoder.encodeInt64(fd.getLength(), ba);
+        Encoder.encodeInt16(fd.getVersion(), ba);
+        Encoder.encodeInt64(fd.getMd5A(), ba);
+        Encoder.encodeInt64(fd.getMd5B(), ba);
     }
 
     public static FileDescription decodeFileDesc(BytesArray ba) {
         FileDescription fd = new FileDescription();
-        fd.name = Encoder.decodeString(ba);
-        fd.lastChanged = Encoder.decodeInt64(ba);
-        fd.length = Encoder.decodeInt64(ba);
-        fd.version = Encoder.decodeInt16(ba);
-        fd.md5A = Encoder.decodeInt64(ba);
-        fd.md5B = Encoder.decodeInt64(ba);
+        fd.setName(Encoder.decodeString(ba));
+        fd.setLastChanged(Encoder.decodeInt64(ba));
+        fd.setLength(Encoder.decodeInt64(ba));
+        fd.setVersion(Encoder.decodeInt16(ba));
+        fd.setMd5A(Encoder.decodeInt64(ba));
+        fd.setMd5B(Encoder.decodeInt64(ba));
         return fd;
     }
 

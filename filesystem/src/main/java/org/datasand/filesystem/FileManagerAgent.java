@@ -48,6 +48,9 @@ public class FileManagerAgent extends MicroService {
             case TYPE_REPO_MANIFEST:
                 processPeerRepository(source, (FileRepositoryManifest) message.getMessageData());
                 break;
+            case REQUEST_FILE:
+                FileDescription fd = (FileDescription)message.getMessageData();
+                sendFile(fd.getName(),source);
         }
     }
 
@@ -57,6 +60,10 @@ public class FileManagerAgent extends MicroService {
             FileRepositoryManifest fd = repositories.get(repoName);
             if(fd!=null) {
                 List<FileDescription> missing = fd.compareToOther(frm);
+                for(FileDescription f:missing){
+                    Message m = new Message(REQUEST_FILE,f);
+                    send(m,source);
+                }
             }
         }
     }
