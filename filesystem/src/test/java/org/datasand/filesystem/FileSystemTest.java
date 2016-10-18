@@ -6,10 +6,10 @@ public class FileSystemTest {
 	public static void main(String args[]){
 		MicroServicesManager am = new MicroServicesManager();
 		FileManagerAgent fa = new FileManagerAgent(am);
-		fa.addRepository("./repo1");
+		fa.addRepository("repo","./filesystem/repo1");
 
 		MicroServicesManager am1 = new MicroServicesManager();
 		FileManagerAgent fa1 = new FileManagerAgent(am1);
-		fa1.addRepository("./repo2");
+		fa1.addRepository("repo","./filesystem/repo2");
 	}
 }
