@@ -16,13 +16,14 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.HierarchyBytesArray;
 import org.datasand.codec.MD5ID;
-import org.datasand.codec.util.ThreadPool;
 import org.datasand.codec.VColumn;
-import org.datasand.codec.VLogger;
 import org.datasand.codec.VSchema;
 import org.datasand.codec.VTable;
+import org.datasand.codec.util.ThreadPool;
 import org.datasand.store.jdbc.JDBCServer;
 import org.datasand.store.jdbc.ResultSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Sharon Aicler (saichler@gmail.com)
@@ -30,9 +31,10 @@ import org.datasand.store.jdbc.ResultSet;
  */
 public class DataStore {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DataStore.class);
     private ThreadPool threadpool = new ThreadPool(5,"DataBase",2000);
     private JDBCServer jdbcServer = null;
-
+    
     public int put(Object key,Object object){
         HierarchyBytesArray objectBytesArray = new HierarchyBytesArray();
         Encoder.encodeObject(object,objectBytesArray);
@@ -85,7 +87,7 @@ public class DataStore {
                 }
             }
         } catch (IOException e) {
-            VLogger.error("Failed to write to data file",e);
+            LOG.error("Failed to write to data file",e);
         }
         return myIndex;
     }
@@ -100,7 +102,7 @@ public class DataStore {
             Object o = Encoder.decodeObject(hba);
             return o;
         } catch (IOException e) {
-            VLogger.error("Failed to read object",e);
+            LOG.error("Failed to read object",e);
         }
         return null;
     }
@@ -114,7 +116,7 @@ public class DataStore {
             Object o = Encoder.decodeObject(hba);
             return o;
         } catch (IOException e) {
-            VLogger.error("Failed to read object",e);
+            LOG.error("Failed to read object",e);
         }
         return null;
     }
@@ -128,7 +130,7 @@ public class DataStore {
             Object o = Encoder.decodeObject(hba);
             return o;
         } catch (IOException e) {
-            VLogger.error("Failed to read object",e);
+            LOG.error("Failed to read object",e);
         }
         return null;
     }
@@ -143,7 +145,7 @@ public class DataStore {
             Object o = Encoder.decodeObject(hba);
             return o;
         } catch (IOException e) {
-            VLogger.error("Failed to read object",e);
+            LOG.error("Failed to read object",e);
         }
         return null;
     }
@@ -248,7 +250,7 @@ public class DataStore {
             }
             return result;
         } catch (IOException e) {
-            VLogger.error("Failed to read object",e);
+            LOG.error("Failed to read object",e);
         }
         return null;
     }

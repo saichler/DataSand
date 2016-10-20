@@ -41,7 +41,6 @@ public class FileSystemTest {
 
     @Test
     public void testFileSync() throws InterruptedException {
-        System.out.println("Waiting for the sync...");
         while(fa1.getRepository("repo").getSize()!=fa2.getRepository("repo").getSize() || fa1.getRepository("repo").getSize()<2){
             Thread.sleep(1000);
         }

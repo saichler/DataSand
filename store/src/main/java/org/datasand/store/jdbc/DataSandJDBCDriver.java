@@ -7,19 +7,23 @@
  */
 package org.datasand.store.jdbc;
 
-import org.datasand.codec.Encoder;
-import org.datasand.codec.VLogger;
-import org.datasand.microservice.MicroServicesManager;
-
-import java.sql.*;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.DriverPropertyInfo;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
+import org.datasand.codec.Encoder;
+import org.datasand.microservice.MicroServicesManager;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
  */
 public class DataSandJDBCDriver implements Driver {
-
+    
+    public static final org.slf4j.Logger LOG = LoggerFactory.getLogger(DataSandJDBCDriver.class);
     public static DataSandJDBCDriver drv = new DataSandJDBCDriver();
     static {
         Encoder.registerSerializer(JDBCMessage.class, new JDBCMessage());
@@ -41,14 +45,14 @@ public class DataSandJDBCDriver implements Driver {
 
     @Override
     public java.sql.Connection connect(String url, Properties arg1) throws SQLException {
-        VLogger.info("Data Sand JDBC Connection");
+        LOG.info("Data Sand JDBC Connection");
         try {
             MicroServicesManager manager = new MicroServicesManager(true);
             return new Connection(manager, url);
         } catch (Exception err) {
             err.printStackTrace();
         }
-        VLogger.info("Error Data Sand JDBC Connection");
+        LOG.info("Error Data Sand JDBC Connection");
         return null;
     }
 

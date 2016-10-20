@@ -54,7 +54,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
     private int collectedDataType = 0;
 
     public static class RSID{
-        private int address = NID.valueOf(Encoder.getLocalIPAddress() + ":0:0").getIPv4Address();
+        private long address = UUID.randomUUID().getLeastSignificantBits();
         private long time = System.currentTimeMillis();
         private int localID = -1;
         public RSID(){
@@ -68,7 +68,7 @@ public class ResultSet implements java.sql.ResultSet,ResultSetMetaData {
             this.time = _t;
             this.localID = _l;
         }
-        public int getAddress(){return this.address;}
+        public long getAddress(){return this.address;}
         public long getTime(){return this.time;}
         public int getLocalID(){return this.localID;}
         @Override
