@@ -246,7 +246,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
                 count++;
             byte[] countData = new byte[4];
             Encoder.encodeInt32(count, countData, 0);
-            Packet header = new Packet(source, dest, countData, -1, true);
+            Packet header = new Packet(source, dest, countData, -1, true,-1);
             send(header);
             for (int i = 0; i < count; i++) {
                 byte[] pData = new byte[Packet.MAX_DATA_IN_ONE_PACKET];
@@ -258,7 +258,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
                             pData, 0, data.length
                                     - (i * Packet.MAX_DATA_IN_ONE_PACKET));
                 }
-                send(new Packet(source, dest, pData, header.getPacketID(), true));
+                send(new Packet(source, dest, pData, header.getPacketID(), true,i));
             }
         }
     }

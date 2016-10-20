@@ -24,7 +24,7 @@ public class FileRepositoryManifest {
         this.directory = directory;
         File dir = new File(directory);
         if(!dir.exists()){
-            throw new IllegalArgumentException("Directoery "+directory+" does not exist!");
+            throw new IllegalArgumentException("Directoery "+directory+" relative to:"+System.getProperty("user.dir")+" does not exist!");
         }
         collectFiles(dir);
     }
@@ -32,10 +32,8 @@ public class FileRepositoryManifest {
     public List<FileDescription> compareToOther(FileRepositoryManifest other) {
         List<FileDescription> result = new ArrayList<>();
         for (FileDescription fd : other.filesInRepository.values()) {
-            String filePath = this.directory+fd.getName().substring(other.directory.length());
-            FileDescription myFile = this.filesInRepository.get(filePath);
+            FileDescription myFile = this.filesInRepository.get(fd.getRelativePath());
             if(myFile==null) {
-                System.out.println("Not Found="+filePath);
                 result.add(fd);
             }
         }
@@ -50,8 +48,16 @@ public class FileRepositoryManifest {
         return this.directory;
     }
 
-    private void addFileDescription(File f) {
-        if (filesInRepository.containsKey(f.getPath()))
+    public int getSize(){
+        return this.filesInRepository.size();
+    }
+
+    public FileDescription getFileDescription(String relativePath){
+        return this.filesInRepository.get(relativePath);
+    }
+
+    protected void addFileDescription(File f) {
+        if (filesInRepository.containsKey(f.getPath().substring(this.directory.length())))
             return;
 
         if (!fileExtentions.isEmpty() && !fileExtentions.contains("*")) {
@@ -64,15 +70,9 @@ public class FileRepositoryManifest {
             }
         }
 
-        FileDescription fd = new FileDescription();
-        fd.setName(f.getPath());
-        fd.setLastChanged(f.lastModified());
-        fd.setLength(f.length());
-        fd.setVersion(0);
         long md5[] = getFileMD5(f);
-        fd.setMd5A(md5[0]);
-        fd.setMd5B(md5[1]);
-        filesInRepository.put(fd.getName(), fd);
+        FileDescription fd = new FileDescription(this.name,f.getPath().substring(this.directory.length()),f.lastModified(),f.length(),0,md5[0],md5[1]);
+        filesInRepository.put(fd.getRelativePath(), fd);
     }
 
     public void collectFiles() {
@@ -102,7 +102,7 @@ public class FileRepositoryManifest {
         }
         Encoder.encodeInt32(rm.filesInRepository.size(), ba);
         for (FileDescription fd : rm.filesInRepository.values()) {
-            encodeFileDesc(fd, ba);
+            FileDescription.SERIALIZER.encode(fd,ba);
         }
     }
 
@@ -118,31 +118,10 @@ public class FileRepositoryManifest {
         }
         size = Encoder.decodeInt32(ba);
         for (int i = 0; i < size; i++) {
-            FileDescription fd = decodeFileDesc(ba);
-            rm.filesInRepository.put(fd.getName(), fd);
+            FileDescription fd = (FileDescription)FileDescription.SERIALIZER.decode(ba);
+            rm.filesInRepository.put(fd.getRelativePath(), fd);
         }
         return rm;
-    }
-
-    public static void encodeFileDesc(Object obj, BytesArray ba) {
-        FileDescription fd = (FileDescription) obj;
-        Encoder.encodeString(fd.getName(), ba);
-        Encoder.encodeInt64(fd.getLastChanged(), ba);
-        Encoder.encodeInt64(fd.getLength(), ba);
-        Encoder.encodeInt16(fd.getVersion(), ba);
-        Encoder.encodeInt64(fd.getMd5A(), ba);
-        Encoder.encodeInt64(fd.getMd5B(), ba);
-    }
-
-    public static FileDescription decodeFileDesc(BytesArray ba) {
-        FileDescription fd = new FileDescription();
-        fd.setName(Encoder.decodeString(ba));
-        fd.setLastChanged(Encoder.decodeInt64(ba));
-        fd.setLength(Encoder.decodeInt64(ba));
-        fd.setVersion(Encoder.decodeInt16(ba));
-        fd.setMd5A(Encoder.decodeInt64(ba));
-        fd.setMd5B(Encoder.decodeInt64(ba));
-        return fd;
     }
 
     public static long[] getFileMD5(File f) {

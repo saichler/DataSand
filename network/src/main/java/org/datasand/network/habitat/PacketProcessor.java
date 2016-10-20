@@ -47,9 +47,10 @@ public class PacketProcessor extends ThreadNode {
             if (mpc == null) {
                 mpc = new MultiPartContainer();
                 multiparts.put(pID, mpc);
-                mpc.expectedCount = Encoder.decodeInt32(ba.getBytes(), Packet.PACKET_DATA_LOCATION);
+                mpc.expectedCount = Encoder.decodeInt32(Encoder.decodeByteArray(ba.getBytes(), Packet.PACKET_DATA_LOCATION),0);
             } else {
-                mpc.parts.add(ba);
+                LOG.info("Received part "+pID.getPart()+" out of "+mpc.expectedCount);
+                mpc.addPart(pID);
                 if (mpc.parts.size() == mpc.expectedCount) {
                     multiparts.remove(pID);
                     addFrame(mpc.toFrame());
@@ -118,10 +119,22 @@ public class PacketProcessor extends ThreadNode {
     }
 
     private static class MultiPartContainer {
-        private final List<BytesArray> parts = new LinkedList<BytesArray>();
+        private final List<Packet> parts = new LinkedList<>();
         private int expectedCount = -1;
 
+
+        public void addPart(Packet p){
+            this.parts.add(p);
+        }
+
         public BytesArray toFrame() {
+            byte data[] = new byte[this.parts.size()* Packet.MAX_DATA_IN_ONE_PACKET];
+            for(Packet b:this.parts){
+                int part = b.getPart();
+                System.arraycopy(b.getData(),0,data,part*Packet.MAX_DATA_IN_ONE_PACKET,b.getData().length);
+            }
+
+            /*
             BytesArray firstPart = parts.get(0);
             byte[] data = new byte[(firstPart.getBytes().length - Packet.PACKET_DATA_LOCATION) * parts.size() + Packet.PACKET_DATA_LOCATION];
             System.arraycopy(firstPart, 0, data, 0, Packet.PACKET_DATA_LOCATION);
@@ -129,8 +142,12 @@ public class PacketProcessor extends ThreadNode {
             for (BytesArray p : parts) {
                 System.arraycopy(p.getBytes(), Packet.PACKET_DATA_LOCATION, data, location, p.getBytes().length - Packet.PACKET_DATA_LOCATION);
                 location += (p.getBytes().length - Packet.PACKET_DATA_LOCATION);
-            }
-            return new BytesArray(data);
+            }*/
+            Packet p = this.parts.get(0);
+            p.setData(data);
+            BytesArray ba = new BytesArray(p.getData().length+Packet.PACKET_DATA_LOCATION);
+            p.encode(p,ba);
+            return ba;
         }
     }
 

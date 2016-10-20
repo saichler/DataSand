@@ -21,7 +21,7 @@ public class Packet implements ISerializer {
     public static final int PACKET_DEST_LOCATION = PACKET_SOURCE_LOCATION + PACKET_SOURCE_LENGHT;
     public static final int PACKET_DEST_LENGTH = 20;
     public static final int PACKET_ID_LOCATION = PACKET_DEST_LOCATION + PACKET_DEST_LENGTH;
-    public static final int PACKET_ID_LENGTH = 2;
+    public static final int PACKET_ID_LENGTH = 4;
     public static final int PACKET_MULTIPART_AND_PRIORITY_LOCATION = PACKET_ID_LOCATION + PACKET_ID_LENGTH;
     public static final int PACKET_MULTIPART_AND_PRIORITY_LENGTH = 1;
     public static final int PACKET_DATA_LOCATION = PACKET_MULTIPART_AND_PRIORITY_LOCATION + PACKET_MULTIPART_AND_PRIORITY_LENGTH;
@@ -39,6 +39,7 @@ public class Packet implements ISerializer {
     private NID originalAddress = null;
 
     private int packetID = -1;
+    private int part = -1;
     private boolean multiPart = false;
     private int priority = 2;
     private byte[] data = null;
@@ -59,11 +60,11 @@ public class Packet implements ISerializer {
     }
 
     public Packet(NID _source, NID _destination, byte[] _data) {
-        this(_source, _destination, _data, -1, false);
+        this(_source, _destination, _data, -1, false, -1);
     }
 
     public Packet(NID _source, NID _destination, byte[] _data,
-                  int _id, boolean _multiPart) {
+                  int _id, boolean _multiPart, int part) {
         if (_id == -1) {
             synchronized (Packet.class) {
                 this.packetID = nextPacketID;
@@ -75,6 +76,7 @@ public class Packet implements ISerializer {
         this.multiPart = _multiPart;
         this.source = _source;
         this.destination = _destination;
+        this.part = part;
         this.data = _data;
         if (this.data == null) {
             this.data = new byte[0];
@@ -85,6 +87,10 @@ public class Packet implements ISerializer {
         this.source = source;
         this.destination = source;
         this.message = message;
+    }
+
+    public int getPart(){
+        return this.part;
     }
 
     public void setSource(NID s){
@@ -134,6 +140,7 @@ public class Packet implements ISerializer {
         p.source.encode(p.source, ba);
         p.destination.encode(p.destination, ba);
         Encoder.encodeInt16(p.packetID, ba);
+        Encoder.encodeInt16(p.part,ba);
 
         if (p.multiPart) {
             byte m_p = (byte) (p.priority * 2 + 1);
@@ -167,6 +174,7 @@ public class Packet implements ISerializer {
         m.source = (NID) serializer.decode(ba);
         m.destination = (NID) serializer.decode(ba);
         m.packetID = Encoder.decodeInt16(ba);
+        m.part = Encoder.decodeInt16(ba);
         m.priority = ((int) ba.getBytes()[ba.getLocation()]) / 2;
         m.multiPart = ba.getBytes()[ba.getLocation()] % 2 == 1;
         ba.advance(1);
