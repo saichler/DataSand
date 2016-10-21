@@ -13,7 +13,7 @@ import org.datasand.microservice.MicroServicesManager;
 import org.datasand.microservice.cmap.CMap;
 import org.datasand.network.NID;
 import org.datasand.network.Packet;
-import org.datasand.network.habitat.Node;
+import org.datasand.network.nnode.Node;
 import org.junit.*;
 
 import java.io.File;

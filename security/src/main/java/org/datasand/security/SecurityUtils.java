@@ -11,9 +11,14 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -25,10 +30,13 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import org.slf4j.Logger;
@@ -43,198 +51,174 @@ public class SecurityUtils {
     protected static IvParameterSpec ivspec = new IvParameterSpec(iv);
 
     //Encrypt a byte array using the given key.
-    public static byte[] encrypt(byte[] dataToEncode, SecretKey key) {
-        try {
-            Cipher cr = Cipher.getInstance("AES/CFB8/NoPadding");
-            cr.init(Cipher.ENCRYPT_MODE, key, ivspec);
-            ByteArrayOutputStream bout = new ByteArrayOutputStream();
-            CipherOutputStream out = new CipherOutputStream(bout, cr);
-            out.write(dataToEncode);
-            out.close();
-            return bout.toByteArray();
-        } catch (Exception err) {
-            LOG.error("Failed to encrypt byte array", err);
-            return null;
-        }
+    public static byte[] encrypt(byte[] dataToEncode, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, IOException {
+        Cipher cr = Cipher.getInstance("AES/CFB8/NoPadding");
+        cr.init(Cipher.ENCRYPT_MODE, key, ivspec);
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        CipherOutputStream out = new CipherOutputStream(bout, cr);
+        out.write(dataToEncode);
+        out.close();
+        return bout.toByteArray();
     }
 
     //Decrypt a byte array using the given key
-    public static byte[] decrypt(byte[] dataToDecrypt, SecretKey key) {
-        try {
-            Cipher cr = Cipher.getInstance("AES/CFB8/NoPadding");
-            cr.init(Cipher.DECRYPT_MODE, key, ivspec);
-            ByteArrayInputStream bin = new ByteArrayInputStream(dataToDecrypt);
-            CipherInputStream in = new CipherInputStream(bin, cr);
-            byte data[] = new byte[dataToDecrypt.length];
-            in.read(data);
-            in.close();
-            return data;
-        } catch (Exception err) {
-            LOG.error("Failed To Decrypt byte array.", err);
-            return null;
-        }
+    public static byte[] decrypt(byte[] dataToDecrypt, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, IOException {
+        Cipher cr = Cipher.getInstance("AES/CFB8/NoPadding");
+        cr.init(Cipher.DECRYPT_MODE, key, ivspec);
+        ByteArrayInputStream bin = new ByteArrayInputStream(dataToDecrypt);
+        CipherInputStream in = new CipherInputStream(bin, cr);
+        byte data[] = new byte[dataToDecrypt.length];
+        in.read(data);
+        in.close();
+        return data;
     }
 
-    public static final SecretKey generateSecretKey() {
-        try {
-            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(128);
-            return keyGen.generateKey();
-        } catch (NoSuchAlgorithmException e) {
-            LOG.error("Failed to generate a secret key.", e);
-            return null;
-        }
+    public static final SecretKey generateSecretKey() throws NoSuchAlgorithmException {
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(128);
+        return keyGen.generateKey();
     }
 
-    public static final KeyPair generateRSAKeys() {
-        try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(2048);
-            return keyPairGenerator.genKeyPair();
-        } catch (Exception e) {
-            LOG.error("Failed to generate a RSA key.", e);
-            return null;
-        }
+    public static final KeyPair generateRSAKeys() throws NoSuchAlgorithmException {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+        keyPairGenerator.initialize(2048);
+        return keyPairGenerator.genKeyPair();
     }
 
-    public static final byte[] encryptRSA(byte dataToEncrypt[], PublicKey publicKey) {
+    public static final byte[] encryptRSA(byte dataToEncrypt[], PublicKey publicKey) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
         //if the data is larger than 117 bytes. we need to encrypt it in two blocks
         //we divide to 110 per block
         byte blockCount = 0;
         if (dataToEncrypt.length > 110) {
             blockCount = (byte) (dataToEncrypt.length / 110 + 1);
         }
-        try {
-            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-            if (blockCount == 0) {
-                byte encData[] = cipher.doFinal(dataToEncrypt);
-                byte[] result = new byte[encData.length + 1];
-                result[0] = (byte) encData.length;
-                System.arraycopy(encData, 0, result, 1, encData.length);
-                return result;
-            } else {
-                List<byte[]> blocks = new LinkedList<>();
-                for (int i = 0; i < blockCount; i++) {
-                    if (dataToEncrypt.length - i * 110 >= 110) {
-                        byte data[] = new byte[110];
-                        System.arraycopy(dataToEncrypt, i * 110, data, 0, data.length);
-                        byte encData[] = cipher.doFinal(data);
-                        blocks.add(encData);
-                    } else {
-                        byte data[] = new byte[dataToEncrypt.length - i * 110];
-                        System.arraycopy(dataToEncrypt, i * 110, data, 0, data.length);
-                        byte encData[] = cipher.doFinal(data);
-                        blocks.add(encData);
-                    }
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        if (blockCount == 0) {
+            byte encData[] = cipher.doFinal(dataToEncrypt);
+            byte[] result = new byte[encData.length + 1];
+            result[0] = (byte) encData.length;
+            System.arraycopy(encData, 0, result, 1, encData.length);
+            return result;
+        } else {
+            List<byte[]> blocks = new LinkedList<>();
+            for (int i = 0; i < blockCount; i++) {
+                if (dataToEncrypt.length - i * 110 >= 110) {
+                    byte data[] = new byte[110];
+                    System.arraycopy(dataToEncrypt, i * 110, data, 0, data.length);
+                    byte encData[] = cipher.doFinal(data);
+                    blocks.add(encData);
+                } else {
+                    byte data[] = new byte[dataToEncrypt.length - i * 110];
+                    System.arraycopy(dataToEncrypt, i * 110, data, 0, data.length);
+                    byte encData[] = cipher.doFinal(data);
+                    blocks.add(encData);
                 }
-                byte result[] = new byte[256 * blocks.size() + 1];
-                result[0] = (byte) blocks.size();
-                int pos = 1;
-                for (byte[] d : blocks) {
-                    System.arraycopy(d, 0, result, pos, d.length);
-                    pos += d.length;
-                }
-                return result;
             }
-
-        } catch (Exception e) {
-            LOG.error("Failed to encrypt RSA", e);
+            byte result[] = new byte[256 * blocks.size() + 1];
+            result[0] = (byte) blocks.size();
+            int pos = 1;
+            for (byte[] d : blocks) {
+                System.arraycopy(d, 0, result, pos, d.length);
+                pos += d.length;
+            }
+            return result;
         }
-        return null;
     }
 
-    public static final byte[] decryptRSA(byte dataToDecrypt[], PrivateKey privateKey) {
-        try {
-            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            if (dataToDecrypt[0] == 0) {
-                byte data[] = new byte[dataToDecrypt.length - 1];
-                System.arraycopy(dataToDecrypt, 1, data, 0, data.length);
-                return cipher.doFinal(data);
-            } else {
-                int blockCount = dataToDecrypt[0];
-                List<byte[]> data = new ArrayList<byte[]>(blockCount);
-                int len = 0;
-                for (int i = 0; i < blockCount; i++) {
-                    byte encData[] = new byte[256];
-                    System.arraycopy(dataToDecrypt, 256 * i + 1, encData, 0, 256);
-                    byte decData[] = cipher.doFinal(encData);
-                    len += decData.length;
-                    data.add(decData);
-                }
-                byte result[] = new byte[len];
-                int pos = 0;
-                for (byte d[] : data) {
-                    System.arraycopy(d, 0, result, pos, d.length);
-                    pos += d.length;
-                }
-                return result;
+    public static final byte[] decryptRSA(byte dataToDecrypt[], PrivateKey privateKey) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
+        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        if (dataToDecrypt[0] == 0) {
+            byte data[] = new byte[dataToDecrypt.length - 1];
+            System.arraycopy(dataToDecrypt, 1, data, 0, data.length);
+            return cipher.doFinal(data);
+        } else {
+            int blockCount = dataToDecrypt[0];
+            List<byte[]> data = new ArrayList<byte[]>(blockCount);
+            int len = 0;
+            for (int i = 0; i < blockCount; i++) {
+                byte encData[] = new byte[256];
+                System.arraycopy(dataToDecrypt, 256 * i + 1, encData, 0, 256);
+                byte decData[] = cipher.doFinal(encData);
+                len += decData.length;
+                data.add(decData);
             }
-        } catch (Exception err) {
-            LOG.error("Failed to decrypt RSA", err);
+            byte result[] = new byte[len];
+            int pos = 0;
+            for (byte d[] : data) {
+                System.arraycopy(d, 0, result, pos, d.length);
+                pos += d.length;
+            }
+            return result;
         }
-        return null;
     }
 
     public static byte[] getRSAPublicKey(PublicKey key) {
-        try {
-            return key.getEncoded();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        return key.getEncoded();
     }
 
-    public static PublicKey getRSAPublicKey(byte[] data) {
-        try {
-            return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(data));
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        return null;
+    public static PublicKey getRSAPublicKey(byte[] data) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(data));
     }
 
-    public static byte[] getSecretKey(SecretKey key) {
+    public static byte[] getSecretKeyBytes(SecretKey key) throws IOException {
         ObjectOutputStream bout = null;
-        try {
+        try{
             ByteArrayOutputStream baout = new ByteArrayOutputStream();
             bout = new ObjectOutputStream(new DataOutputStream(baout));
             bout.writeObject(key);
             bout.flush();
             return baout.toByteArray();
-        } catch (Exception e) {
-
         } finally {
-            if (bout != null)
-                try {
-                    bout.close();
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+            if (bout != null){
+                bout.close();
+            }
         }
-        return null;
     }
 
-    public static SecretKey getSecretKey(byte[] data) {
+    public static SecretKey getSecretKeyFromBytes(byte[] data) throws IOException, ClassNotFoundException {
         ObjectInputStream in = null;
         try {
             ByteArrayInputStream bin = new ByteArrayInputStream(data);
             in = new ObjectInputStream(new DataInputStream(bin));
             return (SecretKey) in.readObject();
-        } catch (Exception e) {
-
         } finally {
-            if (in != null)
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+            if (in != null) {
+                in.close();
+            }
         }
-        return null;
+    }
+
+    public static final void saveKeyToFile(SecretKey key,String filename) throws IOException {
+        File file = new File(filename);
+        if(!file.getParentFile().exists()){
+            file.getParentFile().mkdirs();
+        }
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream(file);
+            out.write(getSecretKeyBytes(key));
+        }finally {
+            out.close();
+        }
+    }
+
+    public static final SecretKey loadKeyFromFile(String filename) throws IOException, ClassNotFoundException {
+        FileInputStream in = null;
+        File file = new File(filename);
+        if(!file.exists()){
+            throw new IllegalArgumentException("File "+filename+" does not exist");
+        }
+        try {
+            in = new FileInputStream(filename);
+            byte data[] = new byte[(int)file.length()];
+            in.read(data);
+            return getSecretKeyFromBytes(data);
+        }finally {
+            if(in!=null){
+                in.close();
+            }
+        }
     }
 }

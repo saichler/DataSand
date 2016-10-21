@@ -8,8 +8,15 @@
 
 package org.datasand.security;
 
+import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 import org.junit.Assert;
@@ -19,7 +26,7 @@ import org.junit.Test;
  */
 public class SecurityUtilTest {
     @Test
-    public void testEncryptionDecruption(){
+    public void testEncryptionDecruption() throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IOException {
         String input = "Hello World Security Test 1...2...3...4...5...6....7...8....9....10";
         SecretKey key = SecurityUtils.generateSecretKey();
         byte[] enryptedData = SecurityUtils.encrypt(input.getBytes(), key);
@@ -29,7 +36,7 @@ public class SecurityUtilTest {
     }
 
     @Test
-    public void testEncryptionDecruptionRSA(){
+    public void testEncryptionDecruptionRSA() throws NoSuchAlgorithmException, IllegalBlockSizeException, InvalidKeyException, BadPaddingException, NoSuchPaddingException {
     	String input = "Hello World Security Test 1...2...3...4...5...6....7...8....9....10";
         KeyPair keys = SecurityUtils.generateRSAKeys();
         byte[] enryptedData = SecurityUtils.encryptRSA(input.getBytes(),keys.getPublic());

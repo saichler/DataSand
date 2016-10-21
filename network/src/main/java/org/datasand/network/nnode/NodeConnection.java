@@ -5,7 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.network.habitat;
+package org.datasand.network.nnode;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -50,6 +50,10 @@ public class NodeConnection extends ThreadNode {
         id.encode(id,myData);
         try {
             tmpSocket = new Socket(addr, port);
+            ConnectProtocol c = new ConnectProtocol(this.getNode().getSecretKey());
+            if(!c.connect(tmpSocket)){
+                throw new IllegalStateException("Illegal Connection Attempt");
+            }
             tmpIn = new DataInputStream(new BufferedInputStream(tmpSocket.getInputStream()));
             tmpOut = new DataOutputStream(new BufferedOutputStream(tmpSocket.getOutputStream()));
             tmpOut.write(myData.getData());
@@ -80,6 +84,10 @@ public class NodeConnection extends ThreadNode {
 
     public NodeConnection(Node node, Socket socket) {
         super(node, node.getName()+" Connection");
+        ConnectProtocol c = new ConnectProtocol(node.getSecretKey());
+        if(!c.connect(socket)){
+            throw new IllegalStateException("Illegal Connection Attempt");
+        }
         this.socket = socket;
         this.node = node;
         this.setDaemon(true);

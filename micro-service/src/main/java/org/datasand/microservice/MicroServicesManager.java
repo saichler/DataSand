@@ -13,7 +13,7 @@ import org.datasand.codec.util.ThreadPool;
 import org.datasand.network.IFrameListener;
 import org.datasand.network.NID;
 import org.datasand.network.Packet;
-import org.datasand.network.habitat.Node;
+import org.datasand.network.nnode.Node;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -87,7 +87,7 @@ public class MicroServicesManager extends ThreadNode implements IFrameListener {
             lastServiceInventoryBroadcast = System.currentTimeMillis();
             BytesArray ba = new BytesArray(1024);
             serviceInventory.encode(serviceInventory, ba);
-            //this.getHabitat().send(ba.getData(), this.habitat.getNID(), Packet.PROTOCOL_ID_BROADCAST);
+            //this.getHabitat().send(ba.getData(), this.nnode.getNID(), Packet.PROTOCOL_ID_BROADCAST);
         }
         if (!addedTask) {
             synchronized (servicesSeynchronizeObject) {

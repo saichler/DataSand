@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.UUID;
 import org.datasand.network.NID;
 import org.datasand.network.Packet;
-import org.datasand.network.habitat.Node;
+import org.datasand.network.nnode.Node;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;

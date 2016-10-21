@@ -5,7 +5,7 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-package org.datasand.network.habitat;
+package org.datasand.network.nnode;
 
 import java.util.HashMap;
 import java.util.LinkedList;
