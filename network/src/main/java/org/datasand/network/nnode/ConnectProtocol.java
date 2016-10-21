@@ -4,8 +4,16 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Map;
+import java.util.UUID;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import org.datasand.network.NID;
 import org.datasand.security.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +26,11 @@ public class ConnectProtocol {
     private static final Logger LOG = LoggerFactory.getLogger(ConnectProtocol.class);
 
     private final SecretKey key;
+    private final Map<NID,SecretKey> clients;
 
-    public ConnectProtocol(SecretKey key){
+    public ConnectProtocol(SecretKey key,Map<NID,SecretKey> clients){
         this.key = key;
+        this.clients = clients;
     }
 
     private static final String CONNECT_MESSAGE = "Hello, This is the connect message.";
@@ -49,11 +59,23 @@ public class ConnectProtocol {
             if(connStr.equals(CONNECT_MESSAGE)){
                 return true;
             }else {
+                for(SecretKey csk:clients.values()){
+
+                }
                 socket.close();
                 return false;
             }
         }catch(Exception e){
             LOG.error("Failed to connect due to:",e);
+        }
+        return false;
+    }
+
+    private static final boolean ok(SecretKey key,byte[] data) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, IOException {
+        byte[] unencrypted = SecurityUtils.decrypt(data,key);
+        String connStr = new String(unencrypted);
+        if(connStr.equals(CONNECT_MESSAGE)){
+            return true;
         }
         return false;
     }
