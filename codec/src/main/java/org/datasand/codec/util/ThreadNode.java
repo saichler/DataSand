@@ -29,7 +29,7 @@ public abstract class ThreadNode extends Thread {
         }
     }
 
-    public void run() {
+    public final void run() {
         initialize();
         LOG.info(this.getName() + " was started.");
         try {
@@ -83,7 +83,7 @@ public abstract class ThreadNode extends Thread {
         super.start();
     }
 
-    public boolean isRunning() {
+    public final boolean isRunning() {
         return this.running;
     }
 }

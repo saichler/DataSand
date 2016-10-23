@@ -9,10 +9,8 @@
 package org.datasand.security;
 
 import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -43,5 +41,18 @@ public class SecurityUtilTest {
         byte[] decruptedData = SecurityUtils.decryptRSA(enryptedData, keys.getPrivate());
         String output = new String(decruptedData).trim();
         Assert.assertEquals(input, output);
+    }
+
+    @Test
+    public void testRSAKeysToBytes() throws NoSuchAlgorithmException, InvalidKeySpecException {
+        KeyPair keys = SecurityUtils.generateRSAKeys();
+        byte[] p = SecurityUtils.getRSAPublicKeyBytes(keys.getPublic());
+        PublicKey pKey = SecurityUtils.getRSAPublicKeyFromBytes(p);
+        Assert.assertNotNull(pKey);
+
+        p = SecurityUtils.getRSAPrivateKeyBytes(keys.getPrivate());
+        PrivateKey prKey = SecurityUtils.getRSAPrivateKeyFromBytes(p);
+        Assert.assertNotNull(prKey);
+
     }
 }

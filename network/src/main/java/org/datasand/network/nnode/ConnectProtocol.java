@@ -39,14 +39,7 @@ public class ConnectProtocol {
             out.writeInt(encrypt.length);
             out.write(encrypt);
             out.flush();
-            int count = 0;
-            while(in.available()==0){
-                Thread.sleep(500);
-                count++;
-                if(count==20){
-                    throw new IllegalStateException("Timeout while waiting for connet response");
-                }
-            }
+            ConnectProtocol.waitForInput(in);
             int size = in.readInt();
             byte data[] = new byte[size];
             in.read(data);
@@ -67,6 +60,17 @@ public class ConnectProtocol {
             LOG.error("Failed to connect due to:",e);
         }
         return false;
+    }
+
+    public static final void waitForInput(DataInputStream in) throws InterruptedException, IOException {
+        int count = 0;
+        while(in.available()==0){
+            Thread.sleep(500);
+            count++;
+            if(count==20){
+                throw new IllegalStateException("Timeout while waiting for input stream");
+            }
+        }
     }
 
     private static final boolean ok(SecretKey key,byte[] data) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, IOException {

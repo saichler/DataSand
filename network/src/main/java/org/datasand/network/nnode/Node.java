@@ -50,6 +50,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
     private final RoutingTable routingTable = new RoutingTable();
     private final SecretKey secretKey;
     private final KeyPair rsaKeys;
+    private final Map<String,SecretKey> tempKeys = new HashMap<>();
 
     public Node(IFrameListener _frameListener) {
         this(_frameListener, false);
@@ -90,11 +91,19 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
         }
     }
 
+    public void addTempKey(String username, SecretKey key){
+        this.tempKeys.put(username,key);
+    }
+
     public SecretKey getSecretKey() {
         return secretKey;
     }
 
-    public SecretKey loadSecretKey() {
+    public KeyPair getRSAKeys(){
+        return this.rsaKeys;
+    }
+
+    private final SecretKey loadSecretKey() {
         try {
             File sFile = new File(SECRET_KEY_FILE);
             if (sFile.exists()) {
@@ -109,7 +118,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
         return null;
     }
 
-    public KeyPair loadRSAKeys() {
+    private final KeyPair loadRSAKeys() {
         try {
             File sFile = new File(RSA_KEYS_FILE);
             if (sFile.exists()) {
