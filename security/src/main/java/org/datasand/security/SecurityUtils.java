@@ -17,6 +17,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.channels.FileLock;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
@@ -190,7 +191,7 @@ public class SecurityUtils {
         }
     }
 
-    public static final void saveKeyToFile(SecretKey key,String filename) throws IOException {
+    public static final void saveKeyToFile(SecretKey key,String filename) throws IOException, InterruptedException {
         File file = new File(filename);
         if(!file.getParentFile().exists()){
             file.getParentFile().mkdirs();
@@ -198,7 +199,12 @@ public class SecurityUtils {
         FileOutputStream out = null;
         try {
             out = new FileOutputStream(file);
-            out.write(getSecretKeyBytes(key));
+            FileLock lock = out.getChannel().tryLock();
+            if(lock.isValid()) {
+                out.write(getSecretKeyBytes(key));
+            }else {
+                Thread.sleep(1000);
+            }
         }finally {
             out.close();
         }

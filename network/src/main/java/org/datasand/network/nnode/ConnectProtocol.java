@@ -1,22 +1,18 @@
 package org.datasand.network.nnode;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import org.datasand.network.NID;
+import org.datasand.security.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import java.io.*;
 import java.net.Socket;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
-import java.util.UUID;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import org.datasand.network.NID;
-import org.datasand.security.SecurityUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Created by saichler on 10/21/16.
@@ -59,8 +55,10 @@ public class ConnectProtocol {
             if(connStr.equals(CONNECT_MESSAGE)){
                 return true;
             }else {
-                for(SecretKey csk:clients.values()){
+                if(clients!=null) {
+                    for (SecretKey csk : clients.values()) {
 
+                    }
                 }
                 socket.close();
                 return false;
