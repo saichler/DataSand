@@ -1,6 +1,7 @@
 package org.datasand.aaa.service;
 
 import org.datasand.network.nnode.Node;
+import org.datasand.network.nnode.auth.AuthenticationProvider;
 import org.datasand.security.SecurityUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,8 +34,6 @@ public class AuthenticationProviderTest {
 
     @Test
     public void test() throws NoSuchAlgorithmException, BadPaddingException, IOException, ClassNotFoundException, IllegalBlockSizeException, NoSuchPaddingException, InvalidKeyException, InvalidKeySpecException, InterruptedException {
-        AuthenticationProvider p1 = new AuthenticationProvider(null,n1);
-        p1.start();
         KeyPair keys = SecurityUtils.generateRSAKeys();
         SecretKey key = AuthenticationProvider.authenticate("admin","admin","127.0.0.1",keys);
         Assert.assertNotNull(key);

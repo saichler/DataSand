@@ -11,6 +11,7 @@ import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.*;
+import org.datasand.network.nnode.auth.AuthenticationProvider;
 import org.datasand.security.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,8 +46,6 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
     private IFrameListener frameListener = null;
     private boolean unicast = false;
     private final NetMetrics netMetrics = new NetMetrics();
-    private final AdjacentMachineDiscovery discovery;
-    private final RepetitiveTaskContainer repetitiveTaskContainer = new RepetitiveTaskContainer(this);
     private final RoutingTable routingTable = new RoutingTable();
     private final SecretKey secretKey;
     private final KeyPair rsaKeys;
@@ -80,11 +79,12 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
             this.servicePort = selectedPort;
             this.NID = loadHabitatID();
             if (!this.unicast && this.servicePort == SERVICE_NODE_SWITCH_PORT) {
-                this.discovery = new AdjacentMachineDiscovery(this.NID, this);
-            } else {
-                this.discovery = null;
+                new AdjacentMachineDiscovery(this.NID, this);
+                new AuthenticationProvider(this,this);
             }
         }
+
+        new RepetitiveTaskContainer(this);
 
         if (_frameListener == null) {
             this.start();

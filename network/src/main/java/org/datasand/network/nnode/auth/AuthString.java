@@ -1,4 +1,4 @@
-package org.datasand.aaa.service;
+package org.datasand.network.nnode.auth;
 
 import org.datasand.security.SecurityUtils;
 

@@ -1,4 +1,4 @@
-package org.datasand.aaa.service;
+package org.datasand.network.nnode.auth;
 
 import org.datasand.codec.util.ThreadNode;
 import org.datasand.network.nnode.ConnectProtocol;
@@ -51,7 +51,7 @@ public class AuthenticationProvider extends ThreadNode{
         DataOutputStream out = new DataOutputStream(s.getOutputStream());
         out.writeInt(rsaPubKeyBytes.length);
         out.write(rsaPubKeyBytes);
-        LOG.info("RSA Size="+rsaPubKeyBytes.length);
+        LOG.info("Received an auth request from "+s.getLocalAddress());
         out.flush();
         ConnectProtocol.waitForInput(in);
         int size = in.readInt();
