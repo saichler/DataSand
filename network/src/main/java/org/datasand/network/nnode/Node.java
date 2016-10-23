@@ -7,34 +7,22 @@
  */
 package org.datasand.network.nnode;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.datasand.codec.BytesArray;
 import org.datasand.codec.Encoder;
 import org.datasand.codec.util.ThreadNode;
-import org.datasand.network.ConnectionID;
-import org.datasand.network.IFrameListener;
-import org.datasand.network.NID;
-import org.datasand.network.Packet;
-import org.datasand.network.RoutingTable;
+import org.datasand.network.*;
 import org.datasand.security.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.SecretKey;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.KeyPair;
+import java.util.*;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -44,6 +32,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
     public static final int SERVICE_NODE_SWITCH_PORT = 50000;
     private static final Logger LOG = LoggerFactory.getLogger(Node.class);
     private static final String SECRET_KEY_FILE = "./data/.lck";
+    private static final String RSA_KEYS_FILE = "./data/.rsa";
     private final ServerSocket socket;
     private final NID NID;
     private final int servicePort;
@@ -60,6 +49,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
     private final RepetitiveTaskContainer repetitiveTaskContainer = new RepetitiveTaskContainer(this);
     private final RoutingTable routingTable = new RoutingTable();
     private final SecretKey secretKey;
+    private final KeyPair rsaKeys;
 
     public Node(IFrameListener _frameListener) {
         this(_frameListener, false);
@@ -68,6 +58,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
     public Node(IFrameListener _frameListener, boolean unicastOnly) {
         super((ThreadNode) _frameListener, "");
         this.secretKey = loadSecretKey();
+        this.rsaKeys = loadRSAKeys();
         this.frameListener = _frameListener;
         this.unicast = unicastOnly;
         synchronized (Node.class) {
@@ -110,10 +101,25 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
                 return SecurityUtils.loadKeyFromFile(SECRET_KEY_FILE);
             }
             SecretKey tmpKey = SecurityUtils.generateSecretKey();
-            SecurityUtils.saveKeyToFile(tmpKey,SECRET_KEY_FILE);
+            SecurityUtils.saveKeyToFile(tmpKey, SECRET_KEY_FILE);
             return SecurityUtils.loadKeyFromFile(SECRET_KEY_FILE);
-        }catch(Exception e){
-            LOG.error("Failed to load secret key, Security is disabled.",e);
+        } catch (Exception e) {
+            LOG.error("Failed to load secret key, Security is disabled.", e);
+        }
+        return null;
+    }
+
+    public KeyPair loadRSAKeys() {
+        try {
+            File sFile = new File(RSA_KEYS_FILE);
+            if (sFile.exists()) {
+                return SecurityUtils.loadRSAKeyFromFile(RSA_KEYS_FILE);
+            }
+            KeyPair tmpKey = SecurityUtils.generateRSAKeys();
+            SecurityUtils.saveRSAKeysToFile(tmpKey, RSA_KEYS_FILE);
+            return SecurityUtils.loadRSAKeyFromFile(RSA_KEYS_FILE);
+        } catch (Exception e) {
+            LOG.error("Failed to load secret key, Security is disabled.", e);
         }
         return null;
     }
@@ -271,7 +277,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
                 count++;
             byte[] countData = new byte[4];
             Encoder.encodeInt32(count, countData, 0);
-            Packet header = new Packet(source, dest, countData, -1, true,-1);
+            Packet header = new Packet(source, dest, countData, -1, true, -1);
             send(header);
             for (int i = 0; i < count; i++) {
                 byte[] pData = new byte[Packet.MAX_DATA_IN_ONE_PACKET];
@@ -283,7 +289,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
                             pData, 0, data.length
                                     - (i * Packet.MAX_DATA_IN_ONE_PACKET));
                 }
-                send(new Packet(source, dest, pData, header.getPacketID(), true,i));
+                send(new Packet(source, dest, pData, header.getPacketID(), true, i));
             }
         }
     }

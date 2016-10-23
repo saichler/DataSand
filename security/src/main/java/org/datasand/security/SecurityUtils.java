@@ -7,41 +7,20 @@
  */
 package org.datasand.security;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
+import java.io.*;
 import java.nio.channels.FileLock;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -155,24 +134,32 @@ public class SecurityUtils {
         }
     }
 
-    public static byte[] getRSAPublicKey(PublicKey key) {
+    public static byte[] getRSAPublicKeyBytes(PublicKey key) {
         return key.getEncoded();
     }
 
-    public static PublicKey getRSAPublicKey(byte[] data) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    public static byte[] getRSAPrivateKeyBytes(PrivateKey key) {
+        return key.getEncoded();
+    }
+
+    public static PublicKey getRSAPublicKeyFromBytes(byte[] data) throws NoSuchAlgorithmException, InvalidKeySpecException {
         return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(data));
+    }
+
+    public static PrivateKey getRSAPrivateKeyFromBytes(byte[] data) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(data));
     }
 
     public static byte[] getSecretKeyBytes(SecretKey key) throws IOException {
         ObjectOutputStream bout = null;
-        try{
+        try {
             ByteArrayOutputStream baout = new ByteArrayOutputStream();
             bout = new ObjectOutputStream(new DataOutputStream(baout));
             bout.writeObject(key);
             bout.flush();
             return baout.toByteArray();
         } finally {
-            if (bout != null){
+            if (bout != null) {
                 bout.close();
             }
         }
@@ -191,21 +178,21 @@ public class SecurityUtils {
         }
     }
 
-    public static final void saveKeyToFile(SecretKey key,String filename) throws IOException, InterruptedException {
+    public static final void saveKeyToFile(SecretKey key, String filename) throws IOException, InterruptedException {
         File file = new File(filename);
-        if(!file.getParentFile().exists()){
+        if (!file.getParentFile().exists()) {
             file.getParentFile().mkdirs();
         }
         FileOutputStream out = null;
         try {
             out = new FileOutputStream(file);
             FileLock lock = out.getChannel().tryLock();
-            if(lock.isValid()) {
+            if (lock.isValid()) {
                 out.write(getSecretKeyBytes(key));
-            }else {
+            } else {
                 Thread.sleep(1000);
             }
-        }finally {
+        } finally {
             out.close();
         }
     }
@@ -213,16 +200,70 @@ public class SecurityUtils {
     public static final SecretKey loadKeyFromFile(String filename) throws IOException, ClassNotFoundException {
         FileInputStream in = null;
         File file = new File(filename);
-        if(!file.exists()){
-            throw new IllegalArgumentException("File "+filename+" does not exist");
+        if (!file.exists()) {
+            throw new IllegalArgumentException("File " + filename + " does not exist");
         }
         try {
             in = new FileInputStream(filename);
-            byte data[] = new byte[(int)file.length()];
+            byte data[] = new byte[(int) file.length()];
             in.read(data);
             return getSecretKeyFromBytes(data);
-        }finally {
-            if(in!=null){
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+    }
+
+    public static final void saveRSAKeysToFile(KeyPair rsaKeys, String filename) throws IOException, InterruptedException {
+        File file = new File(filename);
+        if (!file.getParentFile().exists()) {
+            file.getParentFile().mkdirs();
+        }
+        FileOutputStream fout = null;
+        DataOutputStream dout = null;
+        try {
+            fout = new FileOutputStream(file);
+            dout = new DataOutputStream(fout);
+            FileLock lock = fout.getChannel().tryLock();
+            if (lock.isValid()) {
+                byte[] pub = getRSAPublicKeyBytes(rsaKeys.getPublic());
+                byte[] pri = getRSAPrivateKeyBytes(rsaKeys.getPrivate());
+                dout.writeInt(pub.length);
+                dout.write(pub);
+                dout.writeInt(pri.length);
+                dout.write(pri);
+            } else {
+                Thread.sleep(1000);
+            }
+        } finally {
+            dout.close();
+            fout.close();
+        }
+    }
+
+    public static final KeyPair loadRSAKeyFromFile(String filename) throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+        DataInputStream in = null;
+        File file = new File(filename);
+        if (!file.exists()) {
+            throw new IllegalArgumentException("File " + filename + " does not exist");
+        }
+        try {
+            in = new DataInputStream(new FileInputStream(filename));
+
+            int pubs = in.readInt();
+            byte pubData[] = new byte[pubs];
+            in.read(pubData);
+
+            int pris = in.readInt();
+            byte priData[] = new byte[pris];
+            in.read(priData);
+
+            PublicKey publicKey = getRSAPublicKeyFromBytes(pubData);
+            PrivateKey privateKey = getRSAPrivateKeyFromBytes(priData);
+            return new KeyPair(publicKey, privateKey);
+        } finally {
+            if (in != null) {
                 in.close();
             }
         }
