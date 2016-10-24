@@ -22,9 +22,9 @@ public class ConnectProtocol {
     private static final Logger LOG = LoggerFactory.getLogger(ConnectProtocol.class);
 
     private final SecretKey key;
-    private final Map<NID,SecretKey> clients;
+    private final Map<String,SecretKey> clients;
 
-    public ConnectProtocol(SecretKey key,Map<NID,SecretKey> clients){
+    public ConnectProtocol(SecretKey key,Map<String,SecretKey> clients){
         this.key = key;
         this.clients = clients;
     }
@@ -50,7 +50,11 @@ public class ConnectProtocol {
             }else {
                 if(clients!=null) {
                     for (SecretKey csk : clients.values()) {
-
+                        unencrypted = SecurityUtils.decrypt(data,key);
+                        connStr = new String(unencrypted);
+                        if(connStr.equals(CONNECT_MESSAGE)) {
+                            return true;
+                        }
                     }
                 }
                 socket.close();

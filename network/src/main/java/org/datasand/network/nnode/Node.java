@@ -91,8 +91,12 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
         }
     }
 
-    public void addTempKey(String username, SecretKey key){
+    protected void addTempKey(String username, SecretKey key){
         this.tempKeys.put(username,key);
+    }
+
+    protected Map<String,SecretKey> getTempKeys(){
+        return this.tempKeys;
     }
 
     public SecretKey getSecretKey() {
