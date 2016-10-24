@@ -20,9 +20,13 @@ import java.util.Map;
 public class ConnectProtocol {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConnectProtocol.class);
+    public static final int SWITCH_CONNECTION = 2;
+    public static final int CLIENT_CONNECTION = 3;
+    public static final int NO_CONNECTION = -2;
 
     private final SecretKey key;
     private final Map<String,SecretKey> clients;
+
 
     public ConnectProtocol(SecretKey key,Map<String,SecretKey> clients){
         this.key = key;
@@ -31,7 +35,7 @@ public class ConnectProtocol {
 
     private static final String CONNECT_MESSAGE = "Hello, This is the connect message.";
 
-    public boolean connect(Socket socket){
+    public int connect(Socket socket, boolean connectTo){
         try {
             DataInputStream in = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
             DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
@@ -46,22 +50,39 @@ public class ConnectProtocol {
             byte[] unencrypted = SecurityUtils.decrypt(data,key);
             String connStr = new String(unencrypted);
             if(connStr.equals(CONNECT_MESSAGE)){
-                return true;
+                return SWITCH_CONNECTION;
             }else {
-                if(clients!=null) {
-                    for (SecretKey csk : clients.values()) {
-                        unencrypted = SecurityUtils.decrypt(data,key);
-                        connStr = new String(unencrypted);
-                        if(connStr.equals(CONNECT_MESSAGE)) {
-                            return true;
-                        }
+                if(isClientKey(data)){
+                    out.writeInt(CLIENT_CONNECTION);
+                    out.flush();
+                    return CLIENT_CONNECTION;
+                } else if(connectTo){
+                    out.writeInt(NO_CONNECTION);
+                    out.flush();
+                } else {
+                    int stat = in.readInt();
+                    if(stat==CLIENT_CONNECTION){
+                        return CLIENT_CONNECTION;
                     }
                 }
                 socket.close();
-                return false;
+                return NO_CONNECTION;
             }
         }catch(Exception e){
             LOG.error("Failed to connect due to:",e);
+        }
+        return NO_CONNECTION;
+    }
+
+    private final boolean isClientKey(byte data[]) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, IOException {
+        if(this.clients!=null) {
+            for(SecretKey clientKey:clients.values()) {
+                byte[] unencrypted = SecurityUtils.decrypt(data, clientKey);
+                String connStr = new String(unencrypted);
+                if(connStr.equals(CONNECT_MESSAGE)){
+                    return true;
+                }
+            }
         }
         return false;
     }

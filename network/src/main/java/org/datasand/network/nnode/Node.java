@@ -7,23 +7,35 @@
  */
 package org.datasand.network.nnode;
 
-import org.datasand.codec.BytesArray;
-import org.datasand.codec.Encoder;
-import org.datasand.codec.util.ThreadNode;
-import org.datasand.network.*;
-import org.datasand.network.nnode.auth.AuthenticationProvider;
-import org.datasand.security.SecurityUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.crypto.SecretKey;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.KeyPair;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import javax.crypto.SecretKey;
+import org.datasand.codec.BytesArray;
+import org.datasand.codec.Encoder;
+import org.datasand.codec.util.ThreadNode;
+import org.datasand.network.ConnectionID;
+import org.datasand.network.IFrameListener;
+import org.datasand.network.NID;
+import org.datasand.network.Packet;
+import org.datasand.network.RoutingTable;
+import org.datasand.network.nnode.auth.AuthenticationProvider;
+import org.datasand.security.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author - Sharon Aicler (saichler@gmail.com)
@@ -91,7 +103,7 @@ public class Node extends ThreadNode implements AdjacentMachineDiscovery.Adjacen
         }
     }
 
-    protected void addTempKey(String username, SecretKey key){
+    public void addTempKey(String username, SecretKey key){
         this.tempKeys.put(username,key);
     }
 

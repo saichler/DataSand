@@ -51,7 +51,7 @@ public class NodeConnection extends ThreadNode {
         try {
             tmpSocket = new Socket(addr, port);
             ConnectProtocol c = new ConnectProtocol(this.getNode().getSecretKey(),null);
-            if(!c.connect(tmpSocket)){
+            if(c.connect(tmpSocket,false)==ConnectProtocol.NO_CONNECTION){
                 throw new IllegalStateException("Illegal Connection Attempt");
             }
             tmpIn = new DataInputStream(new BufferedInputStream(tmpSocket.getInputStream()));
@@ -85,7 +85,8 @@ public class NodeConnection extends ThreadNode {
     public NodeConnection(Node node, Socket socket) {
         super(node, node.getName()+" Connection");
         ConnectProtocol c = new ConnectProtocol(node.getSecretKey(),null);
-        if(!c.connect(socket)){
+        int connStat = c.connect(socket,true);
+        if(connStat==ConnectProtocol.NO_CONNECTION){
             throw new IllegalStateException("Illegal Connection Attempt");
         }
         this.socket = socket;
@@ -105,6 +106,9 @@ public class NodeConnection extends ThreadNode {
             unicastOnly = tmpIn.readInt();
             tmpOut.write(myData.getData());
             tmpOut.flush();
+            if(connStat==ConnectProtocol.CLIENT_CONNECTION) {
+                unicastOnly = 1;
+            }
         } catch (Exception e) {
             LOG.error("Failed to use input/output of socket",e);
         }
